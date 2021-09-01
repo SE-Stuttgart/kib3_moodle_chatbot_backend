@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 from passlib.context import CryptContext
 import jwt
 import tornado.ioloop
-import tornado.web
+import tornado.websocket
 import json
 
 from services.service import PublishSubscribe, Service, DialogSystem
