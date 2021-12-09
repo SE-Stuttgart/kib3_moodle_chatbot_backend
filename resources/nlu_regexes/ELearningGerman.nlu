@@ -1,0 +1,202 @@
+# user informable slots are name, department and position
+
+rule inform(goal)
+    "{goal}"
+    "{goal}{UNIT()}?"
+
+rule inform(finishedGoal)
+    "Ich bin mit (de(m|r|n)|allen){UNIT()} fertig"
+
+rule request(goal)
+    "Was {SHOULD()} ich {TIME()}(abschließen|lernen|tun|machen)(\\?)?"
+
+rule request(toReachGoal)
+    "Welche(s)? Ziel(e)? habe ich( für)?{TIME()}(\\?)?"
+
+rule request(newModuleYes)
+    "Ja, {NEW()}"
+
+rule request(newModuleNo)
+    "Nein"
+    "Nein, ich möchte es wiederholen?"
+
+rule inform(finishTask)
+    "(Ok, )?ich bin fertig"
+
+rule request(goalAlternative)
+    "Was {SHOULD()} ich {TIME()}noch {TIME()}(abschlie(ß|ss)en|lernen|tun|machen)(\\?)?"
+    "{WHICH()}(andere)?{UNIT()} {SHOULD()} ich {TIME()}noch {TIME()}(lernen|abschließen)(\\?)?"
+
+rule request(repeatableModul)
+    "{WHICH()}{UNIT()} {SHOULD()} ich wiederholen(\\?)?"
+
+rule request(learnableModul)
+    "{WHICH()}{UNIT()} {SHOULD()} ich {TIME()}lernen(\\?)?"
+
+rule request(needHelp)
+    "Was mache ich falsch(\\?)?"
+
+rule request(insufficient)
+    "Bei welche(m|r){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
+
+rule request(content)
+    "{WHATSABOUT()}(\\?)?"
+    "{WHATSABOUT()} in diese(m|r|n){UNIT()}(\\?)?"
+    # "Wo kann ich mehr Informationen|Info(s)? (zu de(m|n|r){UNIT()})|dazu finden(\\?)?"
+    # "Wie viele{UNIT()} sind sie|(bei diesem Modul vorgesehen)(\\?)?"
+
+rule request(firstGoal)
+    "Mit welch(er|em){UNIT()}? {SHOULD()} ich {NEW()}(\\?)?"
+    "{WHICH()} ist (die|der|das) erste({UNIT()})?(\\?)?"
+
+rule request(dueContent)
+    "Sind sie alle pflichtig|verplichtend(\\?)?"
+
+rule request(description)
+    "asdasdad"
+
+rule request(submission)
+    "Wann ist (die|der) (erste )?(Abgabe|Frist|deadline|Termin)(\\?)?"
+
+rule request(nextModule)
+    "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes lernen|machen(\\?)?"
+    "Was ist mein nächstes Modul|Ziel(\\?)?"
+
+rule request(infoContent)
+    "Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\\?)?"
+    "Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\\?)?"
+    "Wo finde ich Info(s)? (über|zu) (?P<content3>.*)(\\?)?"
+    "Was war (nochmal)? mit (?P<content4>.*) gemeint(\\?)?"
+    "Wo wird (?P<content5>.*) erklärt(\\?)?"
+    "(Zu|über) (?P<content6>.*)"
+
+rule inform(lecture)
+    "{rINFORM()}{lecture}"
+    "Neue {synonyms(lecture, "Einheit")} lernen"
+    "Nein, {NEW()}"
+
+rule request(finishTask)
+    "Wie viele{UNIT()} fehlen noch(\\?)?"
+
+rule inform(learningTime)
+    "\\d+"
+
+rule inform(description)
+    "(Test)"
+
+#rule inform(repeatedModul)
+    #"Okay, ich habe es nochmal gelesen und ich denke, ich hab’s verstanden."
+
+rule inform(lecture_link)
+    "test"
+
+rule inform(link)
+    "test"
+
+rule inform(module)
+    "Nein, ich möchte mit dem neuen starten"
+    "Hallo, ich bin mit dem {module} Modul fertig."
+    "ich bin bereits mit allen Modulen und Quiz fertig."
+
+rule inform(quiz_link)
+    "test"
+
+rule inform(topic)
+    "test"
+
+rule inform(topic_link)
+    "test"
+
+rule inform(affirm)
+    "Ja(, bitte)?"
+    "danke"
+
+# All slots are requestable
+
+rule request(module)
+    "Welche Einheiten|Inhalte|Module könnte ich wiederholen?"
+    "(Welches Modul soll ich lernen|Was soll ich lernen|Was sollte ich heute lernen|Was muss ich lernen)\\?"
+    "Wo kann ich mehr Informationen zu dem Thema finden\\?"
+    "Was sollte ich sonst noch in diesem Monat abschließen\\?"
+    "Welche Ziele habe ich für (diese Woche|heute)\\?"
+    "Kann ich nächste Woche die Basismodule nachholen\\?"
+    "Wie viele neuen Module kommen jede Woche\\?"
+
+
+
+rule request(link)
+    "Alles klar, dann zeige sie mir bitte"
+
+rule request(topic)
+    "test"
+
+rule request(quiz_link)
+    "test"
+
+rule request(lecture)
+    "Welche {synonyms(lecture, "Einheit")} könnte ich wiederholen\\?"
+    "Welches {synonyms(lecture, "Modul")} (soll ich lernen|Was soll ich lernen|Was sollte ich heute lernen|Was kann ich lernen|Was muss ich lernen)\\?"
+    "Wo kann ich mehr Informationen zu dem Thema finden\\?"
+
+rule request(lecture_link)
+    "test"
+
+rule request(topic_link)
+    "test"
+
+function synonyms(slot, value)
+    "{value}"
+    add_if slot = "description"
+        "Beschreibung"
+        "Informationen"
+
+    add_if slot = "Modul"
+        if value = "Einheit"
+            "Einheit(en)?"
+            "Inhalt(en)"
+            "Modul(e)?"
+
+
+    add_if value = "Einheit"
+        "Einheit(en)?"
+        "Inhalt(en)?"
+        "Modul(e)?"
+        "Thema"
+
+    add_if value = "starten"
+        "beginnen"
+        "anfangen"
+
+
+
+function slot_synonyms(slot)
+    "{IMPOSSIBLEREGEX()}"
+    "{slot}"
+
+
+
+function SHOULD(): "könnte|sollte|muss|soll|kann"
+function TIME(): "( )?(diesen Monat( )?|diese Woche( )?|heute( )?)?"
+function UNIT(): "( Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs)"
+function WHICH(): "(Welche(s|r|n|m))?"
+function WHATSABOUT(): "Worum geht('| e)s"
+function NEW(): "(ich möchte mit dem neuen )?(anfangen|beginnen|starten)"
+function IMPOSSIBLEREGEX(): "^\b$"
+function WHAT(): "(what(\\')?(s)?|which|does|where)(\\ (its|the))*"
+function IT(): "(it\\'*s*|it\\ have|is\\ it\\'*s*|is\\ (the|their))(\\ for)*"
+function CYTM(): "(can\\ you\\ tell\\ me\\ (the|it\\'*s|their))"
+function CIG(): "(can\\ I\\ get\\ (the|it\\'*s|their))"
+function NEGATE(): "((i\\ )*(don\\'?t|do\\ not|does\\ not|does\\'?nt)\\ (care|mind|matter)(\\ (about|what))*(\\ (the|it\\'?s*))*)"
+# Cant create variable lengths with negative lookback... else merge following:
+function DONTCARE(): "(i\\ dont\\ care)"
+function DONTCAREWHAT(): "(i\\ dont\\ care\\ what\\ )"
+function DONTCAREABOUT(): "(i\\ dont\\ care\\ about\\ )"
+function rREQUEST(): "(\\\\b|^|\\ )(?<!{DONTCARE()})({WHAT()}\\ {IT()}|{CYTM()}|{CIG()})"
+function WANT(): "(suche|möchte wissen|will|will( wissen|Info( |s |rmationen )?über)?)*"
+function WBG(): "(\\ ((would|seems\\ to)\\ be\\ (good|nice)($|[^\\?]$)|seems\\ (good|nice)($|[^\\?]$)))"
+function rINFORM(): "(\\\\b|^|\\ ){WANT()}"
+function rINFORM_DONTCARE(): "{DONTCARE()} ((what|which|about)(\\ (it\\'*s*|the))*)+"
+function rINFORM_DONTWANT(): "(((i\\ )*(don\\'*t\\ want))|it\\ (shouldn\\'*t|should\\ not)\\ (have|be))+"
+# Contextual dontcares: i.e things that should be labelled inform(=dontcare)
+function rCONTEXTUAL_DONTCARE(): "(anything(?!\\ else)|((any$|any\\ kind)|(i\\ )*(don\\'?t|do\\ not)\\ (care|know))($|(?!\\ (a?bout|of|what))|(\\ (a?bout|of|what)\\ (type|kind)(?!\\ of))|\\ a?bout\\ (that|this))|(any(thing)?\\ (is\\ )*(fine|ok\\\\b|okay|will\\ do))($|\\ and|\\ but)|(it )?(doesn\\'?t|does not) matter)+"
+

@@ -1,6 +1,6 @@
 ###############################################################################
 #
-# Copyright 2019, University of Stuttgart: Institute for Natural Language Processing (IMS)
+# Copyright 2020, University of Stuttgart: Institute for Natural Language Processing (IMS)
 #
 # This file is part of Adviser.
 # Adviser is free software: you can redistribute it and/or modify
@@ -20,10 +20,8 @@
 import os
 import sys
 
-head_location = os.path.realpath(os.curdir)
-end = head_location.find('adviser')
-head_location = head_location[:end]
-sys.path.append(head_location + "/adviser")
+head_location = os.path.abspath(os.path.join(os.path.abspath(__file__), '..', '..', '..')) # main folder of adviser
+sys.path.append(head_location)
 
 from services.nlg.templates.parsing.automaton import ModifiedPushdownAutomaton
 

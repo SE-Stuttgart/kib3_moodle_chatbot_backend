@@ -1,6 +1,6 @@
 ###############################################################################
 #
-# Copyright 2019, University of Stuttgart: Institute for Natural Language Processing (IMS)
+# Copyright 2020, University of Stuttgart: Institute for Natural Language Processing (IMS)
 #
 # This file is part of Adviser.
 # Adviser is free software: you can redistribute it and/or modify
@@ -22,43 +22,23 @@
 import copy
 
 from utils.domain.jsonlookupdomain import JSONLookupDomain
-from utils.transmittable import Transmittable
-from utils.useract import UserActionType
 
-class BeliefState(Transmittable):
+
+class BeliefState:
     """
-    The representation of a belief state.
+    A representation of the belief state, can be accessed like a dictionary.
 
-    Can be accessed like a dict, e.g. state['beliefs']['food']['italian']
-    The history of the belief state can be accessed by using indexes
-    0 is the first turn, -1 is the current turn
+    Includes information on:
+        * current set of UserActTypes
+        * informs to date (dictionary where key is slot and value is {value: probaility})
+        * requests for the current turn
+        * number of db matches for given constraints
+        * if the db matches can further be split
 
-    Example:
-    state[-2]['beliefs']['area']['north'] returns the probability
-    of area=north in the last turn
     """
     def __init__(self, domain: JSONLookupDomain):
         self.domain = domain
         self._history = [self._init_beliefstate()]
-
-    def serialize(self):
-        return [
-            {
-                key: turn[key] if key != 'user_acts' else [act.name for act in turn[key]] for key in turn
-            }
-            for turn in self._history
-        ]
-
-    @staticmethod
-    def deserialize(obj: list):
-        inst = BeliefState(None)
-        inst._history = [
-            {
-                key: turn[key] if key != 'user_acts' else [UserActionType[item] for item in turn[key]] for key in turn
-            }
-            for turn in obj
-        ]
-        return inst
 
     def __getitem__(self, val):  # for indexing
         # if used with numbers: int (e.g. state[-2]) or slice (e.g. state[3:6])
@@ -121,7 +101,7 @@ class BeliefState(Transmittable):
         """
 
         # TODO: revist when we include probabilites, sets should become dictionaries
-        belief_state = {"user_acts": [],
+        belief_state = {"user_acts": set(),
                         "informs": {},
                         "requests": {},
                         "num_matches": 0,
@@ -138,7 +118,6 @@ class BeliefState(Transmittable):
         then the slot will not be added to the result at all.
 
         Args:
-            beliefstate: beliefstate dict
             consider_NONE: If True, slots where **NONE** values have the
                            highest probability will not be added to the result.
                            If False, slots where **NONE** values have the
@@ -149,13 +128,11 @@ class BeliefState(Transmittable):
             turn_idx: index for accessing the belief state history (default = -1: use last turn)
 
         Returns:
-            A dict with mapping from slots to a list (if max_results > 1) or
-            a float (if max_results == 1) of values containing the slots which
+            Union(Dict[str, List[str]], Dict[str, str]): A dict with mapping from slots to a list of values (if max_results > 1) or
+            a value (if max_results == 1) containing the slots which
             have at least one value whose probability exceeds the specified
             threshold.
         """
-
-        # TODO: consider_NONE what does this even mean for the new beliefstate?
 
         informs = self._history[turn_idx]["informs"]
         candidates = []
@@ -176,24 +153,21 @@ class BeliefState(Transmittable):
         then the slot will not be added to the result at all.
 
         Args:
-            beliefstate: beliefstate dict
             consider_NONE: If True, slots where **NONE** values have the
                            highest probability will not be added to the result.
                            If False, slots where **NONE** values have the
                            highest probability will look for the best value !=
                            **NONE**.
-            threshold: minimum probability to be accepted to the
-            max_results: return at most #max_results best values per slot
+            threshold: minimum probability to be accepted
+            max_results: return at most `max_results` best values per slot
             turn_idx: index for accessing the belief state history (default = -1: use last turn)
 
         Returns:
-            A dict with mapping from slots to a list (if max_results > 1) or
-            a float (if max_results == 1) of values containing the slots which
+            Union(Dict[str, List[str]], Dict[str, str]): A dict with mapping from slots to a list of values (if max_results > 1) or
+            a value (if max_results == 1) containing the slots which
             have at least one value whose probability exceeds the specified
             threshold.
         """
-
-        # TODO: consider_NONE what does this even mean for the new beliefstate?
 
         candidates = {}
         informs = self._history[turn_idx]["informs"]
@@ -217,8 +191,6 @@ class BeliefState(Transmittable):
 
     def get_requested_slots(self, turn_idx: int = -1):
         """ Returns the slots requested by the user
-
-        TODO: consider including some belief probability for requests
 
         Args:
             turn_idx: index for accessing the belief state history (default = -1: use last turn)

@@ -2470,6 +2470,10 @@ class MFile(Base):
 	referencefileid = Column(BIGINT(10), index=True)
 
 
+	def get_server_file_path(self):
+		return f"moodledata/filedir/{self.contenthash[0:2]}/{self.contenthash[2:4]}/{self.contenthash}"
+
+
 class MFilesReference(Base):
 	__tablename__ = 'm_files_reference'
 	__table_args__ = (
@@ -7375,6 +7379,7 @@ def get_grades(session, user_id: int, course_id: int) -> List[GradeInfo]:
 								user_id=user_id, rawgrade_max=grade.rawgrademax, rawgrade_min=grade.rawgrademin, rawgrade=grade.rawgrade, finalgrade=grade.finalgrade))
 	return gradeinfo
 
+
 #
 # Print helpers
 #
@@ -7394,6 +7399,8 @@ def print_courses(session):
 			for module in get_course_modules(session, course_id=course.id, section=sec.id):
 				print("    - Module ", module.id)
 	print("-------------------------")
+	
+	
 
 
 with Session() as session:

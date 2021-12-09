@@ -1,0 +1,199 @@
+
+# ---------------NEW RULES - IMS COURSE MESSAGES-------------------------#
+
+template welcomemsg(): "Willkommen zum IMS Lehrveranstaltungs Chat Bot. Wie kann ich dir weiterhelfen?"
+template welcomemsg(help): "Ich habe dich leider nicht verstanden. Könntest du mir noch einmal sagen, wonach du suchst."
+template welcomemsg(more) : "Ḱann ich dir bei noch etwas anderem behilflich sein?"
+template bad() : "Entschuldige, ich bin etwas durcheinander. Könntest du mir noch einmal sagen, wonach du suchst."
+# repeat() : "Könntest du das bitte wiederholen?"
+template closingmsg() : "Danke schön, bis zum nächsten Mal."
+
+#--------------System Requests---------------#
+# System Requestable Keywords: 1, 2, 7, 12, 14, 16, 30, 35
+
+template request(goal)
+	"Willst du heute neue Einheiten lernen oder abgeschlossene Inhalte wiederholen?"
+
+template inform(moduleRequirements, moduleName, moduleRequired)
+    if moduleRequirements = "true":
+        if moduleRequired = "true":
+            "Alles klar. Es gibt ein neues Modul zu dem {moduleName} Kurs, für das du die Voraussetzungen erfüllt hast. Okay?"
+
+
+template inform(positiveFeedback, test)
+    "Cool! Ich würde dir helfen, dein Wissen über die Lerninhalte zu überprüfen. Wenn du bereit bist, würde ich dir Fragen dazu stellen."
+
+template inform(positiveFeedback, repeatQuiz)
+    "Cool! Du solltest die Quiz regelmäßig wiederholen, damit du die Inhalte bis der Prüfung nicht vergisst!"
+
+
+template inform(moduleName, repeatContent)
+    if repeatContent = "quiz":
+        "Du hast das Module {moduleName} seit langen Zeit abgeschlossen. {REPEAT_QUIZ()}"
+    if repeatContent = "module":
+        "Du hast bei {moduleName} weniger als 50% der Quiz richtig beantwortet :-(. Es wäre besser, wenn du das Modul wiederholst, dann wirst du bestimmt ein besseres Ergibniss erreichen!"
+    if repeatContent = "oldcontent":
+        "Du hast {moduleName} seit zwei Wochen nicht mehr geöffnet. Du solltest die Inhalte nochmal auffrischen, ansonsten vergiss du sie!"
+    if repeatContent = "noContent":
+        "Es gibt keine Inhalte, die du wiederholen solltest. Du könntest mit einem neuen Modul anfangen!"
+
+template request(quiz_link, module, insufficient)
+    if insufficient = "true":
+        "Bei {module} bist du leider noch nicht ausreichend. Möchtest du die Quiz zu {module} wiederholen?"
+    if insufficient = "false":
+        "Du bist eigentlich bei allen ausreichend, gut gemacht! Möchstest du einige Quiz wiederholen, um die Inhalte aufzufrischen?"
+
+
+template inform(moduleName, finishContent)
+    if finishContent = "video"
+        "Du hast diese interaktiven Videos zu {moduleName} nicht zu Ende gesehen. Das könntest du noch heute abschließen :-)"
+    if finishContent = "frage"
+        "Du hast die Fragen zu diesem/n Video/s nicht zum Ende beantwortet. Das könntest du schell noch heute erldigen!"
+    if finishContent = "module"
+        "Du solltest am besten das Modul von gestern abschließen, es fehlt dir nicht mehr viel!"
+    if finishContent = "doku"
+        "Letztes Mal hast du angefangen, die Dokumentation deines Projekts auszufüllen. Du sollst es am besten heute fertig machen :-)"
+
+template inform(moduleName, submission)
+        "Am {submission} für {moduleName}"
+        # "Heute ist die Frist für {moduleName}. Prüfe bitte, dass alles richtig ist!"
+
+template inform(all_finished)
+        "Du hast alle Module abgeschloßen, sehr gut! Vergiss nicht, jede Woche einige Quiz zu wiederholen!"
+
+
+template inform(moduleName, firstGoal)
+        "Die erste ist {moduleName}"
+
+template request(learningTime)
+    "Wie viel Zet hast du heute, um etwas zu lernen (bitte gebe die Zeit in Minuten an)?"
+
+template inform(modulContent, link)
+    "Gut, dass du fragst! Du kannst mehr Informationen hier finden: {link}"
+
+template inform(notImplementedYet)
+    "Lieder ist die Funktionalität noch nicht implementiert, wir arbeiten dran!"
+
+template inform(positiveFeedback, alreadyFinishedOne, repeat)
+    if alreadyFinishedOne = "false"
+        if repeat = "quiz"
+            "Sehr gut! Dann starte nochmal das Quiz, damit du dieses Modul abschließen kannst."
+    if alreadyFinishedOne = "true"
+            "Sehr gut! Dann starte nochmal das Quiz, damit du auch dieses Modul abschließen kannst!"
+
+template inform(motivational, taskLeft)
+        "{taskLeft}, du hast schon {motivational} geschafft!"
+
+template request(pastModule)
+    "Erinnerst du dich an dem vorherigen Modul?"
+
+template inform(pastModule, repeatContent)
+    "Dann wiederhole am besten die Quiz zu dem vorherigen Modul, bevor du mit dem neuen startest: {repeatContent}"
+
+template inform(positiveFeedback,newModule)
+    "Sehr gut! Du kannst dann mit dem neuen Modul anfangen: {newModule}"
+
+template inform(moduleName, nextModule)
+    "Dein nächstes Modul ist {moduleName}. Möchtest du damit beginnen?"
+
+template inform(moduleName, hasModule)
+    if hasModule = "false"
+        "Leider haben wir kein Modul für diese Angabe gefunden :( Versuche es bitte erneut, wenn du ein bisschen mehr Zeit eingibst."
+    if hasModule = "true"
+        "Dann kannst du dieses Modul lernen: {moduleName}"
+
+template inform(fitForTest, link)
+    if fitForTest = "true"
+        "Dann zeig mal! {link}"
+    if fitForTest = "false"
+        "Ok, es ist nicht zu spät! Mach zuerst diese Quiz[{link}] und dann wiederhole die Themen zu den Fragen, die du nicht antworten konntest."
+
+template inform(welcomeMsg, daysToSubmission, moduleName)
+    if welcomeMsg = "due_date"
+        if daysToSubmission = "near":
+            "Hallo, willkommen zu deinem E-Learning-Bot! Du hast morgen eine Abgabe zum Modul {moduleName}, fühlst du dich dafür vorbereitet?"
+        if daysToSubmission = "week":
+            "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen eine Abgabe zum Modul {moduleName}, fühlst du dich vorbereitet? Du kannst schon früher das Modul abschließen"
+
+
+
+
+template inform(welcomeMsg, daysToSubmission)
+    "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen keine Abgabe. Will du neue Einheiten lernen oder alte wiederholen?"
+
+template infom(repeat_module_affirm, module_link)
+        "Alles klar, du findest die Inhalte zu dem Modul hier: {module_link}"
+
+template inform(repeat_module_deny)
+        "Alles klar, dann wenn du bereit bist, könntest du mit einem neuen Modul anfangen!"
+
+template inform(new_module_deny)
+        "Alles klar, dann würde ich dir empfeheln, einige der bereits abgeschlossenen Inhalte zu wiederholen!"
+
+
+template inform(offerHep)
+    "Dann mach bitte nochmal die Quiz und sag mir, womit du Schwierigkeiten hast."
+
+template inform(QuizWiederholen, completedModule)
+    "Dann könntest du die Zeit nutzen, um die Quiz zu {completedModule} zu wiederholen!"
+
+template inform(complete_Module_affirm)
+    "Sehr gut! Dann schaue kurz, welche Aufgaben bei dem Modul noch offen sind und schließe sie ab ;-)"
+
+
+
+template inform(complete_Module_deny)
+    "Dann könntest du die Zeit nutzen, um dir die Quiz dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist!"
+
+template request(fitForSubmission, newTask)
+    "Super! Willst du dann heute neue Einheiten lernen oder abgeschlossene Inhalte wiederholen?"
+
+template request(offerHelp, time)
+    "Du bist bereits seit [Minuten] an diesem Quiz dran, brauchst du Hilfe?"
+
+
+template reqmore(moduleContent)
+        "Brauchst du mehr Informationen zu dem Modul?"
+
+template inform(positiveFeedback, offerHelp)
+        "Super, sag Bescheid, falls ich dir sonst noch helfen kann!"
+
+template inform(contentTaskRequired)
+        "Ja, aber sie bauen sich aufeinander und es wird dir leicht fallen, ein nach dem anderen zu bearbeiten ;-)"
+
+template inform(suggestion, offerhelp)
+    if suggestion="quiz"
+        "Du solltest die Quiz gleich nach dem Lernen der Einheit machen, als die Inhalte bei dir noch frisch sind!"
+    if suggestion="learningTime"
+        "Du solltest dir die Zeit fürs Lernen einer Einheit besser einplanen, damit du dich richtig konzentrieren kannst. Dann wirst du dich an die Inhalte besser erinnern und die Fragen richtig beantworten!"
+    if suggestion="offerHelp"
+        "Wenn etwas beim Lernen nicht klar ist, solltest du mir gleich Fragen stellen und ich helfe dir gerne! Mach am besten noch nicht die Quiz, wenn du mit den Inhalten noch nicht komplett vertraut bist! "
+
+
+template inform(quiz_link)
+        "{quiz_link}"
+
+template inform(motivateForQuiz)
+        "Wenn du kurz Zeit hast, würde ich dir empfehlen, die Quiz trotzdem zu wiederholen: es dauert nur wenige Minute und du erhöhst die Chance, eine gute Note zu bekommen :-)!"
+
+template inform(nextStep)
+    if nextStep="newModule"
+        "Sehr gut! Du kannst jetzt mit dem neuen Modul anfangen :-D!"
+    if nextStep="repeatConcepts"
+        "Sehr gut! Willst du einige Inhalte noch wiederholen, bevor du mit dem neuen Modul anfängst?"
+    if nextStep="repeatContents"
+        "Sehr gut! Sollen wir ein paar Begriffe durchgehen, und du sagst mir, welche du wiederholen möchtest?"
+
+template request(feedback)
+    if feedback = "richtigkeit"
+        "Konnte ich die Frage richtig beantworten?"
+    if feedback = "Antwort"
+        "Ist meine  Antwort ausreichend?"
+    if feedback = "feedbackMoreInfo"
+        "Brauchst du eine ausführlichere Erklärung?"
+    if feedback = "feedbackSession"
+        "War diese Sitzung hilfreich?"
+    if feedback = "getBetterFeedback"
+        "Wie kann ich dir morgen besser helfen?"
+
+function REPEAT_QUIZ(): "Wiederhole dann bitte die Quiz"

@@ -1,6 +1,6 @@
 ###############################################################################
 #
-# Copyright 2019, University of Stuttgart: Institute for Natural Language Processing (IMS)
+# Copyright 2020, University of Stuttgart: Institute for Natural Language Processing (IMS)
 #
 # This file is part of Adviser.
 # Adviser is free software: you can redistribute it and/or modify
@@ -41,14 +41,7 @@ class EmotionType(Enum):
 class UserState:
     """
     The representation of a user state.
-
-    Can be accessed like a dict, e.g. state['beliefs']['food']['italian']
-    The history of the belief state can be accessed by using indexes
-    0 is the first turn, -1 is the current turn
-
-    Example:
-    state[-2]['beliefs']['area']['north'] returns the probability
-    of area=north in the last turn
+    Can be accessed like a dictionary
     """
     def __init__(self):
         self._history = [self._init_userstate()]
@@ -79,7 +72,7 @@ class UserState:
 
     def start_new_turn(self):
         """
-        ONLY to be called by the belief state tracker at the begin of each turn,
+        ONLY to be called by the user state tracker at the begin of each turn,
         to ensure the correct history can be accessed correctly by other modules
         """
 
@@ -87,11 +80,10 @@ class UserState:
         self._history.append(copy.deepcopy(self._history[-1]))
 
     def _init_userstate(self):
-        """Initializes the belief state based on the currently active domain
+        """Initializes the user state based on the currently active domain
 
         Returns:
-            (dict): nested dict of slots/values and system belief of
-                    each state"
+            (dict): dictionary of user emotion and engagement representations
 
         """
 

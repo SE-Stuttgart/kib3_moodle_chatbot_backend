@@ -1,6 +1,6 @@
 ###############################################################################
 #
-# Copyright 2019, University of Stuttgart: Institute for Natural Language Processing (IMS)
+# Copyright 2020, University of Stuttgart: Institute for Natural Language Processing (IMS)
 #
 # This file is part of Adviser.
 # Adviser is free software: you can redistribute it and/or modify
@@ -25,9 +25,22 @@ import os
 import shutil
 import sqlite3
 import sys
+import importlib
 
-from PyInquirer import prompt
-from examples import custom_style_2  # what's this? Legacy?
+from PyInquirer import prompt, style_from_dict, Token
+
+# taken from the examples package from PyInquirer: https://github.com/CITGuru/PyInquirer/blob/master/examples/__init__.py
+# (this way the examples package does not interfere with our examples sub-package)
+custom_style_2 = style_from_dict({
+    Token.Separator: '#6C6C6C',
+    Token.QuestionMark: '#FF9D00 bold',
+    #Token.Selected: '',  # default
+    Token.Selected: '#5F819D',
+    Token.Pointer: '#FF9D00 bold',
+    Token.Instruction: '',  # default
+    Token.Answer: '#5F819D bold',
+    Token.Question: '',
+})
 
 
 class DatabaseTable(object):
@@ -115,20 +128,6 @@ def run_questions(db: Database):
             'name': 'domain',
             'default': lambda answers: answers['table']
         },
-        # {
-        #     'type': 'checkbox',
-        #     'qmark': '>>>',
-        #     'name': 'discourseAct',
-        #     'message': 'Select discourse actions',
-        #     'choices': [{'name': act, 'checked': True} for act in get_defaults()['discourseAct']]
-        # },
-        # {
-        #     'type': 'checkbox',
-        #     'qmark': '>>>',
-        #     'name': 'method',
-        #     'message': 'Select methods',
-        #     'choices': [{'name': method, 'checked': True} for method in get_defaults()['method']]
-        # },
         {
             'type': 'list',
             'qmark': '>>>',

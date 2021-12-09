@@ -386,6 +386,8 @@ class Service:
                 timestamp = data['timestamp']
                 content = data['content']
                 user_id = data['user_id']
+                
+                # print('recv', topic, user_id, content)
 
                 # print("RECV MSG", user_id, topic)
                 # based on topic, decide what to do
@@ -771,7 +773,9 @@ class DialogSystem:
         # for domain in self._domains:
         # "wildcard" mechanism: publish start messages to all known domains
         for topic in start_signals:
+            # print('start signal', topic, start_signals[topic], user_id)
             _send_msg(self._control_channel_pub, f"{topic}", _serialize_content(start_signals[topic]), user_id)
+            # print('sent!')
 
     def run_dialog(self, start_signals: dict = {Topic.DIALOG_END: False}, user_id: str = "default"):
         """ Run a complete dialog (blocking).
