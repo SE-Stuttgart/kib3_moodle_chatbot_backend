@@ -24,7 +24,9 @@ from re import L
 from typing import List, Tuple
 
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql.functions import next_value
 from sqlalchemy.sql.sqltypes import DateTime
+from elearning.booksearch import get_book_links
 
 from services.service import PublishSubscribe
 from services.service import Service
@@ -33,10 +35,16 @@ from utils.beliefstate import BeliefState
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import MAssignSubmission, connect_to_moodle_db, Base, MUser, MCourseModule, \
+from elearning.moodledb import MAssignSubmission, MCourse, MCourseSection, connect_to_moodle_db, Base, MUser, MCourseModule, \
 	get_time_estimate_module, get_time_estimates, MModule
 from utils.useract import UserActionType
 
+
+LAST_ACCESSED_COURSEMODULE = 'last_accessed_coursemodule'
+NEXT_SUGGESTED_COURSEMODULE = 'next_suggested_coursemodule'
+COURSE_MODULE_ID = 'course_module_id'
+COURSE_ID = 'course_id'
+ASSIGN_ID = 'assign_id'
 
 class ELearningPolicy(Service):
 	""" Base class for handcrafted policies.
@@ -76,7 +84,6 @@ class ELearningPolicy(Service):
 		engine, conn = connect_to_moodle_db()
 		self.Session = sessionmaker()
 		self.Session.configure(bind=engine)
-		self.state = dict()
 		self.session = self.Session()
 		Base.metadata.create_all(engine)
 
@@ -130,6 +137,7 @@ class ELearningPolicy(Service):
 		return {"sys_act": SysAct(act_type=SysActionType.Bad), "sys_state": sys_state}
 
 	def get_current_user(self, userid) -> MUser:
+		self.session.expire_all()
 		user = self.session.query(MUser).filter(MUser.id==userid).first()
 		print("USER:", user.username)
 		return user
@@ -158,6 +166,7 @@ class ELearningPolicy(Service):
 			moduleName = random.choice(insufficient_modules).get_grade_item(self.session)._courseid
 		if repeatContent == "oldcontent":
 			moduleName = random.choice(old_finished_modules)
+		print("REPEATABLE CONTENT", repeatContent)
 		return SysAct(act_type=SysActionType.Inform,
 					  slot_values={"moduleName": moduleName, "repeatContent": repeatContent})
 
@@ -167,6 +176,7 @@ class ELearningPolicy(Service):
 		"""
 		# Beispiel Use Cases:
 		# Wann ist die erste Abgabe?
+		self.session.expire_all()
 		user = self.get_current_user(userid)
 		next_submission = None
 		due_date = None
@@ -174,16 +184,22 @@ class ELearningPolicy(Service):
 
 		new_assignments = self.session.query(MAssignSubmission).filter(MAssignSubmission._user_id==user.id, MAssignSubmission.status=="new").all()
 		for assign in new_assignments:
+			print("ASSIGN", assign.assignment.name, assign.assignment.course, assign.assignment.duedate)
 			if not next_submission or assign.assignment.duedate < due_date:
 				next_submission = assign
 				due_date = next_submission.assignment.duedate
-				submission_name = next_submission.assignment.name
+				submission_name = f"die Abgabe {next_submission.assignment.name}"
 
 		if next_submission:
 			# offenes assignment gefunden: suche course module heraus
-			course_module_section = self.session.query(MCourseModule).filter(MCourseModule.instance==next_submission.assignment.id).all()[0].section
-			course_module_name = course_module_section.name
-			due_date = due_date.strftime("%d.%m.%y, %H:%M:%S")
+			course_modules = self.session.query(MCourseModule).filter(MCourseModule.instance==next_submission.assignment.id).all()
+			for module in course_modules:
+				if module.get_type_name(self.session) == "assign":
+					course_module_section = module.section
+					print("NAME", course_module_section.name)
+					# course_module_name = course_module_section.name
+					course_module_name = module.get_name(self.session) + " im Abschnitt " + course_module_section.name
+					due_date = due_date.strftime("%d.%m.%y, %H:%M:%S")
 		else: 
 			# kein offenes assignment gefunden
 			course_module_name = "kein Modul"
@@ -197,7 +213,7 @@ class ELearningPolicy(Service):
 		module_name, course_module_id = self.get_user_next_module(userid)
 		if module_name is None:
 			return SysAct(act_type=SysActionType.Inform, slot_values="all_finished")
-		self.state['course_module_id'] = course_module_id
+		self.set_state(userid, COURSE_MODULE_ID, course_module_id)
 		return SysAct(act_type=SysActionType.Inform,
 					  slot_values={"moduleName": module_name, "moduleRequirements": "true", "moduleRequired": "true"})
 
@@ -207,6 +223,7 @@ class ELearningPolicy(Service):
 		"""
 		# Beispiel Use Cases:
 		# Was kann ich heute lernen? -> Wie viel Zeit hast du heute? -> Je nach Dauer vorschlagen
+		self.session.expire_all()
 		incomplete_modules_with_time_est = get_time_estimates(self.session, self.get_current_user(userid))
 		matches = [module for module, time in incomplete_modules_with_time_est if time and time <= time_avaible]
 		return matches
@@ -215,10 +232,12 @@ class ELearningPolicy(Service):
 	def get_sys_act(self, act: UserAct, userid) -> SysAct:
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# Implement search by Content
-			return SysAct(act_type=SysActionType.Inform, slot_values={"notImplementedYet": "True"})
+			book_links = get_book_links(self.session, act.text)
+			book_link_str = ", ".join(f'<a href="{link}">hier</a>' for link in book_links)
+			return SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 		if act.type == UserActionType.Request and act.slot == "content":
-			course_id = self.state.get("course_id")
-			course_module_id = self.state.get("course_module_id")
+			course_id = self.get_state(userid, COURSE_ID)
+			course_module_id = self.get_state(userid, COURSE_MODULE_ID)
 			if course_module_id:
 				link = self.get_link_by_course_module_id(course_module_id)
 				return SysAct(act_type=SysActionType.Inform,
@@ -236,7 +255,7 @@ class ELearningPolicy(Service):
 				module_names = self.get_new_module_by_time(int(matches[0]), userid)
 				hasModule = len(module_names) > 0
 				if hasModule:
-					module_name = str(module_names[0])
+					module_name = module_names[0].get_name(self.session)
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"moduleName": module_name, "hasModule": "true" if hasModule else "false"})
 			return {"sys_act": SysAct(act_type=SysActionType.Bad)}
@@ -261,6 +280,7 @@ class ELearningPolicy(Service):
 			if act.value == "neue":
 				return self.get_new_goal_system_act(userid)
 			if act.value == "wiederholen":
+				print("WIEDERHOLEN")
 				return self.get_repeatable_modul_sys_act(userid)
 		elif act.type == UserActionType.Request and act.slot == "moduleRequired":
 			module_name = self.get_last_completed_module(userid)
@@ -269,7 +289,7 @@ class ELearningPolicy(Service):
 		elif act.slot == "pastModule":
 			if act.value == "true":
 				module_link, course_module_id = self.get_user_next_module_link(userid)
-				self.state['course_module_id'] = course_module_id
+				self.set_state(userid, COURSE_MODULE_ID, course_module_id)
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"positiveFeedback":"", "newModule": module_link})
 			if act.value == "false":
@@ -290,7 +310,7 @@ class ELearningPolicy(Service):
 						  slot_values={"positiveFeedback": "positiveFeedback", "repeatQuiz": ""})
 		elif act.slot == "nextModule":
 			module_link, course_module_id = self.get_user_next_module_link(userid)
-			self.state['course_module_id'] = course_module_id
+			self.set_state(userid, COURSE_MODULE_ID, course_module_id)
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"nextModule": "", "moduleName": module_link})
 		elif act.slot == "infoContent":
@@ -319,7 +339,7 @@ class ELearningPolicy(Service):
 
 		elif act.slot == "insufficient":
 			module_names, course_module_id = self.get_insufficient_module(userid)
-			self.state["course_module_id"] = course_module_id
+			self.set_state(userid, COURSE_MODULE_ID, course_module_id)
 			insufficient = "true" if len(module_names) > 0 else "false"
 			return SysAct(act_type=SysActionType.Request,
 						  slot_values={"quiz_link": "",
@@ -353,7 +373,7 @@ class ELearningPolicy(Service):
 						  slot_values={"contentTaskRequired": "x"})
 
 		elif act.slot == "welcomeMsgNearAffirm":
-			course_id = self.state.get('course_id')
+			course_id = self.get_state(userid, COURSE_ID)
 			quizzes = self.get_quiz_for_user_by_course_id(course_id)
 			if len(quizzes) == 0:
 				return SysAct(act_type=SysActionType.Request,
@@ -378,7 +398,7 @@ class ELearningPolicy(Service):
 						  slot_values={"complete_Module_deny": "x"})
 
 		elif act.slot == "welcomeRepeatAffirm":
-			course_module_id = self.state["course_module_id"]
+			course_module_id = self.get_state(userid, COURSE_MODULE_ID)
 			module_link = self.get_link_by_course_module_id(course_module_id)
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"repeat_module_affirm": "x", "module_link": module_link})
@@ -388,7 +408,7 @@ class ELearningPolicy(Service):
 						  slot_values={"repeat_module_deny": "x"})
 
 		elif act.slot == "welcomeMsgNewAffirm":
-			course_module_id = self.state["course_module_id"]
+			course_module_id = self.get_state(userid, COURSE_MODULE_ID)
 			module_link = self.get_link_by_course_module_id(course_module_id)
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"repeat_module_affirm": "x", "module_link": module_link})
@@ -427,17 +447,30 @@ class ELearningPolicy(Service):
 	def get_user_next_module(self, userid):
 		# while loop ends in infinite loop if all courses are completed
 		user = self.get_current_user(userid)
-		module = user.get_last_completed_coursemodule(self.session)
-		next_module: MCourseModule = module.section.get_next_available_module(module, self.get_current_user(userid), self.session)
-		if next_module is None:
-			return None
-		return str(next_module), next_module.id
+		
+		last_completed: MCourseModule = user.get_last_completed_coursemodule(self.session)
+		self.set_state(userid, LAST_ACCESSED_COURSEMODULE, last_completed)
+		if not last_completed:
+			# new user - no completed modules so far
+			next_module = user.get_available_course_modules(self.session)[0]
+			self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
+			return next_module.get_name(self.session), next_module.id
+		
+		# existing user, already completed some content
+		next_module: MCourseModule = last_completed.section.get_next_available_module(last_completed, self.get_current_user(userid), self.session)
+		if next_module:
+			self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
+			return next_module.get_name(self.session), next_module.id
+
+		# next course module in secion of last completed module is not available - choose available one from other section
+		next_module = user.get_available_course_modules(self.session)[0]
+		self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
+		return next_module.get_name(self.session), next_module.id
+
 
 	def get_user_next_module_link(self, userid):
 		# while loop ends in infinite loop if all courses are completed
-		user = self.get_current_user(userid)
-		module = user.get_last_completed_coursemodule(self.session)
-		next_module: MCourseModule = module.section.get_next_available_module(module, self.get_current_user(userid), self.session)
+		next_module: MCourseModule = self.get_state(userid, NEXT_SUGGESTED_COURSEMODULE)
 		if next_module is None:
 			return None
 		return next_module.get_content_link(self.session), next_module.id
@@ -504,15 +537,17 @@ class ELearningPolicy(Service):
 
 	def get_module_and_next_due_date(self, userid) -> Tuple[str, None]:
 		user = self.get_current_user(userid)
+		self.session.expire_all()
 		assignments = self.session.query(MAssignSubmission).filter(MAssignSubmission._user_id == user.id).all()
 		assigns = [assign.assignment for assign in assignments if assign.assignment.duedate > datetime.datetime.now()]
 		if not assigns:
 			return None, None
 		min_assigns = min(assigns, key=attrgetter('duedate'))
-		self.state['course_id'] = min_assigns.course
-		self.state['assign_id'] = min_assigns.id
+		self.set_state(userid, COURSE_ID, min_assigns.course)
+		self.set_state(userid, ASSIGN_ID, min_assigns.id)
 		return min_assigns.name, min_assigns.duedate
 
 	def get_link_by_course_module_id(self, course_module_id):
+		self.session.expire_all()
 		course = self.session.query(MCourseModule).filter(MCourseModule.id == course_module_id).one()
 		return course.get_content_link(self.session)

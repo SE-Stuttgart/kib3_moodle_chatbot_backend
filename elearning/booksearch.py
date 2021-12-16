@@ -68,6 +68,7 @@ def get_book_links(session: Session, searchTerm: str) -> List[str]:
     Returns:
         Links to moodle book chapters matching the search term by looking through the accompanying PDF and matching page numbers between both
     """
+    session.expire_all()
     links = []
     
     # get a list of all pdf names and their locations
@@ -98,7 +99,7 @@ def get_book_links(session: Session, searchTerm: str) -> List[str]:
                 chapter = session.query(MBookChapter).filter(MBookChapter._bookid==book.id, MBookChapter.pagenum==result.pageNumber).first()
                 # create link to chapter
                 links.append(f"http://193.196.53.252/mod/book/view.php?id={course_module.id}&chapterid={chapter.id}")
-    print(links)
+    return links
 
 if __name__ == "__main__":
     # connect to database
@@ -107,7 +108,7 @@ if __name__ == "__main__":
     Session.configure(bind=engine)
     Base.metadata.create_all(engine)
     with Session() as session:
-        # _delete_non_pdf_files(session) # cleanup
+        _delete_non_pdf_files(session) # cleanup
         get_book_links(session, "Zusammenhang")
     conn.close()
     
