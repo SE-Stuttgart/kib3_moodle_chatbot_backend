@@ -45,6 +45,10 @@ NEXT_SUGGESTED_COURSEMODULE = 'next_suggested_coursemodule'
 COURSE_MODULE_ID = 'course_module_id'
 COURSE_ID = 'course_id'
 ASSIGN_ID = 'assign_id'
+TURNS = 'turns'
+FIRST_TURN = 'first_turn'
+CURRENT_SUGGESTIONS = 'current_suggestions'
+S_INDEX = 's_index'
 
 class ELearningPolicy(Service):
 	""" Base class for handcrafted policies.
@@ -74,10 +78,7 @@ class ELearningPolicy(Service):
 			domain {domain.jsonlookupdomain.JSONLookupDomain} -- Domain
 
 		"""
-		self.first_turn = True
 		Service.__init__(self, domain=domain)
-		self.current_suggestions = []  # list of current suggestions
-		self.s_index = 0  # the index in current suggestions for the current system reccomendation
 		self.domain_key = domain.get_primary_key()
 		self.logger = logger
 		self.max_turns = max_turns
@@ -91,10 +92,10 @@ class ELearningPolicy(Service):
 		"""
 			resets the policy after each dialog
 		"""
-		self.turns = 0
-		self.first_turn = True
-		self.current_suggestions = []  # list of current suggestions
-		self.s_index = 0  # the index in current suggestions for the current system reccomendation
+		self.set_state(user_id, TURNS, 0)
+		self.set_state(user_id, FIRST_TURN, True)
+		self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
+		self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate"], pub_topics=["sys_act", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, beliefstate: dict, user_acts: List[UserAct]) -> dict(sys_act=SysAct,html_content=str):
@@ -113,17 +114,17 @@ class ELearningPolicy(Service):
 						action
 
 		"""
-		print(user_acts)
+		print("USER ACTS\n", user_acts)
 
-
-		self.turns += 1
-		# do nothing on the first turn --LV
+		self.turns = self.get_state(user_id, TURNS) + 1
 		sys_state = {}
-		if self.first_turn:
-			self.first_turn = False
+		if self.get_state(user_id, FIRST_TURN):
+			# do nothing on the first turn
+			self.set_state(user_id, FIRST_TURN, False)
 			sys_act = self.start_msg(user_id)
 			sys_state["last_act"] = sys_act
 			return {'sys_act': sys_act, "sys_state": sys_state}
+		# after first turn
 		for act in user_acts:
 			sys_act = self.get_sys_act(act, user_id)
 			if sys_act:
@@ -137,9 +138,8 @@ class ELearningPolicy(Service):
 		return {"sys_act": SysAct(act_type=SysActionType.Bad), "sys_state": sys_state}
 
 	def get_current_user(self, userid) -> MUser:
-		self.session.expire_all()
+		""" Get Moodle user by id from Chat Interface (or start run_chat with --userid=...) """
 		user = self.session.query(MUser).filter(MUser.id==userid).first()
-		print("USER:", user.username)
 		return user
 
 	def get_repeatable_modul_sys_act(self, userid):
@@ -176,7 +176,6 @@ class ELearningPolicy(Service):
 		"""
 		# Beispiel Use Cases:
 		# Wann ist die erste Abgabe?
-		self.session.expire_all()
 		user = self.get_current_user(userid)
 		next_submission = None
 		due_date = None
@@ -223,7 +222,6 @@ class ELearningPolicy(Service):
 		"""
 		# Beispiel Use Cases:
 		# Was kann ich heute lernen? -> Wie viel Zeit hast du heute? -> Je nach Dauer vorschlagen
-		self.session.expire_all()
 		incomplete_modules_with_time_est = get_time_estimates(self.session, self.get_current_user(userid))
 		matches = [module for module, time in incomplete_modules_with_time_est if time and time <= time_avaible]
 		return matches
@@ -231,8 +229,9 @@ class ELearningPolicy(Service):
 
 	def get_sys_act(self, act: UserAct, userid) -> SysAct:
 		if act.type == UserActionType.Request and act.slot == "infoContent":
-			# Implement search by Content
+			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
 			book_links = get_book_links(self.session, act.text)
+			print("LINKS", book_links)
 			book_link_str = ", ".join(f'<a href="{link}">hier</a>' for link in book_links)
 			return SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 		if act.type == UserActionType.Request and act.slot == "content":
@@ -280,7 +279,6 @@ class ELearningPolicy(Service):
 			if act.value == "neue":
 				return self.get_new_goal_system_act(userid)
 			if act.value == "wiederholen":
-				print("WIEDERHOLEN")
 				return self.get_repeatable_modul_sys_act(userid)
 		elif act.type == UserActionType.Request and act.slot == "moduleRequired":
 			module_name = self.get_last_completed_module(userid)
@@ -537,7 +535,6 @@ class ELearningPolicy(Service):
 
 	def get_module_and_next_due_date(self, userid) -> Tuple[str, None]:
 		user = self.get_current_user(userid)
-		self.session.expire_all()
 		assignments = self.session.query(MAssignSubmission).filter(MAssignSubmission._user_id == user.id).all()
 		assigns = [assign.assignment for assign in assignments if assign.assignment.duedate > datetime.datetime.now()]
 		if not assigns:
@@ -548,6 +545,5 @@ class ELearningPolicy(Service):
 		return min_assigns.name, min_assigns.duedate
 
 	def get_link_by_course_module_id(self, course_module_id):
-		self.session.expire_all()
 		course = self.session.query(MCourseModule).filter(MCourseModule.id == course_module_id).one()
 		return course.get_content_link(self.session)

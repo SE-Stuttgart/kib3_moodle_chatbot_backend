@@ -3,6 +3,7 @@ from datetime import timedelta, datetime
 from passlib.context import CryptContext
 import jwt
 import tornado.ioloop
+import tornado.web
 import tornado.websocket
 import json
 
@@ -118,10 +119,19 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
         # allow cross-origin
         return True
 
+class MoodleEventHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write("GET: Hello, world")
+
+    def post(self):
+        event_data = json.loads(self.request.body)
+        print("GOT MOODLE EVENT", event_data)
+        # self.write("POST: Hello, world")
 
 def make_app():
     return tornado.web.Application([
-        (r"/ws", SimpleWebSocket)
+        (r"/ws", SimpleWebSocket),
+        (r"/event", MoodleEventHandler)
     ])
 
 if __name__ == "__main__":

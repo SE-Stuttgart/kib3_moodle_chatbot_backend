@@ -16,7 +16,10 @@ class ELearningBST(Service):
         """
         Create empty beliefstate
         """
-        return {"module_id": None, "section_id": None}
+        return {"module_id": None,
+                "section_id": None,
+                "last_completed_coursemodule": None,
+                "next_suggested_coursemodule": None}
 
     @PublishSubscribe(sub_topics=["user_acts"], pub_topics=["beliefstate"])
     def update_bst(self, user_id: str, user_acts: List[UserAct] = None) \
