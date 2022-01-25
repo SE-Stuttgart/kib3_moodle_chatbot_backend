@@ -5,9 +5,10 @@ import fitz
 import re
 from collections import namedtuple
 
+
 from sqlalchemy.orm.session import sessionmaker
-from utils.moodledb import MCourseModule, MModule
-from utils.moodledb import MBookChapter, MBook, Base, connect_to_moodle_db, Session, MFile
+from moodledb import MCourseModule, MModule
+from moodledb import MBookChapter, MBook, Base, connect_to_moodle_db, Session, MFile
 
 # TODO maybe pre-extract text or multi-thread for better performance
 PdfSearchResult = namedtuple("PdfSearchResult", ('pdfFilename', 'pageNumber', 'pageText'))
@@ -38,7 +39,7 @@ def search_text_in_pdf(searchTerm: str, pdfFilename: str) -> List[PdfSearchResul
 
 def _delete_non_pdf_files(session: Session):
     """ cleanup for local adviser copies, do not use on server """
-    file_path_map = get_all_pdf_files()
+    file_path_map = get_all_pdf_files(session)
     pdf_file_list = set([file_path_map[filename].split("/")[-1] for filename in file_path_map])
     # remove non-pdf files
     for file in Path("resources/moodledata/").rglob("*"):
@@ -59,12 +60,15 @@ def _delete_non_pdf_files(session: Session):
         if len(os.listdir(directory)) == 0:
             os.rmdir(directory)
 
+
+
 def get_book_links(session: Session, searchTerm: str) -> List[str]:
     """
     This is probably the only function you care about from this file.
     Returns:
         Links to moodle book chapters matching the search term by looking through the accompanying PDF and matching page numbers between both
     """
+    session.expire_all()
     links = []
     
     # get a list of all pdf names and their locations
@@ -104,8 +108,7 @@ if __name__ == "__main__":
     Session.configure(bind=engine)
     Base.metadata.create_all(engine)
     with Session() as session:
-        # _delete_non_pdf_files(session) # cleanup
+        _delete_non_pdf_files(session) # cleanup
         get_book_links(session, "Zusammenhang")
-
     conn.close()
     

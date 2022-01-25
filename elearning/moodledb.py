@@ -90,7 +90,7 @@ class MFile(Base):
 
 class MBookChapter(Base):
 	"""
-	Access Book via MBookChapter.book
+	Access parent Book via MBookChapter.book
 	"""
 	__tablename__ = 'm_book_chapters'
 
@@ -111,6 +111,8 @@ class MBookChapter(Base):
 	
 	_bookid = Column(BIGINT(10), ForeignKey("m_book.id"), nullable=False, index=True, name="bookid")
 
+	def get_parent_book(self):
+		return self.book
 
 class MBook(Base):
 	__tablename__ = 'm_book'
@@ -129,9 +131,7 @@ class MBook(Base):
 	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 
-	chapters = relationship("MBookChapter", backref="book")
-
-
+	chapters: List[MBookChapter] = relationship("MBookChapter", backref="book")
 
 
 class MGradeItem(Base):
@@ -165,6 +165,9 @@ class MGradeItem(Base):
 	# internal databasae table mapping information
 	_courseid = Column(BIGINT(10), ForeignKey('m_course.id'), index=True, name='courseid')
 
+	def get_parent_course(self):
+		return self.course
+
 	def __repr__(self) -> str:
 		return f"""Grade Item: {self.itemname}"""
 
@@ -194,19 +197,15 @@ class MGradeGradesHistory(Base):
 
 	def get_grade_item(self, session: Session) -> Union[MGradeItem, None]:
 		""" Returns the MGradeItem associated with the current Grade object """
-		#fixme: .one() throws NoResultFound when no row is found
 		try:
 			session.expire_all()
-			return session.query(MGradeItem).filter(MGradeItem.id == self._gradeItemId).one()
+			return session.query(MGradeItem).get(self._gradeItemId)
 		except NoResultFound:
 			return None
 
-
 	def get_user(self, session: Session) -> "MUser":
 		""" Returns the MUser object associated with the current Grade objet """
-		session.expire_all()
-		return session.query(MGradeItem).filter(MGradeItem.id == self._gradeItemId).one()
-
+		return session.query(MUser).get(self._userid)
 
 class MGradeGrade(Base):
 	""" Current grade for a user in a course """
@@ -229,12 +228,10 @@ class MGradeGrade(Base):
 	
 	def get_grade_item(self, session: Session) -> MGradeItem:
 		session.expire_all()
-		return session.query(MGradeItem).filter(MGradeItem.id == self._gradeItemId).one()
+		return session.query(MGradeItem).get(self._gradeItemId)
 
 	def get_user(self, session: Session) -> "MUser":
-		session.expire_all()
-		return session.query(MUser).filter(MUser.id == self._userid).one()
-
+		return session.query(MUser).get(self._userid)
 
 
 class MUserLastacces(Base):
@@ -264,8 +261,50 @@ class MUserLastacces(Base):
 
 
 
+
+class MFile(Base):
+	""" Access referenced files on server.
+		WARNING: This function might not work on all possible moodle server configurations, 
+				 thus we have to wait for a plugin from Kasra's students to search file contents from the php side instead the python side.
+	""" 
+	__tablename__ = 'm_files'
+
+	id = Column(BIGINT(10), primary_key=True)
+	contenthash = Column(String(40, 'utf8mb4_bin'), nullable=False, index=True, server_default=text("''"))
+	pathnamehash = Column(String(40, 'utf8mb4_bin'), nullable=False, unique=True, server_default=text("''")) 
+
+	# contextid = Column(BIGINT(10), nullable=False, index=True)
+	filearea = Column(String(50, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # 'content', 'draft'
+
+	filepath = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # /
+	filename = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # e.g. 'Regression.pdf'
+	source = Column(LONGTEXT) # source file name, e.g. 'Regression.pdf'
+
+	mimetype = Column(String(100, 'utf8mb4_bin')) # e.g. "application/pdf"
+
+	timecreated = Column(UnixTimestamp, nullable=False)
+	timemodified = Column(UnixTimestamp, nullable=False)
+
+	def get_server_file_path(self):
+		""" real location of file on server: first three pairs of content hash are the path, filename = contenthash e.g. "b0ca8dasd....." -> "b0/ca/8d/b0ca8dasd....."  """
+		return f"resources/moodledata/filedir/{self.contenthash[0:2]}/{self.contenthash[2:4]}/{self.contenthash}"
+
+class MResource(Base):
+	__tablename__ = 'm_resource'
+
+	# TODO link relationships
+	id = Column(BIGINT(10), primary_key=True)
+	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
+	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
+	intro = Column(LONGTEXT)
+	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
+	display = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
+	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+
+
+
 class MModule(Base):
-	""" Nothing of interest to you, internal moodle content type mapping """
+	""" Internal moodle content type mapping: Lookup e.g. for a MCourseModule what type it is """
 	__tablename__ = 'm_modules'
 
 	id = Column(BIGINT(10), primary_key=True)
@@ -395,21 +434,21 @@ class MCourseModule(Base):
 		session.expire_all()
 		type_info = self.get_type_name(session)
 		if type_info == "book":
-			return session.query(MBook).filter(MBook.id==self.instance).first().name
+			return session.query(MBook).get(self.instance).name
 		elif type_info == "assign":
-			return session.query(MAssign).filter(MAssign.id==self.instance).first().name
+			return session.query(MAssign).get(self.instance).name
 		elif type_info == 'resource':
-			return session.query(MResource).filter(MResource.id==self.instance).first().name
+			return session.query(MResource).get(self.instance).name
 		elif type_info == "glossary":
 			return "Glossar"
 		elif type_info == "hvp":
-			return session.query(MHVP).filter(MHVP.id==self.instance).first().name
+			return session.query(MHVP).get(self.instance).name
 		else: 
 			return "Unbekannter Kursmodultyp"
 	
 	def get_type_name(self, session: Session):
 		session.expire_all()
-		return session.query(MModule).filter(MModule.id==self._type_id).first().name
+		return session.query(MModule).get(self._type_id).name
 
 	def __repr__(self) -> str:
 		""" Pretty printing """
@@ -784,7 +823,7 @@ def is_available(json_condition: str, session: Session, user: MUser) -> bool:
 	fullfilled = []
 	for condition in data["c"]:
 		if condition['type'] == 'completion':
-			course_module = session.query(MCourseModule).filter(MCourseModule.id==condition['cm']).first()
+			course_module = session.query(MCourseModule).get(condition['cm'])
 			if course_module:
 				completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id, MCourseModulesCompletion._coursemoduleid==course_module.id).all()
 				if completions:

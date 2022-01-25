@@ -46,6 +46,7 @@ class GUIServer(Service):
         self.websockets = {}
         self.domains = domains
         self.logger = logger
+        self.loopy_loop = asyncio.new_event_loop()
 
     @PublishSubscribe(pub_topics=['user_utterance'])
     def user_utterance(self, user_id = "default", domain_idx = 0, message = ""):
@@ -62,14 +63,20 @@ class GUIServer(Service):
 
     @PublishSubscribe(sub_topics=['sys_utterance'])
     def forward_message_to_websocket(self, user_id = "default", sys_utterance: str = None):
-        asyncio.set_event_loop(asyncio.new_event_loop())
+        asyncio.set_event_loop(self.loopy_loop)
         self.websockets[user_id].write_message(json.dumps({"content": sys_utterance, "format": "text"}))
 
     
     @PublishSubscribe(sub_topics=['html_content'])
     def forward_html_to_websocket(self, user_id = "default", html_content: str = None):
-        asyncio.set_event_loop(asyncio.new_event_loop())
+        asyncio.set_event_loop(self.loopy_loop)
         self.websockets[user_id].write_message(json.dumps({'content': html_content, "format": "html"}))
+
+    @PublishSubscribe(pub_topics=['moodle_event'])
+    def moodle_event(self, user_id = 'default', domain_idx=0, event_data: dict = None):
+        asyncio.set_event_loop(self.loopy_loop)
+        return {f'moodle_event/{self.domains[domain_idx].get_domain_name()}': event_data}
+
 
 domains = [domain_1]
 gui_service = GUIServer(domains, logger)
@@ -126,7 +133,9 @@ class MoodleEventHandler(tornado.web.RequestHandler):
     def post(self):
         event_data = json.loads(self.request.body)
         print("GOT MOODLE EVENT", event_data)
-        # self.write("POST: Hello, world")
+        
+        user_id = event_data['userid']
+        gui_service.moodle_event(user_id=user_id, event_data=event_data)
 
 def make_app():
     return tornado.web.Application([

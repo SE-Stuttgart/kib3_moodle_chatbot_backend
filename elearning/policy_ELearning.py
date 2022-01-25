@@ -97,6 +97,38 @@ class ELearningPolicy(Service):
 		self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
 		self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
 
+	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_act", "sys_state", "html_content"])
+	def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_act=SysAct, sys_state=SysAct, html_content=str):
+		""" Responsible for reacting to events from mooodle.
+			Triggered by interaction with moodle (NOT the chatbot), e.g. when someone completes a coursemodule.
+
+			Currently supports the following events:
+			* \\core\\event\\course_module_completion_updated
+		"""
+
+		event_name = moodle_event['eventname'].lower().strip()
+		event_action = moodle_event['action'].lower().strip()
+		
+		# EXAMPLE: Status eines Kursmoduls geändert (abgeschlossen / nicht abgeschlossen) 
+		if event_name == """\\core\\event\\course_module_completion_updated""":
+			# Lese die Statusänderung aus dem Event aus
+			updated_completion_state = moodle_event['other']['completionstate']
+			# get related course module to be able to check if it was a quiz, book, PDF, ...
+			course_module: MCourseModule = self.session.query(MCourseModule).get(moodle_event['contextinstanceid'])
+
+			# Debugging Hilfe
+			print(f"COURSE MODULE COMPLETION STATE CHANGED: {updated_completion_state}")
+			print(course_module)
+
+			if updated_completion_state == 0:
+				# TODO: not completed: Eventuell einen SysAct ausgeben ("Schade, dass du das Modul nicht fertig bekommen hast. Willst du es vielleicht jetzt nochmal probieren 
+				# (braucht ca. 10 Minuten), oder lieber erst in der nächsten Sitzung?")
+				pass
+			elif updated_completion_state == 1:
+				# TODO: completed: Eventuell einen SysAct ausgeben ("Du hast dieses Modul so gut gemeistert, willst du gleich mit dem nächsten weitermachen? ")
+				pass
+			
+
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate"], pub_topics=["sys_act", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, beliefstate: dict, user_acts: List[UserAct]) -> dict(sys_act=SysAct,html_content=str):
 		"""
@@ -139,7 +171,7 @@ class ELearningPolicy(Service):
 
 	def get_current_user(self, userid) -> MUser:
 		""" Get Moodle user by id from Chat Interface (or start run_chat with --userid=...) """
-		user = self.session.query(MUser).filter(MUser.id==userid).first()
+		user = self.session.query(MUser).get(userid)
 		return user
 
 	def get_repeatable_modul_sys_act(self, userid):

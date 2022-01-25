@@ -69,11 +69,11 @@ class MGradeGradesHistory(Base):
 
 	def get_grade_item(self):
 		session = Session.object_session(self)
-		return session.query(MGradeItem).filter(MGradeItem.id == self._gradeItemId).one()
+		return session.query(MGradeItem).get(self._gradeItemId)
 
 	def get_user(self):
 		session = Session.object_session(self)
-		return session.query(MGradeItem).filter(MGradeItem.id == self._gradeItemId).one()
+		return session.query(MGradeItem).get(self._gradeItemId)
 
 	def __repr__(self) -> str:
 		return f"Grade {self.get_grade_item().itemname} for User {self.get_user().username}: {self.finalgrade}"
@@ -103,11 +103,11 @@ class MGradeGrade(Base):
 	
 	def get_grade_item(self):
 		session = Session.object_session(self)
-		return session.query(MGradeItem).filter(MGradeItem.id == self._gradeItemId).one()
+		return session.query(MGradeItem).get(self._gradeItemId)
 
 	def get_user(self):
 		session = Session.object_session(self)
-		return session.query(MGradeItem).filter(MGradeItem.id == self._gradeItemId).one()
+		return session.query(MGradeItem).get(self._gradeItemId)
 
 	def __repr__(self) -> str:
 		return f"Grade {self.get_grade_item().itemname} for User {self.get_user().username}: {self.finalgrade}"
