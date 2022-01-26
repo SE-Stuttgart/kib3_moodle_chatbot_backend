@@ -64,13 +64,16 @@ def connect_to_moodle_db(host='127.0.0.1', port=3306, user='moodle', pwd='m@0dl3
 
 
 
-
 class MFile(Base):
+	""" Access referenced files on server.
+		WARNING: This function might not work on all possible moodle server configurations, 
+				 thus we have to wait for a plugin from Kasra's students to search file contents from the php side instead the python side.
+	""" 
 	__tablename__ = 'm_files'
 
 	id = Column(BIGINT(10), primary_key=True)
 	contenthash = Column(String(40, 'utf8mb4_bin'), nullable=False, index=True, server_default=text("''"))
-	pathnamehash = Column(String(40, 'utf8mb4_bin'), nullable=False, unique=True, server_default=text("''")) # real location of file on server: first three pairs of filename are the path, e.g. "b0ca8dasd....." -> "b0/ca/8d/asd....." 
+	pathnamehash = Column(String(40, 'utf8mb4_bin'), nullable=False, unique=True, server_default=text("''")) 
 
 	# contextid = Column(BIGINT(10), nullable=False, index=True)
 	filearea = Column(String(50, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # 'content', 'draft'
@@ -81,11 +84,13 @@ class MFile(Base):
 
 	mimetype = Column(String(100, 'utf8mb4_bin')) # e.g. "application/pdf"
 
-	timecreated = Column(BIGINT(10), nullable=False)
-	timemodified = Column(BIGINT(10), nullable=False)
+	timecreated = Column(UnixTimestamp, nullable=False)
+	timemodified = Column(UnixTimestamp, nullable=False)
 
 	def get_server_file_path(self):
+		""" real location of file on server: first three pairs of content hash are the path, filename = contenthash e.g. "b0ca8dasd....." -> "b0/ca/8d/b0ca8dasd....."  """
 		return f"resources/moodledata/filedir/{self.contenthash[0:2]}/{self.contenthash[2:4]}/{self.contenthash}"
+
 
 
 class MBookChapter(Base):
@@ -264,33 +269,6 @@ class MUserLastacces(Base):
 
 
 
-class MFile(Base):
-	""" Access referenced files on server.
-		WARNING: This function might not work on all possible moodle server configurations, 
-				 thus we have to wait for a plugin from Kasra's students to search file contents from the php side instead the python side.
-	""" 
-	__tablename__ = 'm_files'
-
-	id = Column(BIGINT(10), primary_key=True)
-	contenthash = Column(String(40, 'utf8mb4_bin'), nullable=False, index=True, server_default=text("''"))
-	pathnamehash = Column(String(40, 'utf8mb4_bin'), nullable=False, unique=True, server_default=text("''")) 
-
-	# contextid = Column(BIGINT(10), nullable=False, index=True)
-	filearea = Column(String(50, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # 'content', 'draft'
-
-	filepath = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # /
-	filename = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # e.g. 'Regression.pdf'
-	source = Column(LONGTEXT) # source file name, e.g. 'Regression.pdf'
-
-	mimetype = Column(String(100, 'utf8mb4_bin')) # e.g. "application/pdf"
-
-	timecreated = Column(UnixTimestamp, nullable=False)
-	timemodified = Column(UnixTimestamp, nullable=False)
-
-	def get_server_file_path(self):
-		""" real location of file on server: first three pairs of content hash are the path, filename = contenthash e.g. "b0ca8dasd....." -> "b0/ca/8d/b0ca8dasd....."  """
-		return f"resources/moodledata/filedir/{self.contenthash[0:2]}/{self.contenthash[2:4]}/{self.contenthash}"
-
 class MResource(Base):
 	__tablename__ = 'm_resource'
 
@@ -335,19 +313,6 @@ class MCourseModulesCompletion(Base):
 	def __repr__(self) -> str:
 		""" Pretty printing """
 		return f"Completion: course_module_id {self._coursemoduleid}: {self.completed} for user {self._userid}"
-
-
-class MResource(Base):
-	__tablename__ = 'm_resource'
-
-	# TODO link relationships
-	id = Column(BIGINT(10), primary_key=True)
-	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
-	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	intro = Column(LONGTEXT)
-	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
-	display = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
-	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 
 
 
@@ -808,8 +773,8 @@ class MUser(Base):
 		return f"""User {self.username} ({self.id})
 			- Last login: {self.lastlogin}
 			- Last accessed course: {self.last_accessed_course.course.fullname if self.last_accessed_course else None}
-			- Grades: {self.get_grades()}
 		"""
+		# - Grades: {self.get_grades()}
 
 
 def is_available(json_condition: str, session: Session, user: MUser) -> bool:

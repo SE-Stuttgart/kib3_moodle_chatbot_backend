@@ -171,7 +171,7 @@ class ELearningPolicy(Service):
 
 	def get_current_user(self, userid) -> MUser:
 		""" Get Moodle user by id from Chat Interface (or start run_chat with --userid=...) """
-		user = self.session.query(MUser).get(userid)
+		user = self.session.query(MUser).get(int(userid))
 		return user
 
 	def get_repeatable_modul_sys_act(self, userid):
@@ -566,8 +566,8 @@ class ELearningPolicy(Service):
 
 
 	def get_module_and_next_due_date(self, userid) -> Tuple[str, None]:
-		user = self.get_current_user(userid)
-		assignments = self.session.query(MAssignSubmission).filter(MAssignSubmission._user_id == user.id).all()
+		print("USERID", userid)
+		assignments = self.session.query(MAssignSubmission).filter(MAssignSubmission._user_id == userid).all()
 		assigns = [assign.assignment for assign in assignments if assign.assignment.duedate > datetime.datetime.now()]
 		if not assigns:
 			return None, None

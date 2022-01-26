@@ -41,18 +41,53 @@ domain_1, services_1 = load_elearning_domain()
 
 import asyncio
 class GUIServer(Service):
-    def __init__(self, domains, logger):
+    TURN_HISTORY = "turn_history"
+
+    def __init__(self, domains, logger, max_history_length: int = -1):
         super().__init__(domain="")
         self.websockets = {}
         self.domains = domains
         self.logger = logger
+        self.max_history_length = max_history_length
         self.loopy_loop = asyncio.new_event_loop()
 
+    @PublishSubscribe(sub_topics=['socket_opened'], pub_topics=['user_utterance', 'sys_state'])
+    def on_socket_opened(self, user_id: str, socket_opened: bool = True):
+        """ If page (re-)load/transition is registered (websocket (re-)connected),
+            we check if the current session state contains chat history for the given user already.
+            If so, we forward the chat history to the moodle frontend.
+            If not, we start a new dialog by publishing an empty user_utterance and sys_state message to the backend.
+        """
+        asyncio.set_event_loop(self.loopy_loop)
+
+        if not socket_opened:
+            return
+
+        hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
+        if not hist:
+            # chat history not found, start new dialog in backend
+            self.set_state(user_id, GUIServer.TURN_HISTORY, [])
+            return {f'user_utterance/{self.domains[0].get_domain_name()}': '', f'sys_state/{self.domains[0].get_domain_name()}': {}}
+        else:
+            # chat history found, forward to frontend and refresh timout for GC
+            self.set_state(user_id, GUIServer.TURN_HISTORY, hist)
+            self.websockets[user_id].write_message(json.dumps(hist))
+
+
     @PublishSubscribe(pub_topics=['user_utterance'])
-    def user_utterance(self, user_id = "default", domain_idx = 0, message = ""):
+    def user_utterance(self, user_id, domain_idx = 0, message = ""):
         try:
             self.logger.dialog_turn(f"# USER {user_id} # USR-UTTERANCE ({self.domains[domain_idx].get_domain_name()}) - {message}")
-            # forward_message_from_react('gen_user_utterance', message)
+
+            # manage recording of chat history
+            hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
+            if self.max_history_length > 0:
+                hist.append({"content": message, "format": "text", "party": "user"})
+                if len(hist) > self.max_history_length:
+                    del hist[0]
+            self.set_state(user_id, GUIServer.TURN_HISTORY, hist)
+
+            # forward message from moodle frontend to dialog system backend
             return {f'user_utterance/{self.domains[domain_idx].get_domain_name()}': message}
         except:
             print("ERROR in GUIService - user_utterance: user=", user_id, "domain_idx=", domain_idx, "message=", message)
@@ -61,25 +96,44 @@ class GUIServer(Service):
             traceback.print_exc(file=sys.stdout)
             return {}
 
-    @PublishSubscribe(sub_topics=['sys_utterance'])
-    def forward_message_to_websocket(self, user_id = "default", sys_utterance: str = None):
-        asyncio.set_event_loop(self.loopy_loop)
-        self.websockets[user_id].write_message(json.dumps({"content": sys_utterance, "format": "text"}))
-
-    
-    @PublishSubscribe(sub_topics=['html_content'])
-    def forward_html_to_websocket(self, user_id = "default", html_content: str = None):
-        asyncio.set_event_loop(self.loopy_loop)
-        self.websockets[user_id].write_message(json.dumps({'content': html_content, "format": "html"}))
-
     @PublishSubscribe(pub_topics=['moodle_event'])
-    def moodle_event(self, user_id = 'default', domain_idx=0, event_data: dict = None):
+    def moodle_event(self, user_id, domain_idx=0, event_data: dict = None):
         asyncio.set_event_loop(self.loopy_loop)
         return {f'moodle_event/{self.domains[domain_idx].get_domain_name()}': event_data}
 
+    @PublishSubscribe(sub_topics=['sys_utterance'])
+    def forward_message_to_websocket(self, user_id, sys_utterance: str = None):
+        asyncio.set_event_loop(self.loopy_loop)
 
+        # manage recording of chat history
+        hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
+        if self.max_history_length > 0:
+            hist.append({"content": sys_utterance, "format": "text", "party": "system"})
+            if len(hist) > self.max_history_length:
+                del hist[0]
+        self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
+
+        # forward message to moodle frontend
+        self.websockets[user_id].write_message(json.dumps([{"content": sys_utterance, "format": "text", "party": "system"}]))
+    
+    @PublishSubscribe(sub_topics=['html_content'])
+    def forward_html_to_websocket(self, user_id, html_content: str = None):
+        asyncio.set_event_loop(self.loopy_loop)
+
+        # manage recording of chat history
+        hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
+        if self.max_history_length > 0:
+            hist.append({"content": html_content, "format": "html", "party": "system"})
+            if len(hist) > self.max_history_length:
+                del hist[0]
+        self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
+
+        # forward message to moodle frontend
+        self.websockets[user_id].write_message(json.dumps([{'content': html_content, "format": "html"}]))
+
+# setup dialog system
 domains = [domain_1]
-gui_service = GUIServer(domains, logger)
+gui_service = GUIServer(domains, logger, max_history_length=50)
 services = [gui_service]
 services.extend(services_1)
 ds = DialogSystem(services=services)
@@ -89,7 +143,9 @@ if not error_free:
 # ds.draw_system_graph()
 print('setup system')
 
+
 class SimpleWebSocket(tornado.websocket.WebSocketHandler):
+    """ Websocket for communication between frontend and backend """ 
     def _extract_token(self, uri):
         start=len("/ws?token=")
         return uri[start:]
@@ -111,7 +167,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
             print(" - domain index", domain_index)
             if topic == 'start_dialog':
                 logger.dialog_turn(f"# USER {self.userid} # DIALOG-START ({domains[domain_index].get_domain_name()})")
-                ds._start_dialog(start_signals={f'user_utterance/{domains[domain_index].get_domain_name()}': '', "sys_state/ELearning": {}}, user_id=self.userid)
+                ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True}, user_id=self.userid)
             elif topic == 'user_utterance':
                 gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, message=data['msg'])
     
