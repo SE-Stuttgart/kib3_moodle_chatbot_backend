@@ -26,11 +26,11 @@ class ELearningBST(Service):
             -> dict(beliefstate=BeliefState):
         # TODO beatrice: store relevant information from user acts here
         print("TODO Beatrice: eLearningBst.py: hier Informationen aus User Acts in BST schreiben")
-        return {'beliefstate': self.state}
+        return {'beliefstate': {}}
 
     def dialog_start(self, user_id: str):
         """
         Restets the belief state so it is ready for a new dialog
         """
         # initialize belief state
-        self.state = self._init_state()
+        pass

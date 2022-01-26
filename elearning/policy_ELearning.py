@@ -92,10 +92,12 @@ class ELearningPolicy(Service):
 		"""
 			resets the policy after each dialog
 		"""
-		self.set_state(user_id, TURNS, 0)
-		self.set_state(user_id, FIRST_TURN, True)
-		self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
-		self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
+		if not self.get_state(user_id, TURNS):
+			print("POLICY STARTING")
+			self.set_state(user_id, TURNS, 0)
+			self.set_state(user_id, FIRST_TURN, True)
+			self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
+			self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
 
 	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_act", "sys_state", "html_content"])
 	def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_act=SysAct, sys_state=SysAct, html_content=str):
@@ -148,7 +150,8 @@ class ELearningPolicy(Service):
 		"""
 		print("USER ACTS\n", user_acts)
 
-		self.turns = self.get_state(user_id, TURNS) + 1
+		turns = self.get_state(user_id, TURNS) + 1
+		self.set_state(user_id, TURNS, turns)
 		sys_state = {}
 		if self.get_state(user_id, FIRST_TURN):
 			# do nothing on the first turn

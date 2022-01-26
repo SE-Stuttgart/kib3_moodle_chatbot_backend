@@ -64,6 +64,15 @@ class HandcraftedNLU(Service):
 
 
     """
+    DIALOG_STARTED = 'dialog_started'
+    LAST_ACT = "last_act"
+    LAST_OFFER = 'last_offer'
+    LAST_INFORMED_PRIMARYKEY_VAL = 'last_informed_primkey_val'
+    LAST_REQUESTED_SLOT = 'last_requested_slot'
+    SLOTS_REQUESTED = 'slots_requested'
+    SLOTS_INFORMED = 'slots_informed'
+    REQ_EVERYTHING = 'req_everything'
+
 
     def __init__(self, domain: JSONLookupDomain, logger: DiasysLogger = DiasysLogger(),
                  language: Language = Language.GERMAN):
@@ -98,11 +107,22 @@ class HandcraftedNLU(Service):
 
         # Setting previous system act to None to signal the first turn
         # self.prev_sys_act = None
-        self.sys_act_info = {
-            'last_act': None, 'lastInformedPrimKeyVal': None, 'lastRequestSlot': None}
-
+      
         self.language = language
         self._initialize()
+
+    def dialog_start(self, user_id: str):
+        started = self.get_state(user_id, self.DIALOG_STARTED) # check if user started new dialog or continues existing one
+        if not started:
+            print("NLU STARTING")
+            self.set_state(user_id, self.DIALOG_STARTED, True)
+            self.set_state(user_id, self.LAST_ACT, None)
+            self.set_state(user_id, self.LAST_OFFER, None)
+            self.set_state(user_id, self.LAST_INFORMED_PRIMARYKEY_VAL, None)
+            self.set_state(user_id, self.LAST_REQUESTED_SLOT, None)
+            self.set_state(user_id, self.REQ_EVERYTHING, False)
+            self.set_state(user_id, self.SLOTS_REQUESTED, set())
+            self.set_state(user_id, self.SLOTS_INFORMED, set())
 
     @PublishSubscribe(sub_topics=["user_utterance"], pub_topics=["user_acts"])
     def extract_user_acts(self, user_id: str, user_utterance: str = None) -> dict(user_acts=List[UserAct]):
@@ -122,46 +142,46 @@ class HandcraftedNLU(Service):
         result = {}
 
         # Setting request everything to False at every turn
-        self.req_everything = False
+        self.set_state(user_id, self.REQ_EVERYTHING, False)
 
-        self.user_acts = []
+        user_acts = []
 
         # slots_requested & slots_informed store slots requested and informed in this turn
         # they are used later for later disambiguation
-        self.slots_requested, self.slots_informed = set(), set()
+        slots_requested, slots_informed = set(), set()
         if user_utterance is not None:
             user_utterance = user_utterance.strip()
-            self._match_general_act(user_utterance)
-            self._match_domain_specific_act(user_utterance)
+            self._match_general_act(user_id, user_utterance, user_acts)
+            self._match_domain_specific_act(user_id, user_utterance, user_acts)
 
-        self._solve_informable_values()
+        self._solve_informable_values(user_acts)
 
         # If nothing else has been matched, see if the user chose a domain; otherwise if it's
         # not the first turn, it's a bad act
-        if len(self.user_acts) == 0:
+        if len(user_acts) == 0:
             if self.domain.get_keyword() in user_utterance:
-                self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
+                user_acts.append(UserAct(text=user_utterance if user_utterance else "",
                                               act_type=UserActionType.SelectDomain))
-            elif self.sys_act_info['last_act'] is not None:
+            elif self.get_state(user_id, self.LAST_ACT) is not None:
                 # start of dialogue or no regex matched
-                self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
+                user_acts.append(UserAct(text=user_utterance if user_utterance else "",
                                               act_type=UserActionType.Bad))
-        self._assign_scores()
-        self.logger.dialog_turn("User Actions: %s" % str(self.user_acts))
-        result['user_acts'] = self.user_acts
+        self._assign_scores(user_acts)
+        self.logger.dialog_turn("User Actions: %s" % str(user_acts))
+        result['user_acts'] = user_acts
 
         return result
 
     @PublishSubscribe(sub_topics=["sys_state"])
     def _update_sys_act_info(self, user_id: str, sys_state):
         if "lastInformedPrimKeyVal" in sys_state:
-            self.sys_act_info['last_offer'] = sys_state['lastInformedPrimKeyVal']
+            self.set_state(user_id, self.LAST_OFFER, sys_state['lastInformedPrimKeyVal'])
         if "lastRequestSlot" in sys_state:
-            self.sys_act_info['last_request'] = sys_state['lastRequestSlot']
+            self.set_state(user_id, self.LAST_REQUESTED_SLOT, sys_state['lastRequestSlot'])
         if "last_act" in sys_state:
-            self.sys_act_info['last_act'] = sys_state['last_act']
+            self.set_state(user_id, self.LAST_ACT, sys_state['last_act'])
 
-    def _match_general_act(self, user_utterance: str):
+    def _match_general_act(self, user_id: str, user_utterance: str, user_acts: list):
         """
         Finds general acts (e.g. Hello, Bye) in the user input
 
@@ -182,137 +202,138 @@ class HandcraftedNLU(Service):
                 else:
                     user_act_type = act
                 # Check if the found user act is affirm or deny
-                if self.sys_act_info['last_act'] and (user_act_type == UserActionType.Affirm or
+                last_act = self.get_state(user_id, self.LAST_ACT)
+                if last_act and (user_act_type == UserActionType.Affirm or
                                                       user_act_type == UserActionType.Deny):
                     # Conditions to check the history in order to assign affirm or deny
                     # slots mentioned in the previous system act
 
                     # Check if the preceeding system act was confirm
-                    if self.sys_act_info['last_act'].type == SysActionType.Confirm:
+                    if last_act.type == SysActionType.Confirm:
                         # Iterate over all slots in the system confimation
                         # and make a list of Affirm/Deny(slot=value)
                         # where value is taken from the previous sys act
-                        for slot in self.sys_act_info['last_act'].slot_values:
+                        for slot in last_act.slot_values:
                             # New user act -- Affirm/Deny(slot=value)
                             user_act = UserAct(act_type=UserActionType(act),
                                                text=user_utterance,
                                                slot=slot,
-                                               value=self.sys_act_info['last_act'].slot_values[slot])
-                            self.user_acts.append(user_act)
+                                               value=last_act.slot_values[slot])
+                            user_acts.append(user_act)
 
                     # Check if the preceeding system act was request
                     # This covers the binary requests, e.g. 'Is the course related to Math?'
-                    elif self.sys_act_info['last_act'].type == SysActionType.Request:
+                    elif last_act.type == SysActionType.Request:
                         # Iterate over all slots in the system request
                         # and make a list of Inform(slot={True|False})
-                        for slot in self.sys_act_info['last_act'].slot_values:
+                        for slot in last_act.slot_values:
                             # Assign value for the slot mapping from Affirm or Request to Logical,
                             # True if user affirms, False if user denies
                             value = 'true' if user_act_type == UserActionType.Affirm else 'false'
                             # in order to know which module we were talking abut
                             if user_act_type == UserActionType.Affirm and slot == 'quiz_link':
-                                value = self.sys_act_info['last_act'].slot_values['module']
+                                value = last_act.slot_values['module']
                             # Adding user inform act
-                            self._add_inform(user_utterance, slot, value)
+                            self._add_inform(user_id, user_utterance, slot, value, user_acts)
 
                     # Check if Deny happens after System Request more, then trigger bye
-                    elif self.sys_act_info['last_act'].type == SysActionType.RequestMore:
+                    elif last_act.type == SysActionType.RequestMore:
                         if user_act_type == UserActionType.Deny:
                             user_act = UserAct(text=user_utterance, act_type=UserActionType.Bye)
-                            self.user_acts.append(user_act)
+                            user_acts.append(user_act)
                         elif user_act_type == UserActionType.Affirm:
                             user_act = UserAct(text=user_utterance, act_type=UserActionType.RequestMore)
-                            self.user_acts.append(user_act)
+                            user_acts.append(user_act)
 
-                    elif self.sys_act_info['last_act'].type == SysActionType.Inform:
+                    elif last_act.type == SysActionType.Inform:
                         user_act = UserAct(text=user_utterance, act_type=UserActionType.RequestMore)
-                        if ("moduleRequirements" in self.sys_act_info['last_act'].slot_values.keys()) and (
-                                "moduleName" in self.sys_act_info['last_act'].slot_values.keys()) and (
-                                "moduleRequired" in self.sys_act_info['last_act'].slot_values.keys()):
+                        if ("moduleRequirements" in last_act.slot_values.keys()) and (
+                                "moduleName" in last_act.slot_values.keys()) and (
+                                "moduleRequired" in last_act.slot_values.keys()):
                             user_act.slot = "moduleRequired"
                             user_act.type = UserActionType.Request
-                            user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
-                        if ("welcomeMsg" in self.sys_act_info['last_act'].slot_values.keys()) and (
-                                "moduleName" in self.sys_act_info['last_act'].slot_values.keys()):
-                            if self.sys_act_info['last_act'].slot_values["welcomeMsg"] == "due_date":
+                            user_act.value = last_act.slot_values['moduleName']
+                        if ("welcomeMsg" in last_act.slot_values.keys()) and (
+                                "moduleName" in last_act.slot_values.keys()):
+                            if last_act.slot_values["welcomeMsg"] == "due_date":
                                 # template inform(welcomeMsg, daysToSubmission, moduleName)
-                                if self.sys_act_info["last_act"].slot_values["daysToSubmission"] == "near":
+                                if last_act.slot_values["daysToSubmission"] == "near":
                                     # "Hallo, willkommen zu deinem E-Learning-Bot! Du hast morgen eine Abgabe zum Modul {moduleName}, fühlst du dich dafür vorbereitet?"
                                     if user_act_type == UserActionType.Affirm:
                                         # user affirm
                                         user_act.slot = "welcomeMsgNearAffirm"
                                         user_act.type = UserActionType.Request
-                                        user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
+                                        user_act.value = last_act.slot_values['moduleName']
                                     else:
                                         # user deny
                                         user_act.slot = "welcomeMsgNearDeny"
                                         user_act.type = UserActionType.Request
-                                        user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
-                                elif self.sys_act_info["last_act"].slot_values["daysToSubmission"] == "week":
+                                        user_act.value = last_act.slot_values['moduleName']
+                                elif last_act.slot_values["daysToSubmission"] == "week":
                                     # "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen eine Abgabe zum Modul {moduleName},
                                     #             wenn du dich vorbereitet fühlst, kannst du schon vorher das Modul abschließen"
                                     if user_act_type == UserActionType.Affirm:
                                         # user affirm
                                         user_act.slot = "welcomeMsgWeekAffirm"
                                         user_act.type = UserActionType.Request
-                                        user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
+                                        user_act.value = last_act.slot_values['moduleName']
                                     else:
                                         # user deny
                                         user_act.slot = "welcomeMsgWeekDeny"
                                         user_act.type = UserActionType.Request
-                                        user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
-                            elif self.sys_act_info["last_act"].slot_values["welcomeMsg"] == "repeat":
+                                        user_act.value = last_act.slot_values['moduleName']
+                            elif last_act.slot_values["welcomeMsg"] == "repeat":
                                 # "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen keine Abgabe. Möchstest du die Zeit nutzten, um {moduleName} zu wiederholen?"
                                 if user_act_type == UserActionType.Affirm:
                                     user_act.slot = "welcomeRepeatAffirm"
                                     user_act.type = UserActionType.Request
-                                    user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
+                                    user_act.value = last_act.slot_values['moduleName']
                                 else:
                                     user_act.slot = "welcomeRepeatDeny"
                                     user_act.type = UserActionType.Request
-                                    user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
-                            elif self.sys_act_info["last_act"].slot_values["welcomeMsg"] == "new":
+                                    user_act.value = last_act.slot_values['moduleName']
+                            elif last_act.slot_values["welcomeMsg"] == "new":
                                 # "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen keine Abgabe. Möchstest du die Zeit nutzten, um das Modul {moduleName} anzufangen?"
                                 if user_act_type == UserActionType.Affirm:
                                     # user affirm
                                     user_act.slot = "welcomeMsgNewAffirm"
                                     user_act.type = UserActionType.Request
-                                    user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
+                                    user_act.value = last_act.slot_values['moduleName']
                                 else:
                                     user_act.slot = "welcomeMsgNewDeny"
                                     user_act.type = UserActionType.Request
-                                    user_act.value = self.sys_act_info['last_act'].slot_values['moduleName']
+                                    user_act.value = last_act.slot_values['moduleName']
 
 
-                        self.user_acts.append(user_act)
+                        user_acts.append(user_act)
 
 
                 # Check if Request or Select is the previous system act
                 elif user_act_type == 'dontcare':
-                    if self.sys_act_info['last_act'].type == SysActionType.Request or \
-                            self.sys_act_info['last_act'].type == SysActionType.Select:
+                    if last_act == SysActionType.Request or \
+                            last_act.type == SysActionType.Select:
                         # Iteration over all slots mentioned in the last system act
-                        for slot in self.sys_act_info['last_act'].slot_values:
+                        for slot in last_act.slot_values:
                             # Adding user inform act
-                            self._add_inform(user_utterance, slot, value=user_act_type)
+                            self._add_inform(user_id, user_utterance, slot, value=user_act_type, user_acts=user_acts)
 
                 # Check if the user wants to get all information about a particular entity
                 elif user_act_type == 'req_everything':
-                    self.req_everything = True
+                    self.set_state(user_id, self.REQ_EVERYTHING, True)
 
                 elif user_act_type == UserActionType.Ready:
-                    if self.sys_act_info['last_act'].type == SysActionType.Inform:
-                        if self.sys_act_info['last_act'].slot_values['test']:
+                    if last_act.type == SysActionType.Inform:
+                        if last_act.slot_values['test']:
                             user_act = UserAct(text=user_utterance, act_type=UserActionType.Request, slot="quiz")
-                            self.user_acts.append(user_act)
+                            user_acts.append(user_act)
                 else:
                     # This section covers all general user acts that do not depend on
                     # the dialog history
                     # New user act -- UserAct()
                     user_act = UserAct(act_type=user_act_type, text=user_utterance)
-                    self.user_acts.append(user_act)
+                    user_acts.append(user_act)
 
-    def _match_domain_specific_act(self, user_utterance: str):
+    def _match_domain_specific_act(self, user_id: str, user_utterance: str, user_acts: list):
         """
         Matches in-domain user acts
         Calls functions to find user requests and informs
@@ -324,11 +345,11 @@ class HandcraftedNLU(Service):
 
         """
         # Find Requests
-        self._match_request(user_utterance)
+        self._match_request(user_id, user_utterance, user_acts)
         # Find Informs
-        self._match_inform(user_utterance)
+        self._match_inform(user_id, user_utterance, user_acts)
 
-    def _match_request(self, user_utterance: str):
+    def _match_request(self, user_id: str, user_utterance: str, user_acts: list):
         """
         Iterates over all user request regexes and find matches with the user utterance
 
@@ -346,9 +367,9 @@ class HandcraftedNLU(Service):
                     for key in matches.keys():
                         if key.startswith("content") and matches.get(key):
                             user_utterance = matches.get(key)
-                self._add_request(user_utterance, slot)
+                self._add_request(user_id, user_utterance, slot, user_acts)
 
-    def _add_request(self, user_utterance: str, slot: str):
+    def _add_request(self, user_id, user_utterance: str, slot: str, user_acts: list):
         """
         Creates the user request act and adds it to the user act list
         Args:
@@ -360,11 +381,13 @@ class HandcraftedNLU(Service):
         """
         # New user act -- Request(slot)
         user_act = UserAct(text=user_utterance, act_type=UserActionType.Request, slot=slot)
-        self.user_acts.append(user_act)
+        user_acts.append(user_act)
         # Storing user requested slots during the whole dialog
-        self.slots_requested.add(slot)
+        slots_requested = self.get_state(user_id, self.SLOTS_REQUESTED)
+        slots_requested.add(slot)
+        self.set_state(user_id, self.SLOTS_REQUESTED, slots_requested)
 
-    def _match_inform(self, user_utterance: str):
+    def _match_inform(self, user_id, user_utterance: str, user_acts: list):
         """
         Iterates over all user inform slot-value regexes and find matches with the user utterance
 
@@ -379,17 +402,17 @@ class HandcraftedNLU(Service):
         for slot in self.USER_INFORMABLE:
             for value in self.inform_regex[slot]:
                 if self._check(re.search(self.inform_regex[slot][value], user_utterance, re.I)):
-                    if slot == self.domain_key and self.req_everything:
+                    if slot == self.domain_key and self.get_state(user_id, self.REQ_EVERYTHING):
                         # Adding all requestable slots because of the req_everything
                         for req_slot in self.USER_REQUESTABLE:
                             # skipping the domain key slot
                             if req_slot != self.domain_key:
                                 # Adding user request act
-                                self._add_request(user_utterance, req_slot)
+                                self._add_request(user_id, user_utterance, req_slot, user_acts)
                     # Adding user inform act
-                    self._add_inform(user_utterance, slot, value)
+                    self._add_inform(user_id, user_utterance, slot, value, user_acts)
 
-    def _add_inform(self, user_utterance: str, slot: str, value: str):
+    def _add_inform(self, user_id: str, user_utterance: str, slot: str, value: str, user_acts: list):
         """
         Creates the user request act and adds it to the user act list
 
@@ -403,9 +426,11 @@ class HandcraftedNLU(Service):
         """
         user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform,
                            slot=slot, value=value)
-        self.user_acts.append(user_act)
+        user_acts.append(user_act)
         # Storing user informed slots in this turn
-        self.slots_informed.add(slot)
+        slots_informed = self.get_state(user_id, self.SLOTS_INFORMED)
+        slots_informed.add(slot)
+        self.set_state(user_id, self.SLOTS_INFORMED, slots_informed)
 
     @staticmethod
     def _exact_match(phrases: List[str], user_utterance: str) -> bool:
@@ -453,7 +478,7 @@ class HandcraftedNLU(Service):
                 return True
         return False
 
-    def _assign_scores(self):
+    def _assign_scores(self, user_acts: list):
         """
         Goes over the user act list, checks concurrencies and assign scores
 
@@ -461,51 +486,19 @@ class HandcraftedNLU(Service):
 
         """
 
-        for i in range(len(self.user_acts)):
+        for i in range(len(user_acts)):
             # TODO: Create a clever and meaningful mechanism to assign scores
             # Since the user acts are matched, they get 1.0 as score
-            self.user_acts[i].score = 1.0
+            user_acts[i].score = 1.0
 
-    def start_dialog(self) -> dict:
-        """
-        Sets the previous system act as None.
-        This function is called when the dialog starts
 
-        Returns:
-            Empty dictionary
-
-        """
-        self.sys_act_info = {
-            'last_act': None, 'lastInformedPrimKeyVal': None, 'lastRequestSlot': None}
-
-    def _disambiguate_co_occurrence(self, beliefstate: BeliefState):
-        # Check if there is user inform and request occur simultaneously for a binary slot
-        # E.g. request(applied_nlp) & inform(applied_nlp=true)
-        # Difficult to disambiguate using regexes
-        if self.slots_requested.intersection(self.slots_informed):
-            if beliefstate is None:
-                act_to_del = UserActionType.Request
-            elif self.sys_act_info['lastInformedPrimKeyVal'] in [None, '**NONE**', 'none']:
-                act_to_del = UserActionType.Request
-            else:
-                act_to_del = UserActionType.Inform
-
-            acts_to_del = []
-            for slot in self.slots_requested.intersection(self.slots_informed):
-                for i, user_act in enumerate(self.user_acts):
-                    if user_act.type == act_to_del and user_act.slot == slot:
-                        acts_to_del.append(i)
-
-            self.user_acts = [user_act for i, user_act in enumerate(self.user_acts)
-                              if i not in acts_to_del]
-
-    def _solve_informable_values(self):
+    def _solve_informable_values(self, user_acts):
         # Verify if two or more informable slots with the same value were caught
         # Cases:
         # If a system request precedes and the slot is the on of the two informable, keep that one.
         # If there is no preceding request, take
         informed_values = {}
-        for i, user_act in enumerate(self.user_acts):
+        for i, user_act in enumerate(user_acts):
             if user_act.type == UserActionType.Inform:
                 if user_act.value != "true" and user_act.value != "false":
                     if user_act.value not in informed_values:
@@ -516,7 +509,7 @@ class HandcraftedNLU(Service):
         informed_values = {value: informed_values[value] for value in informed_values if
                            len(informed_values[value]) > 1}
         if "6" in informed_values:
-            self.user_acts = []
+            user_acts = []
 
     def _initialize(self):
         """

@@ -19,21 +19,17 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 logger = DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_lvl=LogLevel.DIALOGS)
 
 
-def load_nlg(domain=None):
-    from services.nlg.nlg import HandcraftedNLG
-    nlg = HandcraftedNLG(domain=domain)
-    return nlg
-
 def load_elearning_domain():
     from utils.domain.jsonlookupdomain import JSONLookupDomain
     from elearning.policy_ELearning import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
+    from services.nlg.nlg import HandcraftedNLG
     from services.nlu.nlu import HandcraftedNLU
     domain = JSONLookupDomain('ELearning', display_name="ELearning")
     e_learning_nlu = HandcraftedNLU(domain=domain)
     e_learning_policy = ELearningPolicy(domain=domain)
     e_learning_bst = ELearningBST(domain=domain)
-    e_learning_nlg = load_nlg(domain=domain)
+    e_learning_nlg = HandcraftedNLG(domain=domain)
     return domain, [e_learning_nlu, e_learning_bst, e_learning_policy, e_learning_nlg]
 
 #  setup dialog system
