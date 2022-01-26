@@ -198,8 +198,10 @@ class MGradeGradesHistory(Base):
 	def get_grade_item(self, session: Session) -> Union[MGradeItem, None]:
 		""" Returns the MGradeItem associated with the current Grade object """
 		try:
-			session.expire_all()
-			return session.query(MGradeItem).get(self._gradeItemId)
+			# NOTE: Diese Tabelle enthält wahrscheinlich nicht was du suchst - in MGradeGrade stehen die aktuellen Noten,
+			# das sollte deinem Einsatz entsprechen.
+			# Ältere items in MGradeGrades History werden hier oft NONE zurück geben, weil der Link nicht mehr aktuell ist.
+			return session.query(MGradeItem).get(self.oldid)
 		except NoResultFound:
 			return None
 
