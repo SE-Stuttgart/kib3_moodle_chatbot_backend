@@ -1,4 +1,3 @@
-
 # ---------------NEW RULES - IMS COURSE MESSAGES-------------------------#
 
 template welcomemsg(): "Willkommen zum IMS Lehrveranstaltungs Chat Bot. Wie kann ich dir weiterhelfen?"
@@ -82,7 +81,9 @@ template inform(positiveFeedback, alreadyFinishedOne, repeat)
             "Sehr gut! Dann starte nochmal das Quiz, damit du auch dieses Modul abschließen kannst!"
 
 template inform(motivational, taskLeft)
-        "{taskLeft}, du hast schon {motivational} geschafft!"
+        "{taskLeft}, du hast schon {motivational} geschafft!Die restlichen Module bauen sich aufeinander und es wird dir leicht fallen, ein nach dem anderen zu bearbeiten ;-)"
+template inform(NoMotivational, taskLeft)
+        "{taskLeft}, du hast leider {NoMotivational} geschafft :-(. Fange jetzt an! Die Module bauen sich aufeinander und es wird dir leicht fallen, ein nach dem anderen zu bearbeiten ;-)"
 
 template request(pastModule)
     "Erinnerst du dich an dem vorherigen Modul?"
@@ -92,6 +93,15 @@ template inform(pastModule, repeatContent)
 
 template inform(positiveFeedback,newModule)
     "Sehr gut! Du kannst dann mit dem neuen Modul anfangen: {newModule}"
+
+template inform(positiveFeedback, completedQuiz)
+    "Gut gemacht! Du hast die Quiz erfolgreich abgeschlossen :-)!"
+
+template inform(positiveFeedback,completedModul)
+    "Sehr gut! Du hast dieses Modul erfolgreich abgeschlossen und kannst mit den Quiz starten!"
+
+template inform(negativeFeedback, finishedQuiz)
+    "Schade, du hast nicht alle Fragen richtig beantwortet :-(. Versuch es nochmal, du wirst bestimmt ein besseres Ergebnis erreichen!"
 
 template inform(moduleName, nextModule)
     "Dein nächstes Modul ist {moduleName}. Möchtest du damit beginnen?"

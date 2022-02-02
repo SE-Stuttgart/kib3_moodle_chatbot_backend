@@ -1,4 +1,3 @@
-# user informable slots are name, department and position
 
 rule inform(goal)
     "{goal}"
@@ -35,6 +34,9 @@ rule request(learnableModul)
 
 rule request(needHelp)
     "Was mache ich falsch(\\?)?"
+    "Wie kann ich mich verbessern(\\?)?"
+    "Wie kann ich es besser machen(\\?)?"
+    "Wie kann ich (eine )?bessere Ergebnisse|Bewertungen|Bewertung|Benotung bekommen(\\?)?"
 
 rule request(insufficient)
     "Bei welche(m|r){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
@@ -56,7 +58,7 @@ rule request(description)
     "asdasdad"
 
 rule request(submission)
-    "Wann ist (die|der) (erste )?(Abgabe|Frist|deadline|Termin)(\\?)?"
+    "Wann ist (die|der) (erste |nächste )?(Abgabe|Frist|deadline|Termin)(\\?)?"
 
 rule request(nextModule)
     "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes lernen|machen(\\?)?"
@@ -76,10 +78,11 @@ rule inform(lecture)
     "Nein, {NEW()}"
 
 rule request(finishTask)
-    "Wie viele{UNIT()} fehlen noch(\\?)?"
+    "Wie viele{UNIT()} fehlen( noch)?(\\?)?"
 
 rule inform(learningTime)
     "\\d+"
+    "Ich habe (nur)?15 Minuten (Zeit)?"
 
 rule inform(description)
     "(Test)"
