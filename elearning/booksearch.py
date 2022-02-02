@@ -68,7 +68,7 @@ def get_book_links(session: Session, searchTerm: str) -> List[str]:
     Returns:
         Links to moodle book chapters matching the search term by looking through the accompanying PDF and matching page numbers between both
     """
-    session.expire_all()
+    # session.expire_all()
     links = []
     
     # get a list of all pdf names and their locations

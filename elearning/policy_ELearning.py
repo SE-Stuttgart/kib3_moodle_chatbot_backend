@@ -35,7 +35,7 @@ from utils.beliefstate import BeliefState
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import MAssignSubmission, MCourse, MCourseSection, connect_to_moodle_db, Base, MUser, MCourseModule, \
+from elearning.moodledb import MAssignSubmission, MCourse, MCourseModulesCompletion, MCourseSection, MGradeGrade, MGradeItem, connect_to_moodle_db, Base, MUser, MCourseModule, \
 	get_time_estimate_module, get_time_estimates, MModule
 from utils.useract import UserActionType
 
@@ -48,6 +48,7 @@ ASSIGN_ID = 'assign_id'
 TURNS = 'turns'
 FIRST_TURN = 'first_turn'
 CURRENT_SUGGESTIONS = 'current_suggestions'
+MODE = 'mode'
 S_INDEX = 's_index'
 
 class ELearningPolicy(Service):
@@ -107,28 +108,41 @@ class ELearningPolicy(Service):
 			Currently supports the following events:
 			* \\core\\event\\course_module_completion_updated
 		"""
-
 		event_name = moodle_event['eventname'].lower().strip()
 		event_action = moodle_event['action'].lower().strip()
+
+		if event_name == """\\core\\event\\user_graded""":
+			# extract grade info
+			gradeItem: MGradeItem = self.session.query(MGradeItem).get(int(moodle_event['other']['itemid']))
+			# gradeItem: MGradeItem = grade.get_grade_item(self.session)
+			finalgrade = float(moodle_event['other']['finalgrade'])
+			if finalgrade == gradeItem.grademax:
+				# all questions correct
+				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedQuiz": "True"})}
+			else:
+				# not all questions correct
+				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})}
 		
-		# EXAMPLE: Status eines Kursmoduls geändert (abgeschlossen / nicht abgeschlossen) 
-		if event_name == """\\core\\event\\course_module_completion_updated""":
+		elif event_name == """\\core\\event\\course_module_completion_updated""":
+			# TODO: make sure message fires only the first time a course module was completed by a user
+			# is this a session cache problem? 
+			# self.session.expire_all()
 			# Lese die Statusänderung aus dem Event aus
 			updated_completion_state = moodle_event['other']['completionstate']
 			# get related course module to be able to check if it was a quiz, book, PDF, ...
 			course_module: MCourseModule = self.session.query(MCourseModule).get(moodle_event['contextinstanceid'])
+			course_module_type = course_module.get_type_name(self.session)
 
-			# Debugging Hilfe
-			print(f"COURSE MODULE COMPLETION STATE CHANGED: {updated_completion_state}")
-			print(course_module)
+			if course_module_type in ['book', 'resource']:
+				# completed book or pdf
+				# completion: MCourseModulesCompletion = self.session.query(MCourseModulesCompletion).get(moodle_event['objectid'])
+				if updated_completion_state == 1:
+					# first time completion
+					return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedModul": "True"})}
 
-			if updated_completion_state == 0:
-				# TODO: not completed: Eventuell einen SysAct ausgeben ("Schade, dass du das Modul nicht fertig bekommen hast. Willst du es vielleicht jetzt nochmal probieren 
-				# (braucht ca. 10 Minuten), oder lieber erst in der nächsten Sitzung?")
-				pass
-			elif updated_completion_state == 1:
-				# TODO: completed: Eventuell einen SysAct ausgeben ("Du hast dieses Modul so gut gemeistert, willst du gleich mit dem nächsten weitermachen? ")
-				pass
+				
+		
+				
 			
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate"], pub_topics=["sys_act", "sys_state", "html_content"])
@@ -191,10 +205,12 @@ class ELearningPolicy(Service):
 			repeat_content_choices.append("oldcontent")
 
 		if len(repeat_content_choices) == 0:
+			self.set_state(userid, MODE, 'new')
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"moduleName": "moduleName", "repeatContent": "noContent"})
 		repeatContent = random.choice(repeat_content_choices)
 		if repeatContent == "quiz":
+			self.set_state(userid, MODE, 'quiz')
 			moduleName = random.choice(old_finished_modules)
 		if repeatContent == "module":
 			# TODO try/catch block or check for none, could return None!
@@ -307,7 +323,7 @@ class ELearningPolicy(Service):
 			return SysAct(act_type=SysActionType.Request,
 						  slot_values={"goal": ""})
 		elif act.slot == "goalAlternative" or act.slot == "toReachGoal":
-			module_name, open_task = self.find_open_tasks()
+			module_name, open_task = self.find_open_tasks(userid)
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"moduleName": module_name, "finishContent": open_task})
 		elif act.slot == "goal" and act.type == UserActionType.Inform:
@@ -336,8 +352,12 @@ class ELearningPolicy(Service):
 		elif act.slot == "finishTask" and act.type == UserActionType.Request:
 			open_modules = self.total_open_modules(userid)
 			completed_modules = self.total_completed_modules(userid)
-			return SysAct(act_type=SysActionType.Inform,
-						  slot_values={"motivational": f"{completed_modules} von {open_modules + completed_modules}", "taskLeft": str(open_modules)})
+			if completed_modules > 0:
+				return SysAct(act_type=SysActionType.Inform,
+							slot_values={"motivational": f"{completed_modules} von {open_modules + completed_modules}", "taskLeft": str(open_modules)})
+			else:
+				return SysAct(act_type=SysActionType.Inform,
+							  slot_values={"NoMotivational": f"{completed_modules} von {open_modules + completed_modules}", "taskLeft": str(open_modules)})
 		elif act.slot == "finishGoal":
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"positiveFeedback": "positiveFeedback", "repeatQuiz": ""})
@@ -357,7 +377,7 @@ class ELearningPolicy(Service):
 						  slot_values={"modulContent": "a", "value": "content"})
 
 		elif act.slot == "firstGoal":
-			first_goal = self.first_open_module()
+			first_goal = self.first_open_module(userid)
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"moduleName": first_goal, "firstGoal": first_goal})
 
@@ -371,12 +391,13 @@ class ELearningPolicy(Service):
 									   "offerhelp": "content"})
 
 		elif act.slot == "insufficient":
-			module_names, course_module_id = self.get_insufficient_module(userid)
-			self.set_state(userid, COURSE_MODULE_ID, course_module_id)
-			insufficient = "true" if len(module_names) > 0 else "false"
+			module_name, course_module_id = self.get_insufficient_module(userid)
+			if course_module_id:
+				self.set_state(userid, COURSE_MODULE_ID, course_module_id)
+			insufficient = "true" if module_name else "false"
 			return SysAct(act_type=SysActionType.Request,
 						  slot_values={"quiz_link": "",
-									   "module": module_names or '',
+									   "module": module_name or '',
 									   "insufficient": insufficient})
 
 		elif act.slot == "quiz_link":
@@ -394,6 +415,8 @@ class ELearningPolicy(Service):
 			return SysAct(act_type=SysActionType.RequestMore,
 						  slot_values={"moduleContent": "x"})
 		elif act.type == UserActionType.RequestMore:
+			if self.get_state(userid, MODE) == 'new':
+				return self.get_new_goal_system_act(userid)
 			return SysAct(act_type=SysActionType.RequestMore)
 		elif act.type == UserActionType.Deny:
 			return SysAct(act_type=SysActionType.Inform,
@@ -469,7 +492,7 @@ class ELearningPolicy(Service):
 			get modules where grades are lower then 'grade_threshold
 		"""
 		user = self.get_current_user(userid)
-		grades = user.get_grade_history(self.session)
+		grades = user.get_grades(self.session)
 		return [grade for grade in grades if
 				grade.finalgrade and grade.finalgrade < (grade.rawgrademax * decimal.Decimal(grade_threshold))]
 
@@ -522,11 +545,13 @@ class ELearningPolicy(Service):
 		module = user.get_last_completed_coursemodule(self.session)
 		return module.course.fullname
 
-	def find_open_tasks(self):
+	def find_open_tasks(self, userid):
 		# ToDo: Chatbot muss aus Moodle die Info bekommen, welche Tasks nicht beendet wurden
 		# TODO: Q: Was sind Tasks? meinst du verschiedene Course Module Typen? Z.B. Quiz, Buch, ... oder ist das noch was anderes?
 		# @Dirk ich meinte alle Module, d.h. auch Quiz
-		return self.get_user_next_module(), random.choice(["video", "frage", "module", "doku"])
+		module_name, module_id = self.get_user_next_module(userid)
+		self.set_state(userid, COURSE_MODULE_ID, module_id)
+		return module_name, random.choice(["video", "frage", "module", "doku"])
 
 	def total_open_modules(self, userid):
 		user = self.get_current_user(userid)
@@ -543,10 +568,16 @@ class ELearningPolicy(Service):
 
 	def get_insufficient_module(self, userid):
 		user = self.get_current_user(userid)
-		grades = user.get_grade_history(self.session)
-		return [(grade.get_grade_item(self.session).course.fullname, grade.get_grade_item(self.session).course.id) for grade in grades if
-				grade.finalgrade and grade.finalgrade < grade.get_grade_item(self.session).gradepass or grade.finalgrade is None and grade.get_grade_item(self.session)][0]
+		h_grades = user.get_grades(self.session)
 
+		insufficient_modules = [(h_grade.get_grade_item(self.session).course.fullname, h_grade.get_grade_item(self.session).course.id) for
+		 h_grade in h_grades if
+		 h_grade.finalgrade and h_grade.finalgrade < h_grade.get_grade_item(
+			 self.session).gradepass or h_grade.finalgrade is None and h_grade.get_grade_item(self.session)]
+		if insufficient_modules:
+			return insufficient_modules[0]
+		return None, None
+		
 	def get_quiz_for_user_by_course_id(self, course_id: str, userid):
 		user = self.get_current_user(userid)
 		return user.find_quiz_by_course_id(course_id, self.session)

@@ -55,9 +55,10 @@ END Helper classes
 """
 
 def connect_to_moodle_db(host='127.0.0.1', port=3306, user='moodle', pwd='m@0dl3ing', dbname='moodle'):
+	# NOTE: isolation level is important because moodle doesn't seem to commit to DB -> session data will be stale
 	print("connecting...")
 	print(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4")
-	engine = create_engine(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4", echo=False, future=True)
+	engine = create_engine(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4", echo=False, future=True, isolation_level="READ UNCOMMITTED")
 	conn = engine.connect()
 	print("done")
 	return engine, conn
@@ -157,6 +158,7 @@ class MGradeItem(Base):
 	# less important info, tells if the GradeItem is from a HVP quiz, moodle quiz or other
 	itemtype = Column(String(30, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
 	itemmodule = Column(String(30, 'utf8mb4_bin'))
+	iteminstance = Column(BIGINT(10), nullable=False, server_default=text("'100'")) # link to course module
 
 	# bounds of the grades possible for this grade
 	grademax = Column(BIGINT(10), nullable=False, server_default=text("'100'"))
@@ -234,7 +236,7 @@ class MGradeGrade(Base):
 	_gradeItemId = Column(BIGINT(10), ForeignKey("MGradeItem.id"), nullable=False, index=True, name="itemid")
 	
 	def get_grade_item(self, session: Session) -> MGradeItem:
-		session.expire_all()
+		#session.expire_all()
 		return session.query(MGradeItem).get(self._gradeItemId)
 
 	def get_user(self, session: Session) -> "MUser":
@@ -356,7 +358,7 @@ class MCourseModule(Base):
 	def get_content_link(self, session: Session):
 		# TODO Dirk: ist es richtig, dass das erste Element genommen werden muss? Wenn ich nach dem content eines Moduls (Section)frage, wird mir den Link zu dem assignement vorgeschlagen
 		# Falsche Links bekommen
-		session.expire_all()
+		#session.expire_all()
 		type_info = self.get_type_name(session)
 		if type_info == "book":
 			return f'<a href="http://193.196.53.252/mod/book/view.php?id={self.id}">hier</a>' # &chapter={}
@@ -374,7 +376,7 @@ class MCourseModule(Base):
 
 	def get_hvp_embed_html(self, session: Session) -> Union[str, None]:
 		""" Returns the <iframe/> code to embed the h5p content if this course module is h5p content, else None """
-		session.expire_all()
+		#session.expire_all()
 		type_info = self.get_type_name(session)
 		print("TYPE INFO", type_info)
 		if type_info == "hvp":
@@ -394,11 +396,11 @@ class MCourseModule(Base):
 		Returns:
 			completion state (bool): True, if user completed this course module, else False
 		"""
-		session.expire_all()
+		#session.expire_all()
 		return session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id, MCourseModulesCompletion._coursemoduleid==self.id, MCourseModulesCompletion.completed==True).count() > 0
 
 	def get_name(self, session: Session):
-		session.expire_all()
+		#session.expire_all()
 		type_info = self.get_type_name(session)
 		if type_info == "book":
 			return session.query(MBook).get(self.instance).name
@@ -414,7 +416,7 @@ class MCourseModule(Base):
 			return "Unbekannter Kursmodultyp"
 	
 	def get_type_name(self, session: Session):
-		session.expire_all()
+		#session.expire_all()
 		return session.query(MModule).get(self._type_id).name
 
 	def __repr__(self) -> str:
@@ -469,7 +471,7 @@ class MCourseSection(Base):
 			MCourseModule (in order) that can be taken  after `currentModule`.
 			Will return `None`, if no next module is defined for this section after `currentModule`.
 		"""
-		session.expire_all()
+		#session.expire_all()
 		print("SEQUENCE", self.sequence, 'name', self.name, 'id', self.id)
 
 		for index, moduleId in enumerate(self.sequence):
@@ -496,7 +498,7 @@ class MCourseSection(Base):
 		Returns:
 			completion state (bool): True, if user completed this course section, else False
 		"""
-		session.expire_all()
+		#session.expire_all()
 		all_section_module_ids = set([course_module.id for course_module in session.query(MCourseModule).filter(MCourseModule._section_id==self.id).all()])
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id).all()
 		completed_section_modules = [completion._coursemoduleid for completion in completions if completion._coursemoduleid in all_section_module_ids]
@@ -663,29 +665,29 @@ class MUser(Base):
 
 	def get_grades(self, session: Session) -> List[MGradeGrade]:
 		""" Return all current grades of the current user (for all courses) """
-		session.expire_all()
+		#session.expire_all()
 		return session.query(MGradeGrade).filter(MGradeGrade._userid==self.id).all()
 
 	def get_grade_history(self, session: Session) -> List[MGradeGradesHistory]:
 		""" Return all current and past grades of the current user (for all courses) """
-		session.expire_all()
+		#session.expire_all()
 		return session.query(MGradeGradesHistory).filter(MGradeGradesHistory._userid==self.id).all()
 
 	def get_completed_courses(self, session: Session) -> List[MCourseModulesCompletion]:
 		""" Return all course modules already completed by current user """
-		session.expire_all()
+		#session.expire_all()
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
 		return [completion.coursemodule for completion in completions]
 
 	def get_completed_courses_before_date(self, date, session: Session) -> List[MCourseModulesCompletion]:
 		""" Return all course modules already completed by current user before a date """
-		session.expire_all()
+		#session.expire_all()
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True, MCourseModulesCompletion.timemodified < date)
 		return [completion.coursemodule for completion in completions]
 
 	def get_not_finished_courses_before_date(self, date, session: Session) -> List[MCourseModulesCompletion]:
 		""" Return all course modules already completed by current user """
-		session.expire_all()
+		#session.expire_all()
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==False, MCourseModulesCompletion.timemodified < date)
 		return [completion.coursemodule for completion in completions]
 
@@ -693,7 +695,7 @@ class MUser(Base):
 		"""
 			Returns next quiz for Module with name equals module_name
 		"""
-		session.expire_all()
+		#session.expire_all()
 		# TODO test
 		# Tested: it searches for section and not for module_name
 		quiz_types = session.query(MModule).filter((MModule.name=="hvp")).all() # TODO re-enable at some point? | (MModule.name=="quiz")).all()
@@ -718,7 +720,7 @@ class MUser(Base):
 		Returns:
 			* last completed course module (MCourseModule), if the user already completed any course module, else `None`
 		"""
-		session.expire_all()
+		#session.expire_all()
 		completions: List[MCourseModulesCompletion] = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True).all()
 		if len(completions) == 0:
 			return self.get_available_course_modules(session)[0] # return first result
@@ -726,14 +728,14 @@ class MUser(Base):
 
 	def get_not_completed_courses(self, session: Session) -> List[MCourseModule]:
 		""" Return all course modules not completed by current user """
-		session.expire_all()
+		#session.expire_all()
 		completed = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
 		completed_ids = [complete._coursemoduleid for complete in completed]
 		courses = session.query(MCourseModule).all()
 		return [course for course in courses if course.id not in completed_ids]
 
 	def get_available_course_modules(self, session: Session) -> List[MCourseModule]:
-		session.expire_all()
+		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
 			if is_available_course_sections(session, self, section):
@@ -743,7 +745,7 @@ class MUser(Base):
 		return available
 
 	def get_available_course_sections(self, session: Session) -> List[MCourseSection]:
-		session.expire_all()
+		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
 			if is_available_course_sections(session, self, section):
@@ -751,7 +753,7 @@ class MUser(Base):
 		return available
 
 	def get_incomplete_available_course_modules(self, session: Session) -> List[MCourseModule]:
-		session.expire_all()
+		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
 			if is_available_course_sections(session, self, section):
@@ -761,7 +763,7 @@ class MUser(Base):
 		return available		
 	
 	def get_incomplete_available_course_sections(self, session: Session) -> List[MCourseSection]:
-		session.expire_all()
+		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
 			if not section.is_completed(self) and is_available_course_sections(session, self, section):
@@ -778,7 +780,7 @@ class MUser(Base):
 
 
 def is_available(json_condition: str, session: Session, user: MUser) -> bool:
-	session.expire_all()
+	#session.expire_all()
 	if not json_condition:
 		return True # no restrictions
 
@@ -812,17 +814,17 @@ def is_available(json_condition: str, session: Session, user: MUser) -> bool:
 
 
 def is_available_course_module(session: Session, user: MUser, course_module: MCourseModule):
-	session.expire_all()
+	#session.expire_all()
 	return bool(course_module.visible) and is_available(json_condition=course_module.availability, session=session, user=user)
 
 
 def is_available_course_sections(session: Session, user: MUser, section: MCourseSection):
-	session.expire_all()
+	#session.expire_all()
 	return bool(section.visible) and is_available(json_condition=section.availability, session=session, user=user)
 
 
 def get_time_estimate_module(session: Session, user: MUser, course_module: MCourseModule) -> Union[int, None]:
-	session.expire_all()
+	#session.expire_all()
 	already_completed = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id)
 	if is_available_course_module(session, user, course_module) and already_completed.filter(MCourseModulesCompletion._coursemoduleid==course_module.id).count() == 0:
 		# course module is available and has not already been completed
@@ -846,7 +848,7 @@ def get_time_estimates(session: Session, user: MUser) -> List[Tuple[MCourseModul
 		a list of tuples: 
 			* Each entry in list is a combination of a course module and its estimated completion time (in minutes)
 	"""
-	session.expire_all()
+	#session.expire_all()
 	course_modules = session.query(MCourseModule).filter().all()
 	estimates = []
 	for module in course_modules:
@@ -857,7 +859,7 @@ def get_time_estimates(session: Session, user: MUser) -> List[Tuple[MCourseModul
 		
 
 def get_time_estimate_section(session: Session, user: MUser, section: MCourseSection) -> int:
-	session.expire_all()
+	#session.expire_all()
 	estimate = 0
 	for course_module in section.modules:
 		mod_estimate = get_time_estimate_module(session, user, course_module)
