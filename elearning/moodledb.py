@@ -758,7 +758,7 @@ class MUser(Base):
 		for section in session.query(MCourseSection).all():
 			if is_available_course_sections(session, self, section):
 				for course_moudule in section.modules:
-					if not course_moudule.is_completed(self) and is_available_course_module(session, self, course_moudule):
+					if not course_moudule.is_completed(self, session) and is_available_course_module(session, self, course_moudule):
 						available.append(course_moudule)
 		return available		
 	
@@ -791,6 +791,10 @@ def is_available(json_condition: str, session: Session, user: MUser) -> bool:
 	# check conditions
 	fullfilled = []
 	for condition in data["c"]:
+		if not "type" in condition:
+			continue
+		# TODO handle nested conditions:
+		# {'op': '&', 'showc': [False, False, False, False, False], 'c': [{'type': 'grade', 'id': 4, 'min': 50}, {'type': 'grade', 'id': 3, 'min': 50}, {'type': 'grade', 'id': 5, 'min': 50}, {'type': 'grade', 'id': 2, 'min': 50}, {'op': '|', 'c': [{'type': 'grade', 'id': 2, 'max': 80}, {'type': 'grade', 'id': 4, 'max': 80}, {'type': 'grade', 'id': 3, 'max': 80}, {'type': 'grade', 'id': 5, 'max': 80}]}]}
 		if condition['type'] == 'completion':
 			course_module = session.query(MCourseModule).get(condition['cm'])
 			if course_module:
