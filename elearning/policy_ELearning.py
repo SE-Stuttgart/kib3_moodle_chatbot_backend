@@ -213,8 +213,9 @@ class ELearningPolicy(Service):
 			self.set_state(userid, MODE, 'quiz')
 			moduleName = random.choice(old_finished_modules)
 		if repeatContent == "module":
-			# TODO try/catch block or check for none, could return None!
-			moduleName = random.choice(insufficient_modules).get_grade_item(self.session)._courseid
+			instanceId = random.choice(insufficient_modules).get_grade_item(self.session).iteminstance
+			quizModuleId = self.session.query(MModule).filter(MModule.name=='hvp').first().id
+			moduleName = self.session.query(MCourseModule).filter(MCourseModule.instance==instanceId, MCourseModule._type_id==quizModuleId).first().get_name(self.session)
 		if repeatContent == "oldcontent":
 			moduleName = random.choice(old_finished_modules)
 		print("REPEATABLE CONTENT", repeatContent)
