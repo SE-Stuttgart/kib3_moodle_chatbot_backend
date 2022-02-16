@@ -77,7 +77,7 @@ class GUIServer(Service):
 
             # manage recording of chat history
             hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
-            if self.max_history_length > 0:
+            if hist and self.max_history_length > 0:
                 hist.append({"content": message, "format": "text", "party": "user"})
                 if len(hist) > self.max_history_length:
                     del hist[0]

@@ -54,7 +54,7 @@ class CompletionState(TypeDecorator):
 END Helper classes
 """
 
-def connect_to_moodle_db(host='127.0.0.1', port=3306, user='moodle', pwd='m@0dl3ing', dbname='moodle'):
+def connect_to_moodle_db(host='127.0.0.1', port=3306, user='moodledude', pwd='Password2!', dbname='moodle'):
 	# NOTE: isolation level is important because moodle doesn't seem to commit to DB -> session data will be stale
 	print("connecting...")
 	print(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4")
@@ -359,20 +359,21 @@ class MCourseModule(Base):
 		# TODO Dirk: ist es richtig, dass das erste Element genommen werden muss? Wenn ich nach dem content eines Moduls (Section)frage, wird mir den Link zu dem assignement vorgeschlagen
 		# Falsche Links bekommen
 		#session.expire_all()
+		base_path = "http://localhost/moodle"
 		type_info = self.get_type_name(session)
 		if type_info == "book":
-			return f'<a href="http://193.196.53.252/mod/book/view.php?id={self.id}">hier</a>' # &chapter={}
+			return f'<a href="{base_path}/mod/book/view.php?id={self.id}">hier</a>' # &chapter={}
 			# TODO later add chapters (for search), correlate page number in m_book_chapter
 		elif type_info == "assign":
-			return f'<a href="http://193.196.53.252/mod/assign/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/assign/view.php?id={self.id}">hier</a>'
 		elif type_info == 'resource':
-			return f'<a href="http://193.196.53.252/mod/resource/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/resource/view.php?id={self.id}">hier</a>'
 		elif type_info == "glossary":
-			return f'<a href="http://193.196.53.252/mod/glossary/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/glossary/view.php?id={self.id}">hier</a>'
 		elif type_info == "hvp":
-			return f'<a href="http://193.196.53.252/mod/hvp/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/hvp/view.php?id={self.id}">hier</a>'
 		else: 
-			return f'<a href="http://193.196.53.252/mod/{type_info}/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/{type_info}/view.php?id={self.id}">hier</a>'
 
 	def get_hvp_embed_html(self, session: Session) -> Union[str, None]:
 		""" Returns the <iframe/> code to embed the h5p content if this course module is h5p content, else None """
@@ -381,7 +382,7 @@ class MCourseModule(Base):
 		print("TYPE INFO", type_info)
 		if type_info == "hvp":
 			return f"""
-			<iframe src="http://193.196.53.252:80/mod/hvp/embed.php?id={self.id}" allowfullscreen="allowfullscreen"
+			<iframe src="http://localhost/moodle/mod/hvp/embed.php?id={self.id}" allowfullscreen="allowfullscreen"
 				title="Multiple Choice: Welche Zusammenhänge sind kausal?" width="350" height="350" frameborder="0"></iframe>
 			<script src="../../mod/hvp/library/js/h5p-resizer.js" charset="UTF-8"></script>
 			"""
@@ -488,7 +489,7 @@ class MCourseSection(Base):
 	
 	def get_link(self):
 		""" Get link to course section """
-		return f"http://193.196.53.252/course/view.php?id={self._course_id}&section={self._section_id}"
+		return f"http://localhost/moodle/course/view.php?id={self._course_id}&section={self._section_id}"
 
 	def is_completed(self, user: "MUser", session: Session) -> bool:
 		""" Query if user has completed this course section (= all course modules inside this course section).
@@ -760,7 +761,7 @@ class MUser(Base):
 		for section in session.query(MCourseSection).all():
 			if is_available_course_sections(session, self, section):
 				for course_moudule in section.modules:
-					if not course_moudule.is_completed(self, session) and is_available_course_module(session, self, course_moudule) and not course_moudule.get_type_name() in exclude_types:
+					if not course_moudule.is_completed(self, session) and is_available_course_module(session, self, course_moudule) and not course_moudule.get_type_name(session) in exclude_types:
 						available.append(course_moudule)
 		return available		
 	
@@ -856,7 +857,7 @@ def get_time_estimates(session: Session, user: MUser, exclude_types: List[str] =
 	"""
 	#session.expire_all()
 	course_modules = session.query(MCourseModule).filter().all()
-	course_modules = list(course_modules.filter(lambda module: module.get_type_name(session) not in exclude_types))
+	course_modules = filter(lambda module: module.get_type_name(session) not in exclude_types, course_modules)
 	estimates = []
 	for module in course_modules:
 		mod_estimate = get_time_estimate_module(session, user, module)

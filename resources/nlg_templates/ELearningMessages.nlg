@@ -16,53 +16,53 @@ template request(goal)
 template inform(moduleRequirements, moduleName, moduleRequired)
     if moduleRequirements = "true":
         if moduleRequired = "true":
-            "Alles klar. Es gibt ein neues Modul zu dem {moduleName} Kurs, für das du die Voraussetzungen erfüllt hast. Okay?"
+            "Alles klar. Es gibt ein neues Modul zu dem {moduleName} Kurs, für das du die Voraussetzungen erfüllst. Okay?"
 
 
 template inform(positiveFeedback, test)
     "Cool! Ich würde dir helfen, dein Wissen über die Lerninhalte zu überprüfen. Wenn du bereit bist, würde ich dir Fragen dazu stellen."
 
 template inform(positiveFeedback, repeatQuiz)
-    "Cool! Du solltest die Quiz regelmäßig wiederholen, damit du die Inhalte bis der Prüfung nicht vergisst!"
+    "Cool! Du solltest die Quizzes regelmäßig wiederholen, damit du die Inhalte bis zur Prüfung nicht vergisst!"
 
 
-template inform(moduleName, repeatContent)
+template inform(moduleName, repeatContent, link)
     if repeatContent = "quiz":
-        "Du hast das Module {moduleName} seit langen Zeit abgeschlossen. {REPEAT_QUIZ()}"
+        "Du hast das Module {moduleName} seit langen Zeit abgeschlossen. {REPEAT_QUIZ()} {link}"
     if repeatContent = "module":
-        "Du hast bei {moduleName} weniger als 50% der Quiz richtig beantwortet :-(. Es wäre besser, wenn du das Modul wiederholst, dann wirst du bestimmt ein besseres Ergibniss erreichen!"
+        "Du hast bei {moduleName} weniger als 50% der Quizzes richtig beantwortet :-(. Es wäre besser, wenn du das Modul wiederholst, dann wirst du bestimmt ein besseres Ergibniss erreichen! {link}"
     if repeatContent = "oldcontent":
-        "Du hast {moduleName} seit zwei Wochen nicht mehr geöffnet. Du solltest die Inhalte nochmal auffrischen, ansonsten vergiss du sie!"
+        "Du hast {moduleName} seit zwei Wochen nicht mehr geöffnet. Du solltest die Inhalte nochmal auffrischen, ansonsten vergiss du sie! {link}"
     if repeatContent = "noContent":
         "Es gibt keine Inhalte, die du wiederholen solltest. Du könntest mit einem neuen Modul anfangen!"
 
 template request(quiz_link, module, insufficient)
     if insufficient = "true":
-        "Bei {module} bist du leider noch nicht ausreichend. Möchtest du die Quiz zu {module} wiederholen?"
+        "Bei {module} hast du leider noch nicht ausreichend Punkte. Möchtest du die Quizzes dazu wiederholen?"
     if insufficient = "false":
-        "Du bist eigentlich bei allen ausreichend, gut gemacht! Möchstest du einige Quiz wiederholen, um die Inhalte aufzufrischen?"
+        "Du hast eigentlich bei allen ausreichend Punkte erzielt, gut gemacht! Möchtest du einige Quizzes wiederholen, um die Inhalte aufzufrischen?"
 
 
 template inform(moduleName, finishContent)
     if finishContent = "video"
-        "Du hast diese interaktiven Videos zu {moduleName} nicht zu Ende gesehen. Das könntest du noch heute abschließen :-)"
+        "Du hast dieses interaktive Video zu {moduleName} nicht zu Ende gesehen. Das könntest du noch heute abschließen :-) "
     if finishContent = "frage"
-        "Du hast die Fragen zu diesem/n Video/s nicht zum Ende beantwortet. Das könntest du schell noch heute erldigen!"
+        "Du hast die Fragen zu diesem Video nicht zu Ende beantwortet. Das könntest du schnell noch heute erledigen!"
     if finishContent = "module"
         "Du solltest am besten das Modul von gestern abschließen, es fehlt dir nicht mehr viel!"
     if finishContent = "doku"
-        "Letztes Mal hast du angefangen, die Dokumentation deines Projekts auszufüllen. Du sollst es am besten heute fertig machen :-)"
+        "Letztes Mal hast du angefangen, die Dokumentation deines Projekts auszufüllen. Du solltest es am besten heute fertig machen :-)"
 
 template inform(moduleName, submission)
         "Am {submission} für {moduleName}"
         # "Heute ist die Frist für {moduleName}. Prüfe bitte, dass alles richtig ist!"
 
 template inform(all_finished)
-        "Du hast alle Module abgeschloßen, sehr gut! Vergiss nicht, jede Woche einige Quiz zu wiederholen!"
+        "Du hast alle Module abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"
 
 
 template inform(moduleName, firstGoal)
-        "Die erste ist {moduleName}"
+        "Das erste ist {moduleName}"
 
 template request(learningTime)
     "Wie viel Zet hast du heute, um etwas zu lernen (bitte gebe die Zeit in Minuten an)?"
@@ -71,7 +71,7 @@ template inform(modulContent, link)
     "Gut, dass du fragst! Du kannst mehr Informationen hier finden: {link}"
 
 template inform(notImplementedYet)
-    "Lieder ist die Funktionalität noch nicht implementiert, wir arbeiten dran!"
+    "Leider ist die Funktionalität noch nicht implementiert, wir arbeiten dran!"
 
 template inform(positiveFeedback, alreadyFinishedOne, repeat)
     if alreadyFinishedOne = "false"
@@ -81,34 +81,34 @@ template inform(positiveFeedback, alreadyFinishedOne, repeat)
             "Sehr gut! Dann starte nochmal das Quiz, damit du auch dieses Modul abschließen kannst!"
 
 template inform(motivational, taskLeft)
-        "{taskLeft}, du hast schon {motivational} geschafft!Die restlichen Module bauen sich aufeinander und es wird dir leicht fallen, ein nach dem anderen zu bearbeiten ;-)"
+        "{taskLeft}, du hast schon {motivational} geschafft!Die restlichen Module bauen aufeinander auf und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"
 template inform(NoMotivational, taskLeft)
-        "{taskLeft}, du hast leider {NoMotivational} geschafft :-(. Fange jetzt an! Die Module bauen sich aufeinander und es wird dir leicht fallen, ein nach dem anderen zu bearbeiten ;-)"
+        "{taskLeft}, du hast leider {NoMotivational} geschafft 😩 Fange jetzt an! Die Module bauen aufeinander auf und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"
 
 template request(pastModule)
-    "Erinnerst du dich an dem vorherigen Modul?"
+    "Erinnerst du dich an das vorherige Modul?"
 
 template inform(pastModule, repeatContent)
-    "Dann wiederhole am besten die Quiz zu dem vorherigen Modul, bevor du mit dem neuen startest: {repeatContent}"
+    "Dann wiederhole am besten die Quizzes zu dem vorherigen Modul, bevor du mit dem neuen startest: {repeatContent}"
 
 template inform(positiveFeedback,newModule)
-    "Sehr gut! Du kannst dann mit dem neuen Modul anfangen: {newModule}"
+    "Sehr gut! Du kannst jetzt mit dem neuen Modul anfangen :-D: {newModule}"
 
 template inform(positiveFeedback, completedQuiz)
-    "Gut gemacht! Du hast die Quiz erfolgreich abgeschlossen :-)!"
+    "Gut gemacht! Du hast die Quizzes erfolgreich abgeschlossen :-)!"
 
 template inform(positiveFeedback,completedModul)
-    "Sehr gut! Du hast dieses Modul erfolgreich abgeschlossen und kannst mit den Quiz starten!"
+    "Sehr gut! Du hast dieses Modul erfolgreich abgeschlossen und kannst mit den Quizzen starten!"
 
 template inform(negativeFeedback, finishedQuiz)
-    "Schade, du hast nicht alle Fragen richtig beantwortet :-(. Versuch es nochmal, du wirst bestimmt ein besseres Ergebnis erreichen!"
+    "Schade, du hast nicht alle Fragen richtig beantwortet. Versuch nochmal, du wirst bestimmt ein besseres Ergebnis erreichen!"
 
 template inform(moduleName, nextModule)
     "Dein nächstes Modul ist {moduleName}. Möchtest du damit beginnen?"
 
 template inform(moduleName, hasModule)
     if hasModule = "false"
-        "Leider haben wir kein Modul für diese Angabe gefunden :( Versuche es bitte erneut, wenn du ein bisschen mehr Zeit eingibst."
+        "LLeider habe ich kein Modul mit dieser Dauer gefunden :-( Versuche es bitte erneut, wenn du ein bisschen mehr Zeit hast"
     if hasModule = "true"
         "Dann kannst du dieses Modul lernen: {moduleName}"
 
@@ -116,20 +116,20 @@ template inform(fitForTest, link)
     if fitForTest = "true"
         "Dann zeig mal! {link}"
     if fitForTest = "false"
-        "Ok, es ist nicht zu spät! Mach zuerst diese Quiz[{link}] und dann wiederhole die Themen zu den Fragen, die du nicht antworten konntest."
+        "Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist![{link}]"
 
 template inform(welcomeMsg, daysToSubmission, moduleName)
     if welcomeMsg = "due_date"
         if daysToSubmission = "near":
             "Hallo, willkommen zu deinem E-Learning-Bot! Du hast morgen eine Abgabe zum Modul {moduleName}, fühlst du dich dafür vorbereitet?"
         if daysToSubmission = "week":
-            "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen eine Abgabe zum Modul {moduleName}, fühlst du dich vorbereitet? Du kannst schon früher das Modul abschließen"
+            "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen eine Abgabe zum Modul {moduleName}, fühlst du dich vorbereitet? Du könntest das Modul dann schon vorher abschließen!"
 
 
 
 
 template inform(welcomeMsg, daysToSubmission)
-    "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen keine Abgabe. Will du neue Einheiten lernen oder alte wiederholen?"
+    "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen keine Abgabe. Willst du neue Einheiten lernen oder alte wiederholen?"
 
 template infom(repeat_module_affirm, module_link)
         "Alles klar, du findest die Inhalte zu dem Modul hier: {module_link}"
@@ -142,18 +142,18 @@ template inform(new_module_deny)
 
 
 template inform(offerHep)
-    "Dann mach bitte nochmal die Quiz und sag mir, womit du Schwierigkeiten hast."
+    "Dann mach bitte nochmal die Quizzes und sag mir, womit du Schwierigkeiten hast."
 
 template inform(QuizWiederholen, completedModule)
-    "Dann könntest du die Zeit nutzen, um die Quiz zu {completedModule} zu wiederholen!"
+    "Dann könntest du die Zeit nutzen, um die Quizzes zu {completedModule} zu wiederholen!"
 
 template inform(complete_Module_affirm)
-    "Sehr gut! Dann schaue kurz, welche Aufgaben bei dem Modul noch offen sind und schließe sie ab ;-)"
+    "Sehr gut! Dann schau kurz nach, welche Aufgaben bei dem Modul noch offen sind, und schließe sie ab ;-)"
 
 
 
 template inform(complete_Module_deny)
-    "Dann könntest du die Zeit nutzen, um dir die Quiz dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist!"
+    "Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist!"
 
 template request(fitForSubmission, newTask)
     "Super! Willst du dann heute neue Einheiten lernen oder abgeschlossene Inhalte wiederholen?"
@@ -165,6 +165,9 @@ template request(offerHelp, time)
 template reqmore(moduleContent)
         "Brauchst du mehr Informationen zu dem Modul?"
 
+template reqmore(end)
+        "Super, du kannst mir einfach nochmal schreiben, falls du meine Hilfe brauchst!"
+
 template inform(positiveFeedback, offerHelp)
         "Super, sag Bescheid, falls ich dir sonst noch helfen kann!"
 
@@ -173,26 +176,26 @@ template inform(contentTaskRequired)
 
 template inform(suggestion, offerhelp)
     if suggestion="quiz"
-        "Du solltest die Quiz gleich nach dem Lernen der Einheit machen, als die Inhalte bei dir noch frisch sind!"
+        "Du solltest die Quizzes gleich nach dem Lernen der Einheit machen, solange die Inhalte bei dir noch frisch sind!"
     if suggestion="learningTime"
         "Du solltest dir die Zeit fürs Lernen einer Einheit besser einplanen, damit du dich richtig konzentrieren kannst. Dann wirst du dich an die Inhalte besser erinnern und die Fragen richtig beantworten!"
     if suggestion="offerHelp"
-        "Wenn etwas beim Lernen nicht klar ist, solltest du mir gleich Fragen stellen und ich helfe dir gerne! Mach am besten noch nicht die Quiz, wenn du mit den Inhalten noch nicht komplett vertraut bist! "
+        "Wenn etwas beim Lernen nicht klar ist, solltest du mir gleich Fragen stellen, dann helfe ich dir gerne! Mach am besten noch nicht die Quizzes, wenn du mit den Inhalten noch nicht komplett vertraut bist!"
 
 
 template inform(quiz_link)
         "{quiz_link}"
 
 template inform(motivateForQuiz)
-        "Wenn du kurz Zeit hast, würde ich dir empfehlen, die Quiz trotzdem zu wiederholen: es dauert nur wenige Minute und du erhöhst die Chance, eine gute Note zu bekommen :-)!"
+        "Wenn du kurz Zeit hast, würde ich dir empfehlen, die Quizzes trotzdem zu wiederholen: das dauert nur wenige Minuten, und du erhöhst die Chance, eine gute Note zu bekommen :-)!"
 
 template inform(nextStep)
     if nextStep="newModule"
         "Sehr gut! Du kannst jetzt mit dem neuen Modul anfangen :-D!"
     if nextStep="repeatConcepts"
-        "Sehr gut! Willst du einige Inhalte noch wiederholen, bevor du mit dem neuen Modul anfängst?"
+        "Sehr gut! Willst du noch einige Inhalte wiederholen, bevor du mit dem neuen Modul anfängst?"
     if nextStep="repeatContents"
-        "Sehr gut! Sollen wir ein paar Begriffe durchgehen, und du sagst mir, welche du wiederholen möchtest?"
+        "Sehr gut! Sollen wir ein paar Begriffe durchgehen und du sagst mir, welche du wiederholen möchtest?"
 
 template request(feedback)
     if feedback = "richtigkeit"

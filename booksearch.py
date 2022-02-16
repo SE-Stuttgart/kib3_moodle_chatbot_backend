@@ -98,7 +98,7 @@ def get_book_links(session: Session, searchTerm: str) -> List[str]:
                 # find book chapter with page number of search result in PDF
                 chapter = session.query(MBookChapter).filter(MBookChapter._bookid==book.id, MBookChapter.pagenum==result.pageNumber).first()
                 # create link to chapter
-                links.append(f"http://193.196.53.252/mod/book/view.php?id={course_module.id}&chapterid={chapter.id}")
+                links.append(f"http://localhost/moodle/mod/book/view.php?id={course_module.id}&chapterid={chapter.id}")
     return links
 
 if __name__ == "__main__":

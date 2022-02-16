@@ -40,6 +40,7 @@ rule request(needHelp)
 
 rule request(insufficient)
     "Bei welche(m|r){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
+    "Bei welche(m|r){UNIT()} habe ich noch nicht ausreichend Punkte?"
 
 rule request(content)
     "{WHATSABOUT()}(\\?)?"
@@ -52,7 +53,7 @@ rule request(firstGoal)
     "{WHICH()} ist (die|der|das) erste({UNIT()})?(\\?)?"
 
 rule request(dueContent)
-    "Sind sie alle pflichtig|verplichtend(\\?)?"
+    "Sind sie alle pflichtig|verpflichtend(\\?)?"
 
 rule request(description)
     "asdasdad"

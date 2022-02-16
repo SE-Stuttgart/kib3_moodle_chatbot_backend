@@ -26,8 +26,8 @@ from typing import List, Tuple
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.functions import next_value
 from sqlalchemy.sql.sqltypes import DateTime
-from elearning.booksearch import get_book_links
 
+from elearning.booksearch import get_book_links
 from services.service import PublishSubscribe
 from services.service import Service
 from utils import SysAct, SysActionType
@@ -192,7 +192,7 @@ class ELearningPolicy(Service):
 		return user
 
 	def get_repeatable_modul_sys_act(self, userid):
-		two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=6)
+		two_weeks_ago = datetime.datetime.now() - datetime.timedelta(hours=2)
 		old_finished_modules = self.get_modules(since_date=two_weeks_ago, is_finished=True, userid=userid)
 		insufficient_modules = self.get_modules_by_grade(grade_threshold=0.6, userid=userid)
 		open_modules = self.get_modules(since_date=two_weeks_ago, is_finished=False, userid=userid)
@@ -218,9 +218,10 @@ class ELearningPolicy(Service):
 			moduleName = self.session.query(MCourseModule).filter(MCourseModule.instance==instanceId, MCourseModule._type_id==quizModuleId).first().get_name(self.session)
 		if repeatContent == "oldcontent":
 			moduleName = random.choice(old_finished_modules)
+		link = self.get_link_by_course_module_id(moduleName.id)
 		print("REPEATABLE CONTENT", repeatContent)
 		return SysAct(act_type=SysActionType.Inform,
-					  slot_values={"moduleName": moduleName, "repeatContent": repeatContent})
+					  slot_values={"moduleName": moduleName.course.fullname, "repeatContent": repeatContent, "link": link})
 
 	def get_submission_sys_act(self, userid):
 		"""
@@ -418,7 +419,7 @@ class ELearningPolicy(Service):
 		elif act.type == UserActionType.RequestMore:
 			if self.get_state(userid, MODE) == 'new':
 				return self.get_new_goal_system_act(userid)
-			return SysAct(act_type=SysActionType.RequestMore)
+			return SysAct(act_type=SysActionType.RequestMore, slot_values={"end": ""})
 		elif act.type == UserActionType.Deny:
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"positiveFeedback": "", "offerHelp": ""})
@@ -486,7 +487,7 @@ class ELearningPolicy(Service):
 			courses = user.get_completed_courses_before_date(since_date, self.session)
 		else:
 			courses = user.get_not_finished_courses_before_date(since_date, self.session)
-		return [course.course.fullname for course in courses]
+		return [course for course in courses]
 
 	def get_modules_by_grade(self, grade_threshold, userid):
 		"""
