@@ -31,8 +31,8 @@ def search_text_in_pdf(searchTerm: str, pdfFilename: str) -> List[PdfSearchResul
     results = []
     pdfdoc = fitz.open(pdfFilename)
     for page in pdfdoc:
-        text = page.get_text().lower() # extract page text
-        if len(re.findall(searchTerm.lower(), text)):
+        text = page.get_text() # extract page text
+        if len(re.findall(searchTerm, text, re.IGNORECASE)):
             # TODO: later add fuzzy matching
             results.append(PdfSearchResult(pdfFilename=pdfFilename, pageNumber=page.number+1, pageText=text))
     return results

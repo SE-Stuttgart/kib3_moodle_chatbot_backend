@@ -17,6 +17,6 @@
 #
 ###############################################################################
 
-from .nlg import HandcraftedNLG
+from .nlg import ELearningNLG
 
-__all__ = [HandcraftedNLG]
+__all__ = [ELearningNLG]

@@ -55,25 +55,24 @@ rule request(firstGoal)
 rule request(dueContent)
     "Sind sie alle pflichtig|verpflichtend(\\?)?"
 
-rule request(description)
-    "asdasdad"
 
 rule request(submission)
     "Wann ist (die|der) (erste |nächste )?(Abgabe|Frist|deadline|Termin)(\\?)?"
 
 rule request(nextModule)
-    "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes lernen|machen(\\?)?"
+    "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes tun|lernen|machen(\\?)?"
     "Was ist mein nächstes Modul|Ziel(\\?)?"
 
 rule request(infoContent)
     "Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\\?)?"
     "Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\\?)?"
-    "Wo finde ich Info(s)? (über|zu) (?P<content3>.*)(\\?)?"
-    "Was war (nochmal)? mit (?P<content4>.*) gemeint(\\?)?"
-    "Wo wird (?P<content5>.*) erklärt(\\?)?"
-    "Wo steht (et)?was (über|zu) (?P<content6>.*)(\\?)?"
-    "(Zu|über) (?P<content7>.*)"
-
+    "Wo finde ich (Info(s)? )?(über|zu )?(?P<content3>.*)(\\?)?"
+    "Wo steht ((et)?was )?(über|zu )?(?P<content6>.*)(\\?)?"
+    "Wo kann ich Info(s)? (über|zu) (?P<content4>.*)finden(\\?)?"
+    "Was war (nochmal )?mit (?P<content9>.*) gemeint(\\?)?"
+    "Was ist (nochmal )?mit (?P<content5>.*) gemeint(\\?)?"
+    "Wo wird (?P<content10>.*) erklärt(\\?)?"
+    "Was ist (?P<content7>.*)"
 
 rule inform(lecture)
     "{rINFORM()}{lecture}"
@@ -87,17 +86,9 @@ rule inform(learningTime)
     "\\d+"
     "Ich habe (nur)?15 Minuten (Zeit)?"
 
-rule inform(description)
-    "(Test)"
-
 #rule inform(repeatedModul)
     #"Okay, ich habe es nochmal gelesen und ich denke, ich hab’s verstanden."
 
-rule inform(lecture_link)
-    "test"
-
-rule inform(link)
-    "test"
 
 rule inform(module)
     "Nein, ich möchte mit dem neuen starten"
@@ -129,6 +120,17 @@ rule request(module)
     "Wie viele neuen Module kommen jede Woche\\?"
 
 
+rule request(description)
+    "(Test)"
+
+rule inform(description)
+    "(Test)"
+
+rule inform(lecture_link)
+    "test"
+
+rule inform(link)
+    "test"
 
 rule request(link)
     "Alles klar, dann zeige sie mir bitte"
