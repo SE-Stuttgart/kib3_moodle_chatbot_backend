@@ -35,17 +35,17 @@ def load_console():
     return [user_in, user_out]
 
 def load_nlg(domain=None):
-    from services.nlg.nlg import HandcraftedNLG
-    nlg = HandcraftedNLG(domain=domain)
+    from services.nlg.nlg import ELearningNLG
+    nlg = ELearningNLG(domain=domain)
     return nlg
 
 def load_elearning_domain():
     from utils.domain.jsonlookupdomain import JSONLookupDomain
     from elearning.policy_ELearning import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
-    from services.nlu.nlu import HandcraftedNLU
+    from services.nlu.nlu import ELearningNLU
     domain = JSONLookupDomain('ELearning', display_name="ELearning")
-    e_learning_nlu = HandcraftedNLU(domain=domain)
+    e_learning_nlu = ELearningNLU(domain=domain)
     e_learning_policy = ELearningPolicy(domain=domain)
     e_learning_bst = ELearningBST(domain=domain)
     e_learning_nlg = load_nlg(domain=domain)

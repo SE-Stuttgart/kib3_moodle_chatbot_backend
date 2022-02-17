@@ -23,13 +23,13 @@ def load_elearning_domain():
     from utils.domain.jsonlookupdomain import JSONLookupDomain
     from elearning.policy_ELearning import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
-    from services.nlg.nlg import HandcraftedNLG
-    from services.nlu.nlu import HandcraftedNLU
+    from services.nlg.nlg import ELearningNLG
+    from services.nlu.nlu import ELearningNLU
     domain = JSONLookupDomain('ELearning', display_name="ELearning")
-    e_learning_nlu = HandcraftedNLU(domain=domain)
+    e_learning_nlu = ELearningNLU(domain=domain)
     e_learning_policy = ELearningPolicy(domain=domain)
     e_learning_bst = ELearningBST(domain=domain)
-    e_learning_nlg = HandcraftedNLG(domain=domain)
+    e_learning_nlg = ELearningNLG(domain=domain)
     return domain, [e_learning_nlu, e_learning_bst, e_learning_policy, e_learning_nlg]
 
 #  setup dialog system

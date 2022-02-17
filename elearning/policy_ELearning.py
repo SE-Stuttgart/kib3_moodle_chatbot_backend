@@ -530,7 +530,8 @@ class ELearningPolicy(Service):
 		# while loop ends in infinite loop if all courses are completed
 		next_module: MCourseModule = self.get_state(userid, NEXT_SUGGESTED_COURSEMODULE)
 		if next_module is None:
-			return None
+			[_, next_module_id] = self.get_user_next_module(userid)
+			next_module = self.get_course_module_id(next_module_id)
 		return next_module.get_content_link(self.session), next_module.id
 
 	def get_user_last_module_link(self, userid):
@@ -615,3 +616,7 @@ class ELearningPolicy(Service):
 	def get_link_by_course_module_id(self, course_module_id):
 		course = self.session.query(MCourseModule).filter(MCourseModule.id == course_module_id).one()
 		return course.get_content_link(self.session)
+
+	def get_course_module_id(self, course_module_id):
+		return self.session.query(MCourseModule).filter(MCourseModule.id == course_module_id).one()
+

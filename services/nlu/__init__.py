@@ -17,4 +17,4 @@
 #
 ###############################################################################
 
-from .nlu import HandcraftedNLU
+from .nlu import ELearningNLU

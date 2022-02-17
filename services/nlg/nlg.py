@@ -32,7 +32,7 @@ from utils.sysact import SysAct
 from typing import Dict
 
 
-class HandcraftedNLG(Service):
+class ELearningNLG(Service):
     """Handcrafted (i.e. template-based) Natural Language Generation Module
 
     A rule-based approach on natural language generation.
