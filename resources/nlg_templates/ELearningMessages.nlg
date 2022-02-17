@@ -41,7 +41,8 @@ template request(quiz_link, module, insufficient)
         "Bei {module} hast du leider noch nicht ausreichend Punkte. Möchtest du die Quizzes dazu wiederholen?"
     if insufficient = "false":
         "Du hast eigentlich bei allen ausreichend Punkte erzielt, gut gemacht! Möchtest du einige Quizzes wiederholen, um die Inhalte aufzufrischen?"
-
+    if insufficient = "none":
+        "Frag mich nochmal wenn du ein Quiz abgeschloßen hast 😁"
 
 template inform(moduleName, finishContent)
     if finishContent = "video"

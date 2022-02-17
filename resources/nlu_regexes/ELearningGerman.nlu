@@ -62,6 +62,7 @@ rule request(submission)
 rule request(nextModule)
     "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes tun|lernen|machen(\\?)?"
     "Was ist mein nächstes Modul|Ziel(\\?)?"
+    "Was kann ich als nächstes lernen|machen|tun(\\?)?"
 
 rule request(infoContent)
     "Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\\?)?"
@@ -72,7 +73,7 @@ rule request(infoContent)
     "Was war (nochmal )?mit (?P<content9>.*) gemeint(\\?)?"
     "Was ist (nochmal )?mit (?P<content5>.*) gemeint(\\?)?"
     "Wo wird (?P<content10>.*) erklärt(\\?)?"
-    "Was ist (?P<content7>.*)"
+
 
 rule inform(lecture)
     "{rINFORM()}{lecture}"

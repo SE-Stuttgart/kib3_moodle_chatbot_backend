@@ -396,6 +396,12 @@ class ELearningPolicy(Service):
 									   "offerhelp": "content"})
 
 		elif act.slot == "insufficient":
+			grades = self.get_user_grades(userid)
+			if not grades:
+				return SysAct(act_type=SysActionType.Request,
+							  slot_values={"quiz_link": "",
+										   "module": '',
+										   "insufficient": 'none'})
 			module_name, course_module_id = self.get_insufficient_module(userid)
 			if course_module_id:
 				self.set_state(userid, COURSE_MODULE_ID, course_module_id)
@@ -410,7 +416,10 @@ class ELearningPolicy(Service):
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"motivateForQuiz": ""})
 			else:
-				quiz: MCourseModule = self.get_quiz_for_user_by_course_id("6", userid)[1]
+				course_module_id = self.get_state(userid, COURSE_MODULE_ID)
+				if not course_module_id:
+					module_name, course_module_id = self.get_sufficient_module(userid)
+				quiz: MCourseModule = self.get_quiz_for_user_by_course_id(course_module_id, userid)[0]
 				print("QUIZ", quiz)
 				print("QUIZ LINK", quiz.get_hvp_embed_html(self.session))
 				return SysAct(act_type=SysActionType.Inform,
@@ -496,8 +505,7 @@ class ELearningPolicy(Service):
 		"""
 			get modules where grades are lower then 'grade_threshold
 		"""
-		user = self.get_current_user(userid)
-		grades = user.get_grades(self.session)
+		grades = self.get_user_grades(userid)
 		return [grade for grade in grades if
 				grade.finalgrade and grade.finalgrade < (grade.rawgrademax * decimal.Decimal(grade_threshold))]
 
@@ -573,8 +581,7 @@ class ELearningPolicy(Service):
 		return course_modules[0].section.name
 
 	def get_insufficient_module(self, userid):
-		user = self.get_current_user(userid)
-		h_grades = user.get_grades(self.session)
+		h_grades = self.get_user_grades(userid)
 
 		insufficient_modules = [(h_grade.get_grade_item(self.session).course.fullname, h_grade.get_grade_item(self.session).course.id) for
 		 h_grade in h_grades if
@@ -583,7 +590,25 @@ class ELearningPolicy(Service):
 		if insufficient_modules:
 			return insufficient_modules[0]
 		return None, None
-		
+
+
+
+	def get_sufficient_module(self, userid):
+		h_grades = self.get_user_grades(userid)
+
+		sufficient_modules = [(h_grade.get_grade_item(self.session).course.fullname, h_grade.get_grade_item(self.session).course.id) for
+		 h_grade in h_grades if
+		 h_grade.finalgrade and h_grade.finalgrade >= h_grade.get_grade_item(
+			 self.session).gradepass]
+		if sufficient_modules:
+			return sufficient_modules[0]
+		return None, None
+
+	def get_user_grades(self, userid):
+		user = self.get_current_user(userid)
+		h_grades = user.get_grades(self.session)
+		return h_grades
+
 	def get_quiz_for_user_by_course_id(self, course_id: str, userid):
 		user = self.get_current_user(userid)
 		return user.find_quiz_by_course_id(course_id, self.session)
