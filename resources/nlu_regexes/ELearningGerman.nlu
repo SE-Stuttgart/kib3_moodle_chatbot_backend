@@ -71,7 +71,9 @@ rule request(infoContent)
     "Wo finde ich Info(s)? (über|zu) (?P<content3>.*)(\\?)?"
     "Was war (nochmal)? mit (?P<content4>.*) gemeint(\\?)?"
     "Wo wird (?P<content5>.*) erklärt(\\?)?"
-    "(Zu|über) (?P<content6>.*)"
+    "Wo steht (et)?was (über|zu) (?P<content6>.*)(\\?)?"
+    "(Zu|über) (?P<content7>.*)"
+
 
 rule inform(lecture)
     "{rINFORM()}{lecture}"

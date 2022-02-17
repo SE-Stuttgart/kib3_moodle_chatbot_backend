@@ -285,7 +285,10 @@ class ELearningPolicy(Service):
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
 			book_links = get_book_links(self.session, act.text)
 			print("LINKS", book_links)
-			book_link_str = ", ".join(f'<a href="{link}">hier</a>' for link in book_links)
+			if book_links:
+				book_link_str = ", ".join(f'<a href="{link}">hier</a>' for link in book_links)
+			else:
+				book_link_str = "None"
 			return SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 		if act.type == UserActionType.Request and act.slot == "content":
 			course_id = self.get_state(userid, COURSE_ID)

@@ -414,7 +414,7 @@ class MCourseModule(Base):
 		elif type_info == "hvp":
 			return session.query(MHVP).get(self.instance).name
 		else: 
-			return "Unbekannter Kursmodultyp"
+			return None
 	
 	def get_type_name(self, session: Session):
 		#session.expire_all()
@@ -461,13 +461,13 @@ class MCourseSection(Base):
 	_section_id = Column(BIGINT(10), nullable=False, server_default=text("'0'"), name='section')
 
 
-	def get_next_available_module(self, currentModule: MCourseModule, user: "MUser", session: Session, excluded_types: List[str] = ['glossary', 'assign', 'resource']) -> Union[MCourseModule, None]:
+	def get_next_available_module(self, currentModule: MCourseModule, user: "MUser", session: Session, included_types: List[str] = ['assignment', 'book', 'hvp', 'page', 'quiz']) -> Union[MCourseModule, None]:
 		"""
 		Given a current course module (e.g. the most recently finished one) in this course section,
 		find the course module the student should do next.
 
 		Args:
-			excluded_types: obtain e.g. via MCourseModule.get_type_name()
+			included_types: obtain e.g. via MCourseModule.get_type_name()
 							PDF = resource
 
 		Returns: 
@@ -483,7 +483,7 @@ class MCourseSection(Base):
 				if len(self.sequence) > index + 1:
 					nextModuleId = int(self.sequence[index+1])
 					module = session.query(MCourseModule).get(nextModuleId)
-					if is_available_course_module(session, user, module) and module.get_type_name(session) not in excluded_types:
+					if is_available_course_module(session, user, module) and module.get_type_name(session) in included_types:
 						return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
 		return None
 	
@@ -737,13 +737,13 @@ class MUser(Base):
 		courses = session.query(MCourseModule).all()
 		return [course for course in courses if course.id not in completed_ids]
 
-	def get_available_course_modules(self, session: Session, exclude_types: List[str] = ['glossary', 'assign', 'resource']) -> List[MCourseModule]:
+	def get_available_course_modules(self, session: Session, include_types: List[str] = ['assignment', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModule]:
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
 			if is_available_course_sections(session, self, section):
 				for course_moudule in section.modules:
-					if is_available_course_module(session, self, course_moudule) and course_moudule.get_type_name(session) not in exclude_types:
+					if is_available_course_module(session, self, course_moudule) and course_moudule.get_type_name(session) in include_types:
 						available.append(course_moudule)
 		return available
 
@@ -755,13 +755,13 @@ class MUser(Base):
 				available.append(section)
 		return available
 
-	def get_incomplete_available_course_modules(self, session: Session, exclude_types: List[str] = ['glossary', 'assign', 'resource']) -> List[MCourseModule]:
+	def get_incomplete_available_course_modules(self, session: Session, include_types: List[str] = ['assignment', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModule]:
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
 			if is_available_course_sections(session, self, section):
 				for course_moudule in section.modules:
-					if not course_moudule.is_completed(self, session) and is_available_course_module(session, self, course_moudule) and not course_moudule.get_type_name(session) in exclude_types:
+					if not course_moudule.is_completed(self, session) and is_available_course_module(session, self, course_moudule) and course_moudule.get_type_name(session) in include_types:
 						available.append(course_moudule)
 		return available		
 	
@@ -849,7 +849,7 @@ def get_time_estimate_module(session: Session, user: MUser, course_module: MCour
 					return minute_estimate
 	return None
 
-def get_time_estimates(session: Session, user: MUser, exclude_types: List[str] = ['resource']) -> List[Tuple[MCourseModule, int]]:
+def get_time_estimates(session: Session, user: MUser, include_types: List[str] = ['assignment', 'book', 'hvp', 'page', 'quiz']) -> List[Tuple[MCourseModule, int]]:
 	""" 
 	Returns:
 		a list of tuples: 
@@ -857,7 +857,7 @@ def get_time_estimates(session: Session, user: MUser, exclude_types: List[str] =
 	"""
 	#session.expire_all()
 	course_modules = session.query(MCourseModule).filter().all()
-	course_modules = filter(lambda module: module.get_type_name(session) not in exclude_types, course_modules)
+	course_modules = filter(lambda module: module.get_type_name(session) in include_types, course_modules)
 	estimates = []
 	for module in course_modules:
 		mod_estimate = get_time_estimate_module(session, user, module)

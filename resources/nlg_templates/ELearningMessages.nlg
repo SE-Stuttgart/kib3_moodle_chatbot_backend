@@ -69,6 +69,9 @@ template request(learningTime)
 
 template inform(modulContent, link)
     "Gut, dass du fragst! Du kannst mehr Informationen hier finden: {link}"
+    if link = "None"
+        "Leider konnte ich keine Ergebnisse zu deiner Eingabe finden :( Versuche es mal mit Synonymen!"
+    
 
 template inform(notImplementedYet)
     "Leider ist die Funktionalität noch nicht implementiert, wir arbeiten dran!"
