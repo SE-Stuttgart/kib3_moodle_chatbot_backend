@@ -423,7 +423,7 @@ class ELearningPolicy(Service):
 				print("QUIZ", quiz)
 				print("QUIZ LINK", quiz.get_hvp_embed_html(self.session))
 				return SysAct(act_type=SysActionType.Inform,
-							  slot_values={"quiz_link": quiz.get_hvp_embed_html(self.session)})
+							  slot_values={"quiz_link": quiz.get_content_link(self.session)})
 
 		elif act.type == UserActionType.Thanks:
 			return SysAct(act_type=SysActionType.RequestMore,
