@@ -213,4 +213,7 @@ template request(feedback)
     if feedback = "getBetterFeedback"
         "Wie kann ich dir morgen besser helfen?"
 
+template inform(help)
+    "Du kommst nicht weiter? Kein Problem! Hier ist eine Liste von Themen, wonach du mich fragen kannst: <ul><li>Was du als nächstes lernen solltest <br> (z.B. \"Was kann ich als nächstes lernen?\")</li><li>Was du wiederholen kannst <br>(z.B. \"Bei welchem Modul bin ich nicht ausreichend?\")</li></ul>"
+
 function REPEAT_QUIZ(): "Wiederhole dann bitte die Quiz"

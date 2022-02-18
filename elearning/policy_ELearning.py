@@ -486,6 +486,9 @@ class ELearningPolicy(Service):
 		elif act.slot == "welcomeMsgNewDeny":
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"new_module_deny": "x"})
+		elif act.slot == "help":
+			return SysAct(act_type=SysActionType.Inform,
+						  slot_values={"help":"x"})
 
 
 

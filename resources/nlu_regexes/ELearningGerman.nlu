@@ -15,7 +15,11 @@ rule request(toReachGoal)
 rule request(newModuleYes)
     "Ja, {NEW()}"
 
-rule request(newModuleNo)
+
+rule request(help)
+    "Hilfe"
+
+rule request(newMouleNo)
     "Nein"
     "Nein, ich möchte es wiederholen?"
 
