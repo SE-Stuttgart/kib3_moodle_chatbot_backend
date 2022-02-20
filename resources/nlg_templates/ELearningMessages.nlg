@@ -38,7 +38,7 @@ template inform(moduleName, repeatContent, link)
 
 template request(quiz_link, module, insufficient)
     if insufficient = "true":
-        "Bei {module} hast du leider noch nicht ausreichend Punkte. Möchtest du die Quizzes dazu wiederholen?"
+        "Bei {module} hast du leider noch nicht ausreichend Punkte :-( Möchtest du die Quizzes dazu wiederholen?"
     if insufficient = "false":
         "Du hast eigentlich bei allen ausreichend Punkte erzielt, gut gemacht! Möchtest du einige Quizzes wiederholen, um die Inhalte aufzufrischen?"
     if insufficient = "none":
@@ -112,7 +112,7 @@ template inform(moduleName, nextModule)
 
 template inform(moduleName, hasModule)
     if hasModule = "false"
-        "LLeider habe ich kein Modul mit dieser Dauer gefunden :-( Versuche es bitte erneut, wenn du ein bisschen mehr Zeit hast"
+        "Leider habe ich kein Modul mit dieser Dauer gefunden :-( Versuche es bitte erneut, wenn du ein bisschen mehr Zeit hast"
     if hasModule = "true"
         "Dann kannst du dieses Modul lernen: {moduleName}"
 
@@ -120,7 +120,7 @@ template inform(fitForTest, link)
     if fitForTest = "true"
         "Dann zeig mal! {link}"
     if fitForTest = "false"
-        "Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist![{link}]"
+        "Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist! {link}"
 
 template inform(welcomeMsg, daysToSubmission, moduleName)
     if welcomeMsg = "due_date"

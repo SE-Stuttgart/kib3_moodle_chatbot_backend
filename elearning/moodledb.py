@@ -362,18 +362,18 @@ class MCourseModule(Base):
 		base_path = "http://localhost/moodle"
 		type_info = self.get_type_name(session)
 		if type_info == "book":
-			return f'<a href="{base_path}/mod/book/view.php?id={self.id}">hier</a>' # &chapter={}
+			return f'<a href="{base_path}/mod/book/view.php?id={self.id}">{self.get_name(session)}</a>' # &chapter={}
 			# TODO later add chapters (for search), correlate page number in m_book_chapter
 		elif type_info == "assign":
-			return f'<a href="{base_path}/mod/assign/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/assign/view.php?id={self.id}">{self.get_name(session)}</a>'
 		elif type_info == 'resource':
-			return f'<a href="{base_path}/mod/resource/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/resource/view.php?id={self.id}">{self.get_name(session)}</a>'
 		elif type_info == "glossary":
-			return f'<a href="{base_path}/mod/glossary/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/glossary/view.php?id={self.id}">{self.get_name(session)}</a>'
 		elif type_info == "hvp":
-			return f'<a href="{base_path}/mod/hvp/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/hvp/view.php?id={self.id}">{self.get_name(session)}</a>'
 		else: 
-			return f'<a href="{base_path}/mod/{type_info}/view.php?id={self.id}">hier</a>'
+			return f'<a href="{base_path}/mod/{type_info}/view.php?id={self.id}">{self.get_name(session)}</a>'
 
 	def get_hvp_embed_html(self, session: Session) -> Union[str, None]:
 		""" Returns the <iframe/> code to embed the h5p content if this course module is h5p content, else None """

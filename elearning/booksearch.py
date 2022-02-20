@@ -62,14 +62,14 @@ def _delete_non_pdf_files(session: Session):
 
 
 
-def get_book_links(session: Session, searchTerm: str) -> List[str]:
+def get_book_links(session: Session, searchTerm: str) -> Dict:
     """
     This is probably the only function you care about from this file.
     Returns:
         Links to moodle book chapters matching the search term by looking through the accompanying PDF and matching page numbers between both
     """
     # session.expire_all()
-    links = []
+    links = {}
     
     # get a list of all pdf names and their locations
     file_path_map = get_all_pdf_files(session)
@@ -98,7 +98,7 @@ def get_book_links(session: Session, searchTerm: str) -> List[str]:
                 # find book chapter with page number of search result in PDF
                 chapter = session.query(MBookChapter).filter(MBookChapter._bookid==book.id, MBookChapter.pagenum==result.pageNumber).first()
                 # create link to chapter
-                links.append(f"http://localhost/moodle/mod/book/view.php?id={course_module.id}&chapterid={chapter.id}")
+                links[f"http://localhost/moodle/mod/book/view.php?id={course_module.id}&chapterid={chapter.id}"] = chapter.title
     return links
 
 if __name__ == "__main__":

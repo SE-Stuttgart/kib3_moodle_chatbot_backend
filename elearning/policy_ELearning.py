@@ -192,7 +192,7 @@ class ELearningPolicy(Service):
 		return user
 
 	def get_repeatable_modul_sys_act(self, userid):
-		two_weeks_ago = datetime.datetime.now() - datetime.timedelta(hours=2)
+		two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=2)
 		old_finished_modules = self.get_modules(since_date=two_weeks_ago, is_finished=True, userid=userid)
 		insufficient_modules = self.get_modules_by_grade(grade_threshold=0.6, userid=userid)
 		open_modules = self.get_modules(since_date=two_weeks_ago, is_finished=False, userid=userid)
@@ -215,7 +215,7 @@ class ELearningPolicy(Service):
 		if repeatContent == "module":
 			instanceId = random.choice(insufficient_modules).get_grade_item(self.session).iteminstance
 			quizModuleId = self.session.query(MModule).filter(MModule.name=='hvp').first().id
-			moduleName = self.session.query(MCourseModule).filter(MCourseModule.instance==instanceId, MCourseModule._type_id==quizModuleId).first().get_name(self.session)
+			moduleName = self.session.query(MCourseModule).filter(MCourseModule.instance==instanceId, MCourseModule._type_id==quizModuleId).first()
 		if repeatContent == "oldcontent":
 			moduleName = random.choice(old_finished_modules)
 		link = self.get_link_by_course_module_id(moduleName.id)
@@ -286,7 +286,7 @@ class ELearningPolicy(Service):
 			book_links = get_book_links(self.session, act.text)
 			print("LINKS", book_links)
 			if book_links:
-				book_link_str = ", ".join(f'<a href="{link}">hier</a>' for link in book_links)
+				book_link_str = ", ".join(f'<a href="{link}">{book_links[link]}</a>' for link in book_links)
 			else:
 				book_link_str = "None"
 			return SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
@@ -444,20 +444,23 @@ class ELearningPolicy(Service):
 
 		elif act.slot == "welcomeMsgNearAffirm":
 			course_id = self.get_state(userid, COURSE_ID)
-			quizzes = self.get_quiz_for_user_by_course_id(course_id)
+			quizzes = self.get_quiz_for_user_by_course_id(course_id, userid)
 			if len(quizzes) == 0:
 				return SysAct(act_type=SysActionType.Request,
 							  slot_values={"fitForSubmission":"", "newTask":""})
 
-			# Fixme: es funktioniert nicht, weil die session null ist => link = quizzes[0].get_content_link()
-			link = str(quizzes[0])
 			return SysAct(act_type=SysActionType.Inform,
-						  slot_values={"fitForTest": "true", "link": link})
+						  slot_values={"fitForTest": "true", "link": quizzes[0].get_content_link(self.session)})
 
 		elif act.slot == "welcomeMsgNearDeny":
-			link = "link_to_quiz" #self.get_quiz_for_user_by_module_name(act.value)
+			course_id = self.get_state(userid, COURSE_ID)
+			quizzes = self.get_quiz_for_user_by_course_id(course_id, userid)
+			if len(quizzes) == 0:
+				return SysAct(act_type=SysActionType.Request,
+							  slot_values={"fitForSubmission": "", "newTask": ""})
+
 			return SysAct(act_type=SysActionType.Inform,
-						  slot_values={"fitForTest": "false", "link": link})
+						  slot_values={"fitForTest": "false", "link": quizzes[0].get_content_link(self.session)})
 
 		elif act.slot == "welcomeMsgWeekAffirm":
 			return SysAct(act_type=SysActionType.Inform,
