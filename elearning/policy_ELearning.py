@@ -317,10 +317,11 @@ class ELearningPolicy(Service):
 			if matches:
 				module_names = self.get_new_module_by_time(int(matches[0]), userid)
 				hasModule = len(module_names) > 0
+				link = ""
 				if hasModule:
-					module_name = module_names[0].get_name(self.session)
+					link = module_names[0].get_content_link(self.session)
 				return SysAct(act_type=SysActionType.Inform,
-							  slot_values={"moduleName": module_name, "hasModule": "true" if hasModule else "false"})
+							  slot_values={"moduleName": link, "hasModule": "true" if hasModule else "false"})
 			return {"sys_act": SysAct(act_type=SysActionType.Bad)}
 		elif act.slot == "submission":
 			return self.get_submission_sys_act(userid)
