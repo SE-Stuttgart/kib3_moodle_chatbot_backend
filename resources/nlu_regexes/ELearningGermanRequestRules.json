@@ -19,9 +19,10 @@
   "nextModule": "((Was|(((Welche(s|r|n|m))?)(( Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs)))) (k\u00f6nnte|sollte|muss|soll|kann) ich als n\u00e4chstes lernen|machen(\\?)?|Was ist mein n\u00e4chstes Modul|Ziel(\\?)?)",
   "quiz_link": "(test)",
   "repeatableModul": "(((Welche(s|r|n|m))?)(( Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs)) (k\u00f6nnte|sollte|muss|soll|kann) ich wiederholen(\\?)?)",
-  "submission": "(Wann ist (die|der) (erste |n\u00e4chste )?(Abgabe|Frist|deadline|Termin)(\\?)?)",
+  "submission": "(Wann ist (die|der|meine) (erste |n\u00e4chste )?(Abgabe|Frist|deadline|Termin)(\\?)?)",
   "toReachGoal": "(Welche(s)? Ziel(e)? habe ich( f\u00fcr)?(( )?(diesen Monat( )?|diese Woche( )?|heute( )?)?)(\\?)?)",
   "topic": "(test)",
   "topic_link": "(test)",
   "help": "(Hilfe)"
+
 }
