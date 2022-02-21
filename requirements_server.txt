@@ -1,7 +1,24 @@
-bcrypt
-# python-socketio
-# fastapi==0.52.0
-pyjwt
-passlib
-# pydantic
+bcrypt==3.2.0
+certifi==2021.5.30
+cffi==1.14.6
+charset-normalizer==2.0.4
+graphviz==0.19.1
+greenlet==1.1.1
+httplib2==0.20.4
+idna==3.2
+inflect==5.3.0
+numpy==1.21.1
+passlib==1.7.4
+pycparser==2.20
+PyJWT==2.1.0
+PyMuPDF==1.19.2
+PyMySQL==1.0.2
+pyparsing==3.0.7
+pyzmq==22.1.0
+requests==2.26.0
+six==1.16.0
+sqlacodegen==2.3.0
+SQLAlchemy==1.4.23
 tornado==5.1.1
+urllib3==1.26.6
+zmq==0.0.0

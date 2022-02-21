@@ -18,7 +18,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 logger = DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_lvl=LogLevel.DIALOGS)
 
-
 def load_elearning_domain():
     from utils.domain.jsonlookupdomain import JSONLookupDomain
     from elearning.policy_ELearning import ELearningPolicy
@@ -99,18 +98,27 @@ class GUIServer(Service):
 
     @PublishSubscribe(sub_topics=['sys_utterance'])
     def forward_message_to_websocket(self, user_id, sys_utterance: str = None):
-        asyncio.set_event_loop(self.loopy_loop)
+        user_id = int(user_id)
 
-        # manage recording of chat history
-        hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
-        if self.max_history_length > 0:
-            hist.append({"content": sys_utterance, "format": "text", "party": "system"})
-            if len(hist) > self.max_history_length:
-                del hist[0]
-        self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
+        if not user_id in self.websockets:
+            # store messages during page transition where socket is closed
+            print("MISSED MSG", sys_utterance)
+            hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
+            hist.append(json.dumps([{"content": sys_utterance, "format": "text", "party": "system"}]))
+            self.set_state(user_id, GUIServer.TURN_HISTORY, hist)
+        else:
+            asyncio.set_event_loop(self.loopy_loop)
 
-        # forward message to moodle frontend
-        self.websockets[user_id].write_message(json.dumps([{"content": sys_utterance, "format": "text", "party": "system"}]))
+            # manage recording of chat history
+            hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
+            if self.max_history_length > 0:
+                hist.append({"content": sys_utterance, "format": "text", "party": "system"})
+                if len(hist) > self.max_history_length:
+                    del hist[0]
+            self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
+
+            # forward message to moodle frontend
+            self.websockets[user_id].write_message(json.dumps([{"content": sys_utterance, "format": "text", "party": "system"}]))
     
     @PublishSubscribe(sub_topics=['html_content'])
     def forward_html_to_websocket(self, user_id, html_content: str = None):
@@ -144,7 +152,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
     """ Websocket for communication between frontend and backend """ 
     def _extract_token(self, uri):
         start=len("/ws?token=")
-        return uri[start:]
+        return int(uri[start:])
 
     def open(self, *args):
         print("opening connection")
@@ -171,8 +179,8 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
         print('closing')
         # find right connection to delete
         if self.userid in gui_service.websockets:
-            logger.dialog_turn(f"# USER {self.userid} # SOCKET-CLOSE")
-            del gui_service.websockets[self.userid]
+           logger.dialog_turn(f"# USER {self.userid} # SOCKET-CLOSE")
+           del gui_service.websockets[self.userid]
 
     def check_origin(self, *args, **kwargs):
         # allow cross-origin
@@ -186,7 +194,7 @@ class MoodleEventHandler(tornado.web.RequestHandler):
         event_data = json.loads(self.request.body)
         print("GOT MOODLE EVENT", event_data)
         
-        user_id = event_data['userid']
+        user_id = int(event_data['userid'])
         gui_service.moodle_event(user_id=user_id, event_data=event_data)
 
 def make_app():

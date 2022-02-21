@@ -307,6 +307,7 @@ class MCourseModulesCompletion(Base):
 	completed = Column(CompletionState, nullable=False, name='completionstate')
 	# Date of completion
 	timemodified = Column(UnixTimestamp, nullable=False)
+	viewed = Column(SMALLINT(), nullable=True, server_default=text("'0'"))
 
 	# internal database mapping info
 	_coursemoduleid = Column(BIGINT(10), ForeignKey("m_course_modules.id"), nullable=False, index=True, name="coursemoduleid")
@@ -467,6 +468,7 @@ class MCourseSection(Base):
 		find the course module the student should do next.
 
 		Args:
+			currentModule: if None, will return first available module in section
 			included_types: obtain e.g. via MCourseModule.get_type_name()
 							PDF = resource
 
@@ -478,7 +480,12 @@ class MCourseSection(Base):
 		# print("SEQUENCE", self.sequence, 'name', self.name, 'id', self.id)
 
 		for index, moduleId in enumerate(self.sequence):
-			if int(moduleId) == currentModule.id:
+			if not currentModule:
+				nextModuleId = int(self.sequence[index])
+				module = session.query(MCourseModule).get(nextModuleId)
+				if is_available_course_module(session, user, module) and module.get_type_name(session) in included_types:
+					return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
+			elif int(moduleId) == currentModule.id:
 				# found position (index) of current module in order list - return following candidate
 				if len(self.sequence) > index + 1:
 					nextModuleId = int(self.sequence[index+1])
@@ -783,7 +790,7 @@ class MUser(Base):
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
-			if not section.is_completed(self) and is_available_course_sections(session, self, section):
+			if not section.is_completed(self, session) and is_available_course_sections(session, self, section) and not section.name.lower().startswith("ki und maschinelles lernen") and not section.name.lower().startswith("spiel zum einstieg"):
 				available.append(section)
 		return available
 
