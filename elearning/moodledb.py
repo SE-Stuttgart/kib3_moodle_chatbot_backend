@@ -790,7 +790,7 @@ class MUser(Base):
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
-			if not section.is_completed(self, session) and is_available_course_sections(session, self, section) and not section.name.lower().startswith("ki und maschinelles lernen") and not section.name.lower().startswith("spiel zum einstieg"):
+			if not section.is_completed(self, session) and is_available_course_sections(session, self, section) and section.name and not section.name.lower().startswith("ki und maschinelles lernen") and not section.name.lower().startswith("spiel zum einstieg"):
 				available.append(section)
 		return available
 

@@ -46,9 +46,9 @@ template request(quiz_link, module, insufficient)
 
 template inform(moduleName, finishContent)
     if finishContent = "video"
-        "Du hast dieses interaktive Video zu {moduleName} nicht zu Ende gesehen. Das könntest du noch heute abschließen :-) "
+        "Du hast ein interaktive Video zu {moduleName} nicht zu Ende gesehen. Das könntest du noch heute abschließen :-) "
     if finishContent = "frage"
-        "Du hast die Fragen zu diesem Video nicht zu Ende beantwortet. Das könntest du schnell noch heute erledigen!"
+        "Du hast die Fragen zu einem Video nicht zu Ende beantwortet. Das könntest du schnell noch heute erledigen!"
     if finishContent = "module"
         "Du solltest am besten das Modul von gestern abschließen, es fehlt dir nicht mehr viel!"
     if finishContent = "doku"

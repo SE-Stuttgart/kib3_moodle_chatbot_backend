@@ -618,7 +618,9 @@ class ELearningPolicy(Service):
 		# @Dirk ich meinte alle Module, d.h. auch Quiz
 		module_name, module_id = self.get_user_next_module(userid)
 		self.set_state(userid, COURSE_MODULE_ID, module_id)
-		return module_name, random.choice(["video", "frage", "module", "doku"])
+		random_choice = random.choice(["video", "frage", "module", "doku"])
+		module_name = self.get_link_by_course_module_id(module_id) if random_choice == "video" else module_name
+		return module_name, random_choice
 
 	def total_open_modules(self, userid):
 		user = self.get_current_user(userid)
