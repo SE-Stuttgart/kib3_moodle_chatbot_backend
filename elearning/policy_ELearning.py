@@ -21,7 +21,11 @@ import decimal
 import random
 from operator import attrgetter
 from re import L
+import traceback
 from typing import List, Tuple
+
+import httplib2
+import urllib
 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.functions import next_value
@@ -133,10 +137,37 @@ class ELearningPolicy(Service):
 			course_module: MCourseModule = self.session.query(MCourseModule).get(moodle_event['contextinstanceid'])
 			course_module_type = course_module.get_type_name(self.session)
 
-			if course_module_type in ['book', 'resource']:
+			if course_module_type in ['book', 'resource', 'label']:
 				# completed book or pdf
 				# completion: MCourseModulesCompletion = self.session.query(MCourseModulesCompletion).get(moodle_event['objectid'])
 				if updated_completion_state == 1:
+					# update book, pdf or label if either any of them were marked as completed
+					for section_module in course_module.section.modules:
+						if section_module.get_type_name(self.session) in ['book', 'resource', 'label']:
+							completion_query = self.session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user_id, MCourseModulesCompletion._coursemoduleid==section_module.id)
+							# TODO Seite sollte nach Refresh alle PDFs, buecher und labels als fertig markieren
+							if completion_query.count() == 0 or completion_query.first().completed == False:
+								# mark as completed
+								http_client = httplib2.Http(".cache")
+								body={
+										"wstoken": "03720a912f518f0c2213b63e949e6dc7",
+										"wsfunction": "core_completion_override_activity_completion_status",
+										"moodlewsrestformat": "json",
+										"userid": int(user_id),
+										"cmid": section_module.id,
+										"newstate": 1
+								}
+								try:
+									response = http_client.request("http://193.196.53.252/webservice/rest/server.php",
+										method="POST",
+										headers={'Content-type': 'application/x-www-form-urlencoded'},
+										body=urllib.parse.urlencode(body))[1]
+								except:
+									print(traceback.format_exc())
+							
+
+
+
 					# first time completion
 					return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedModul": "True"})}
 
@@ -546,17 +577,24 @@ class ELearningPolicy(Service):
 			return next_module.get_name(self.session), next_module.id
 
 		# next course module in secion of last completed module is not available - choose available one from other section
-		next_module = user.get_available_course_modules(self.session)[0]
+		# next_module = user.get_available_course_modules(self.session)[0]
+		# print("EXISTING USER -> SECTION COMPLETE -> ", next_module.get_name(self.session), next_module.get_type_name(self.session))
+		next_sections = user.get_incomplete_available_course_sections(self.session)
+		if next_sections:
+			next_section: MCourseSection = next_sections[0]
+			next_module: MCourseModule = next_section.get_next_available_module(currentModule=None, user=self.get_current_user(userid), session=self.session)
+
+			if not next_module:
+				return "Kein verfügbares Modul gefunden", -1
 		self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
 		return next_module.get_name(self.session), next_module.id
 
 
 	def get_user_next_module_link(self, userid):
 		# while loop ends in infinite loop if all courses are completed
-		next_module: MCourseModule = self.get_state(userid, NEXT_SUGGESTED_COURSEMODULE)
-		if next_module is None:
-			[_, next_module_id] = self.get_user_next_module(userid)
-			next_module = self.get_course_module_id(next_module_id)
+		# next_module: MCourseModule = self.get_state(userid, NEXT_SUGGESTED_COURSEMODULE)
+		[_, next_module_id] = self.get_user_next_module(userid)
+		next_module = self.get_course_module_id(next_module_id)
 		return next_module.get_content_link(self.session), next_module.id
 
 	def get_user_last_module_link(self, userid):
