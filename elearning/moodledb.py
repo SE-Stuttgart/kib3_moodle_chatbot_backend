@@ -461,7 +461,7 @@ class MCourseSection(Base):
 	_section_id = Column(BIGINT(10), nullable=False, server_default=text("'0'"), name='section')
 
 
-	def get_next_available_module(self, currentModule: MCourseModule, user: "MUser", session: Session, included_types: List[str] = ['assignment', 'book', 'hvp', 'page', 'quiz']) -> Union[MCourseModule, None]:
+	def get_next_available_module(self, currentModule: MCourseModule, user: "MUser", session: Session, included_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> Union[MCourseModule, None]:
 		"""
 		Given a current course module (e.g. the most recently finished one) in this course section,
 		find the course module the student should do next.
@@ -549,13 +549,13 @@ class MCourse(Base):
 
 class MAssignGrade(Base):
 	"""
-	Access MAssign via MAssignGrade.assignment
+	Access MAssign via MAssignGrade.assign
 	"""
 	__tablename__ = 'm_assign_grades'
 
 	id = Column(BIGINT(10), primary_key=True)
 	
-	_assignment_id = Column(BIGINT(10), ForeignKey('m_assign.id'), nullable=False, index=True, name="assignment")
+	_assign_id = Column(BIGINT(10), ForeignKey('m_assign.id'), nullable=False, index=True, name="assign")
 	userid = Column(BIGINT(10), ForeignKey("m_user.id"), nullable=False, index=True)
 
 	timecreated = Column(UnixTimestamp, nullable=True)
@@ -582,17 +582,17 @@ class MAssign(Base):
 
 	maxattempts = Column(MEDIUMINT(6), nullable=False, server_default=text("'-1'"))
 
-	grades = relationship("MAssignGrade", backref="assignment")
-	submissions = relationship("MAssignSubmission", backref="assignment")
+	grades = relationship("MAssignGrade", backref="assign")
+	submissions = relationship("MAssignSubmission", backref="assign")
 
 
 class MAssignSubmission(Base):
-	""" Access related Assignment via MAssignSubmission.assignment """
+	""" Access related assign via MAssignSubmission.assign """
 	__tablename__ = 'm_assign_submission'
 
 	id = Column(BIGINT(10), primary_key=True)
 
-	_assignment_id = Column(BIGINT(10), ForeignKey("m_assign.id"), nullable=False, index=True, name='assignment')
+	_assign_id = Column(BIGINT(10), ForeignKey("m_assign.id"), nullable=False, index=True, name='assignment')
 	_user_id = Column(BIGINT(10), ForeignKey("m_user.id"), nullable=False, index=True, name="userid")
 
 	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
@@ -751,7 +751,7 @@ class MUser(Base):
 		courses = session.query(MCourseModule).all()
 		return [course for course in courses if course.id not in completed_ids]
 
-	def get_available_course_modules(self, session: Session, include_types: List[str] = ['assignment', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModule]:
+	def get_available_course_modules(self, session: Session, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModule]:
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
@@ -769,7 +769,7 @@ class MUser(Base):
 				available.append(section)
 		return available
 
-	def get_incomplete_available_course_modules(self, session: Session, include_types: List[str] = ['assignment', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModule]:
+	def get_incomplete_available_course_modules(self, session: Session, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModule]:
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).all():
@@ -863,7 +863,7 @@ def get_time_estimate_module(session: Session, user: MUser, course_module: MCour
 					return minute_estimate
 	return None
 
-def get_time_estimates(session: Session, user: MUser, include_types: List[str] = ['assignment', 'book', 'hvp', 'page', 'quiz']) -> List[Tuple[MCourseModule, int]]:
+def get_time_estimates(session: Session, user: MUser, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> List[Tuple[MCourseModule, int]]:
 	""" 
 	Returns:
 		a list of tuples: 
