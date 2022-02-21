@@ -35,7 +35,7 @@ from utils.beliefstate import BeliefState
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import MAssignSubmission, MCourse, MCourseModulesCompletion, MCourseSection, MGradeGrade, MGradeItem, connect_to_moodle_db, Base, MUser, MCourseModule, \
+from elearning.moodledb import MAssign, MAssignSubmission, MCourse, MCourseModulesCompletion, MCourseSection, MGradeGrade, MGradeItem, connect_to_moodle_db, Base, MUser, MCourseModule, \
 	get_time_estimate_module, get_time_estimates, MModule
 from utils.useract import UserActionType
 
@@ -223,6 +223,15 @@ class ELearningPolicy(Service):
 		return SysAct(act_type=SysActionType.Inform,
 					  slot_values={"moduleName": moduleName.course.fullname, "repeatContent": repeatContent, "link": link})
 
+	def get_open_assignments(self, userid):
+		""" Get all assignments that are not submitted / graded yet and in the future """
+		next_assignments_ids = set([assignment.id for assignment in  self.session.query(MAssign).filter(MAssign.duedate > datetime.datetime.now()).all()])
+		completed_assignment_id = set([submission._assign_id for submission in self.session.query(MAssignSubmission).filter(MAssignSubmission._user_id==userid, MAssignSubmission.status != "new").all()])
+		open_assignment_ids = next_assignments_ids - completed_assignment_id
+
+		open_assignments = [self.session.query(MAssign).get(assign_id) for assign_id in open_assignment_ids]
+		return open_assignments
+
 	def get_submission_sys_act(self, userid):
 		"""
 		Return the next upcoming incomplete submission
@@ -234,17 +243,16 @@ class ELearningPolicy(Service):
 		due_date = None
 		submission_name = None
 
-		new_assignments = self.session.query(MAssignSubmission).filter(MAssignSubmission._user_id==user.id, MAssignSubmission.status=="new").all()
-		for assign in new_assignments:
-			print("ASSIGN", assign.assignment.name, assign.assignment.course, assign.assignment.duedate)
-			if not next_submission or assign.assignment.duedate < due_date:
-				next_submission = assign
-				due_date = next_submission.assignment.duedate
-				submission_name = f"die Abgabe {next_submission.assignment.name}"
+		for assignment in self.get_open_assignments(userid):
+			print("ASSIGNMENT", assignment.name, assignment.course, assignment.duedate)
+			if not next_submission or assignment.duedate < due_date:
+				next_submission = assignment
+				due_date = next_submission.duedate
+				submission_name = f"die Abgabe {next_submission.name}"
 
 		if next_submission:
-			# offenes assignment gefunden: suche course module heraus
-			course_modules = self.session.query(MCourseModule).filter(MCourseModule.instance==next_submission.assignment.id).all()
+			# offenes assign gefunden: suche course module heraus
+			course_modules = self.session.query(MCourseModule).filter(MCourseModule.instance==next_submission.id).all()
 			for module in course_modules:
 				if module.get_type_name(self.session) == "assign":
 					course_module_section = module.section
@@ -253,10 +261,10 @@ class ELearningPolicy(Service):
 					course_module_name = module.get_name(self.session) + " im Abschnitt " + course_module_section.name
 					due_date = due_date.strftime("%d.%m.%y, %H:%M:%S")
 		else: 
-			# kein offenes assignment gefunden
+			# kein offenes assign gefunden
 			course_module_name = "kein Modul"
 			due_date = "-"
-			submission_name = "kein Assignment"
+			submission_name = "kein assign"
 
 		return SysAct(act_type=SysActionType.Inform,
 					  slot_values={"moduleName": course_module_name, "submission": due_date})
@@ -638,11 +646,10 @@ class ELearningPolicy(Service):
 
 	def get_module_and_next_due_date(self, userid) -> Tuple[str, None]:
 		print("USERID", userid)
-		assignments = self.session.query(MAssignSubmission).filter(MAssignSubmission._user_id == userid).all()
-		assigns = [assign.assignment for assign in assignments if assign.assignment.duedate > datetime.datetime.now()]
-		if not assigns:
+		open_assignments = self.get_open_assignments(userid)
+		if not open_assignments:
 			return None, None
-		min_assigns = min(assigns, key=attrgetter('duedate'))
+		min_assigns = min(open_assignments, key=attrgetter('duedate'))
 		self.set_state(userid, COURSE_ID, min_assigns.course)
 		self.set_state(userid, ASSIGN_ID, min_assigns.id)
 		return min_assigns.name, min_assigns.duedate
