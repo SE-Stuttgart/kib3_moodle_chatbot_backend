@@ -61,7 +61,8 @@ rule request(dueContent)
 
 
 rule request(submission)
-    "Wann ist (die|der) (erste |nächste )?(Abgabe|Frist|deadline|Termin)(\\?)?"
+    "Wann ist (die|der|meine) (erste |nächste )?(Abgabe|Frist|deadline|Termin)(\\?)?"
+
 
 rule request(nextModule)
     "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes tun|lernen|machen(\\?)?"

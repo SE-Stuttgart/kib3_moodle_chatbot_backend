@@ -238,7 +238,7 @@ class ELearningPolicy(Service):
 		if len(repeat_content_choices) == 0:
 			self.set_state(userid, MODE, 'new')
 			return SysAct(act_type=SysActionType.Inform,
-						  slot_values={"moduleName": "moduleName", "repeatContent": "noContent"})
+						  slot_values={"moduleName": "moduleName", "repeatContent": "noContent", "link":"-"})
 		repeatContent = random.choice(repeat_content_choices)
 		if repeatContent == "quiz":
 			self.set_state(userid, MODE, 'quiz')
@@ -664,6 +664,10 @@ class ELearningPolicy(Service):
 	def get_quiz_for_user_by_course_id(self, course_id: str, userid):
 		user = self.get_current_user(userid)
 		return user.find_quiz_by_course_id(course_id, self.session)
+
+	def get_quiz_for_user_by_course_module_id(self, course_module_id: str, userid):
+		user = self.get_current_user(userid)
+		return user.find_quiz_by_course_module_id(course_module_id, self.session)
 
 	def start_msg(self, userid):
 		module_name, due_date = self.get_module_and_next_due_date(userid)

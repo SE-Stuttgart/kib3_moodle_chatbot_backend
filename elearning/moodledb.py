@@ -714,6 +714,20 @@ class MUser(Base):
 			# Fixme es funktioniert nicht gut, es findet mehr als erwartet
 			quizes += session.query(MCourseModule).filter((MCourseModule._course_id==course_id) & (MCourseModule._type_id==quiz_type.id)).all()
 		return quizes
+
+	def find_quiz_by_course_module_id(self, course_module_id, session: Session):
+		"""
+			Returns next quiz for Module with name equals module_name
+		"""
+		#session.expire_all()
+		# TODO test
+		# Tested: it searches for section and not for module_name
+		quiz_types = session.query(MModule).filter((MModule.name=="hvp")).all() # TODO re-enable at some point? | (MModule.name=="quiz")).all()
+		quizes = []
+		for quiz_type in quiz_types:
+			# Fixme es funktioniert nicht gut, es findet mehr als erwartet
+			quizes += session.query(MCourseModule).filter((MCourseModule.id==course_module_id) & (MCourseModule._type_id==quiz_type.id)).all()
+		return quizes
 		
 	def get_enrolled_course(self) -> List[MCourseModule]:
 		"""
