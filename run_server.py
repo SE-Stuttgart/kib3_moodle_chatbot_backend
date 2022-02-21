@@ -18,7 +18,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 logger = DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_lvl=LogLevel.DIALOGS)
 
-
 def load_elearning_domain():
     from utils.domain.jsonlookupdomain import JSONLookupDomain
     from elearning.policy_ELearning import ELearningPolicy
@@ -116,8 +115,6 @@ class GUIServer(Service):
                 hist.append({"content": sys_utterance, "format": "text", "party": "system"})
                 if len(hist) > self.max_history_length:
                     del hist[0]
-            self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
-        self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
             self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
 
             # forward message to moodle frontend
