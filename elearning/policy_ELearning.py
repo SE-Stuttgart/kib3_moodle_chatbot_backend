@@ -640,7 +640,7 @@ class ELearningPolicy(Service):
 	def get_insufficient_module(self, userid):
 		h_grades = self.get_user_grades(userid)
 
-		insufficient_modules = [(h_grade.get_grade_item(self.session).course.fullname, h_grade.get_grade_item(self.session).course.id) for
+		insufficient_modules = [(h_grade.get_grade_item(self.session).itemname, h_grade.get_grade_item(self.session).course.id) for
 		 h_grade in h_grades if
 		 h_grade.finalgrade and h_grade.finalgrade < h_grade.get_grade_item(
 			 self.session).gradepass or h_grade.finalgrade is None and h_grade.get_grade_item(self.session)]
