@@ -229,7 +229,7 @@ class ELearningPolicy(Service):
 		open_modules = self.get_modules(since_date=two_weeks_ago, is_finished=False, userid=userid)
 		repeat_content_choices = []
 		if len(old_finished_modules) > 0:
-			repeat_content_choices.append("quiz")
+			repeat_content_choices.append("finished")
 		if len(insufficient_modules) > 0:
 			repeat_content_choices.append("module")
 		if len(open_modules) > 0:
@@ -240,7 +240,7 @@ class ELearningPolicy(Service):
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"moduleName": "moduleName", "repeatContent": "noContent", "link":"-"})
 		repeatContent = random.choice(repeat_content_choices)
-		if repeatContent == "quiz":
+		if repeatContent == "finished":
 			self.set_state(userid, MODE, 'quiz')
 			moduleName = random.choice(old_finished_modules)
 		if repeatContent == "module":
@@ -251,9 +251,10 @@ class ELearningPolicy(Service):
 			moduleName = random.choice(old_finished_modules)
 		link = self.get_link_by_course_module_id(moduleName.id)
 		print("REPEATABLE CONTENT", repeatContent)
+		contentType = moduleName.get_type_name(self.session)
 		return SysAct(act_type=SysActionType.Inform,
-					  slot_values={"moduleName": moduleName.section.name, "repeatContent": repeatContent,
-								   "link": link})
+					  slot_values={"moduleName": moduleName.section.name, "repeatContent": repeatContent, "link": link,
+								   "contentType": contentType if contentType in ["resource", "hvs", "quiz", "book"] else "else"})
 
 	def get_open_assignments(self, userid):
 		""" Get all assignments that are not submitted / graded yet and in the future """

@@ -26,9 +26,18 @@ template inform(positiveFeedback, repeatQuiz)
     "Cool! Du solltest die Quizzes regelmäßig wiederholen, damit du die Inhalte bis zur Prüfung nicht vergisst!"
 
 
-template inform(moduleName, repeatContent, link)
-    if repeatContent = "quiz":
-        "Du hast das Module {moduleName} seit einiger Zeit abgeschlossen. {REPEAT_QUIZ()}: {link}"
+template inform(moduleName, repeatContent, link, contentType)
+    if repeatContent = "finished":
+        if contentType = "resource":
+            "Du hast das Modul {moduleName} seit einiger Zeit abgeschlossen. Gehe bitte nochmal dieses Dokument durch {link}"
+        if contentType = "book":
+            "Du hast das Modul {moduleName} seit einiger Zeit abgeschlossen. Lies bitte nochmal dieses Buch {link}"
+        if contentType = "quiz":
+            "Du hast das Modul {moduleName} seit einiger Zeit abgeschlossen. {REPEAT_QUIZ()}: {link}"
+        if contentType = "hvs":
+            "Du hast das Modul {moduleName} seit einiger Zeit abgeschlossen. {REPEAT_QUIZ()}: {link}"
+        if contentType = "else":
+            "Du hast das Modul {moduleName} seit einiger Zeit abgeschlossen. Lies nochmal dieses Modul: {link}"
     if repeatContent = "module":
         "Du hast bei {moduleName} weniger als 50% der Quizzes richtig beantwortet :-(. Es wäre besser, wenn du das Modul wiederholst, dann wirst du bestimmt ein besseres Ergibniss erreichen! {link}"
     if repeatContent = "oldcontent":
