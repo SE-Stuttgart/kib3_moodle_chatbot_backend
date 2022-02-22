@@ -2,6 +2,8 @@
 rule inform(goal)
     "{goal}"
     "{goal}{UNIT()}?"
+    "ich will was Neues lernen|machen"
+
 
 rule inform(finishedGoal)
     "Ich bin mit (de(m|r|n)|allen){UNIT()} fertig"
@@ -33,6 +35,7 @@ rule request(goalAlternative)
 
 rule request(repeatableModul)
     "{WHICH()}{UNIT()} {SHOULD()} ich wiederholen(\\?)?"
+    "Gibt es etwas|was zu wiederholen(\\?)?"
 
 rule request(learnableModul)
     "{WHICH()}{UNIT()} {SHOULD()} ich {TIME()}lernen(\\?)?"
@@ -47,6 +50,7 @@ rule request(insufficient)
     "Bei welche(m|r|n){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
     "Bei welche(m|r){UNIT()} habe ich noch nicht ausreichend Punkte?"
     "Bei welche(m|r|n){UNIT()} {SHOULD()} ich mich (noch )?verbessern(\\?)?"
+    "Wo kann ich mich (noch )?verbessern(\\?)?"
 
 rule request(content)
     "{WHATSABOUT()}(\\?)?"
@@ -64,12 +68,16 @@ rule request(dueContent)
 
 rule request(submission)
     "Wann ist (die|der|meine) (erste |nächste )?(Abgabe|Frist|deadline|Termin)(\\?)?"
+    "Wann habe ich (die|der|meine) (erste |nächste )?(Abgabe|Frist|deadline|Termin)(\\?)?"
+    "Kannst du mir (bitte )?sagen(,)? wann (die |der |meine )(erste |nächste )?(Abgabe|Frist|deadline|Termin) ist(\\?)?"
 
 
 rule request(nextModule)
-    "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes tun|lernen|machen(\\?)?"
+    "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes tun|machen(\\?)?"
     "Was ist mein nächstes Modul|Ziel(\\?)?"
-    "Was kann ich als nächstes lernen|machen|tun(\\?)?"
+    "Was kann ich als nächstes machen|tun(\\?)?"
+    "Welchen|Welches Lerninhalt|Modul {SHOULD()} ich als nächstes tun|machen|abschließen|abschliessen(\\?)?"
+    "Was kommt als nächstes(\\?)?"
 
 rule request(infoContent)
     "Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\\?)?"
@@ -81,6 +89,9 @@ rule request(infoContent)
     "Was ist (nochmal )?mit (?P<content5>.*) gemeint(\\?)?"
     "Wo wird (?P<content10>.*) erklärt(\\?)?"
 
+rule request(pastModule)
+    "Wie kann ich ein Quiz (zum|zu dem) vorherigen Inhalt|Modul finden(\\?)?"
+    "Gib mir ein Quiz (zum|zu dem) vorherigen Inhalt|Modul"
 
 rule inform(lecture)
     "{rINFORM()}{lecture}"
@@ -95,6 +106,7 @@ rule request(finishTask)
 rule inform(learningTime)
     "\\d+"
     "Ich habe (nur)?15 Minuten (Zeit)?"
+    "Was kann ich in weniger als 15 Minuten (Zeit )?(\\?)?"
 
 #rule inform(repeatedModul)
     #"Okay, ich habe es nochmal gelesen und ich denke, ich hab’s verstanden."

@@ -389,6 +389,11 @@ class ELearningPolicy(Service):
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"pastModule": "a", "repeatContent": module_link})
 
+		elif act.slot == "pastModule":
+			module_link = self.get_user_last_module_link(userid)
+			return SysAct(act_type=SysActionType.Inform,
+							slot_values={"repeat_module_affirm": "a", "module_link": module_link})
+
 		elif act.slot == "finishTask" and act.type == UserActionType.Inform:
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"nextStep": random.choice(["newModule", "repeatConcepts", "repeatContents"])})
