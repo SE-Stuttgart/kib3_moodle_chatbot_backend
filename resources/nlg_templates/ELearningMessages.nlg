@@ -16,7 +16,7 @@ template request(goal)
 template inform(moduleRequirements, moduleName, moduleRequired)
     if moduleRequirements = "true":
         if moduleRequired = "true":
-            "Alles klar. Es gibt ein neues Modul zu dem {moduleName} Kurs, für das du die Voraussetzungen erfüllst. Erinnerst du dich noch an das vorherige Modul??"
+            "Alles klar. Es gibt ein neues Modul zu dem {moduleName} Kurs, für das du die Voraussetzungen erfüllst. Erinnerst du dich noch an das vorherige Modul?"
 
 
 template inform(positiveFeedback, test)
@@ -102,7 +102,7 @@ template request(pastModule)
     "Erinnerst du dich an das vorherige Modul?"
 
 template inform(pastModule, repeatContent)
-    "Dann wiederhole am besten die Quizzes zu dem vorherigen Modul, bevor du mit dem neuen startest: {repeatContent}"
+    "Dann wiederhole am besten den Inhalt des vorherigen Moduls, bevor du mit dem neuen startest: {repeatContent}"
 
 template inform(positiveFeedback,newModule)
     "Sehr gut! Du kannst jetzt mit dem neuen Modul anfangen :-D: {newModule}"

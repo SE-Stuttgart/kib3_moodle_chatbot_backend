@@ -379,10 +379,6 @@ class ELearningPolicy(Service):
 			if act.value == "wiederholen":
 				return self.get_repeatable_modul_sys_act(userid)
 		elif act.type == UserActionType.Request and act.slot == "moduleRequired":
-			module_name = self.get_last_completed_module(userid)
-			return SysAct(act_type=SysActionType.Request,
-						  slot_values={"pastModule": module_name})
-		elif act.slot == "pastModule":
 			if act.value == "true":
 				module_link, course_module_id = self.get_user_next_module_link(userid)
 				self.set_state(userid, COURSE_MODULE_ID, course_module_id)
