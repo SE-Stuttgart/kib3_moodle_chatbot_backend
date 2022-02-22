@@ -16,7 +16,7 @@ template request(goal)
 template inform(moduleRequirements, moduleName, moduleRequired)
     if moduleRequirements = "true":
         if moduleRequired = "true":
-            "Alles klar. Es gibt ein neues Modul zu dem {moduleName} Kurs, für das du die Voraussetzungen erfüllst. Okay?"
+            "Alles klar. Es gibt ein neues Modul zu dem {moduleName} Kurs, für das du die Voraussetzungen erfüllst. Erinnerst du dich noch an das vorherige Modul??"
 
 
 template inform(positiveFeedback, test)
