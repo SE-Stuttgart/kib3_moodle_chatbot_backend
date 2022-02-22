@@ -70,6 +70,7 @@ def get_book_links(session: Session, searchTerm: str) -> Dict:
     """
     # session.expire_all()
     links = {}
+    searchTerm = searchTerm.strip()
     
     # get a list of all pdf names and their locations
     file_path_map = get_all_pdf_files(session)
@@ -83,10 +84,12 @@ def get_book_links(session: Session, searchTerm: str) -> Dict:
 
     for book in books:
         # see if we have a PDF matching the book's name
-        normalized_book_name = book.name.lower().replace("der", "").replace("die", "").replace("das", "").replace("(buch)", "").strip()
+        normalized_book_name = book.name.lower().replace("der", "").replace("die", "").replace("das", "")
+        normalized_book_name = re.sub(r"\(.*\)", "", normalized_book_name).strip() # get rid of paranthesis, e.g. (buch)
+
         if normalized_book_name in file_names:
             # look for searchTerm in the PDF associated with the current book
-            search_results = search_text_in_pdf(searchTerm, file_path_map[normalized_book_name]) 
+            search_results = search_text_in_pdf(searchTerm, file_path_map[normalized_book_name])
             if len(search_results) == 0:
                 continue # no results
             

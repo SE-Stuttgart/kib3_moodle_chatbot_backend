@@ -72,9 +72,9 @@ rule request(nextModule)
 rule request(infoContent)
     "Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\\?)?"
     "Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\\?)?"
-    "Wo finde ich (Info(s)? )?(über|zu )?(?P<content3>.*)(\\?)?"
+    "Wo finde ich (Info(s|rmation(en)?)? )?(über|zu )?(?P<content3>.*)(\\?)?"
     "Wo steht ((et)?was )?(über|zu )?(?P<content6>.*)(\\?)?"
-    "Wo kann ich Info(s)? (über|zu) (?P<content4>.*)finden(\\?)?"
+    "Wo kann ich Info(s|rmation(en)?)? (über|zu) (?P<content4>.*) finden(\\?)?"
     "Was war (nochmal )?mit (?P<content9>.*) gemeint(\\?)?"
     "Was ist (nochmal )?mit (?P<content5>.*) gemeint(\\?)?"
     "Wo wird (?P<content10>.*) erklärt(\\?)?"
