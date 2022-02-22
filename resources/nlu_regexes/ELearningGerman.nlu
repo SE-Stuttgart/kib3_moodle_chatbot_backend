@@ -8,6 +8,7 @@ rule inform(finishedGoal)
 
 rule request(goal)
     "Was {SHOULD()} ich {TIME()}(abschließen|lernen|tun|machen)(\\?)?"
+    "Was {SHOULD()} ich {TIME()}neues|neu (abschließen|lernen|tun|machen)(\\?)?"
 
 rule request(toReachGoal)
     "Welche(s)? Ziel(e)? habe ich( für)?{TIME()}(\\?)?"
@@ -43,8 +44,9 @@ rule request(needHelp)
     "Wie kann ich (eine )?bessere Ergebnisse|Bewertungen|Bewertung|Benotung bekommen(\\?)?"
 
 rule request(insufficient)
-    "Bei welche(m|r){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
+    "Bei welche(m|r|n){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
     "Bei welche(m|r){UNIT()} habe ich noch nicht ausreichend Punkte?"
+    "Bei welche(m|r|n){UNIT()} {SHOULD()} ich mich (noch )?verbessern(\\?)?"
 
 rule request(content)
     "{WHATSABOUT()}(\\?)?"
@@ -87,6 +89,8 @@ rule inform(lecture)
 
 rule request(finishTask)
     "Wie viele{UNIT()} fehlen( noch)?(\\?)?"
+    "Wie viele{UNIT()} gibt es ( noch)?(\\?)?"
+
 
 rule inform(learningTime)
     "\\d+"
@@ -191,7 +195,7 @@ function slot_synonyms(slot)
 
 function SHOULD(): "könnte|sollte|muss|soll|kann"
 function TIME(): "( )?(diesen Monat( )?|diese Woche( )?|heute( )?)?"
-function UNIT(): "( Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs)"
+function UNIT(): "( Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs| Quiz(zen))"
 function WHICH(): "(Welche(s|r|n|m))?"
 function WHATSABOUT(): "Worum geht('| e)s"
 function NEW(): "(ich möchte mit dem neuen )?(anfangen|beginnen|starten)"

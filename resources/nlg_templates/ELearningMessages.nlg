@@ -28,11 +28,11 @@ template inform(positiveFeedback, repeatQuiz)
 
 template inform(moduleName, repeatContent, link)
     if repeatContent = "quiz":
-        "Du hast das Module {moduleName} seit langen Zeit abgeschlossen. {REPEAT_QUIZ()} {link}"
+        "Du hast das Module {moduleName} seit einiger Zeit abgeschlossen. {REPEAT_QUIZ()}: {link}"
     if repeatContent = "module":
         "Du hast bei {moduleName} weniger als 50% der Quizzes richtig beantwortet :-(. Es wäre besser, wenn du das Modul wiederholst, dann wirst du bestimmt ein besseres Ergibniss erreichen! {link}"
     if repeatContent = "oldcontent":
-        "Du hast {moduleName} seit zwei Wochen nicht mehr geöffnet. Du solltest die Inhalte nochmal auffrischen, ansonsten vergiss du sie! {link}"
+        "Du hast {moduleName} seit einiger Zeit nicht mehr geöffnet. Du solltest die Inhalte nochmal auffrischen, ansonsten vergiss du sie! {link}"
     if repeatContent = "noContent":
         "Es gibt keine Inhalte, die du wiederholen solltest. Du könntest mit einem neuen Modul anfangen!"
 

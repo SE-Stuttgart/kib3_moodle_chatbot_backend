@@ -692,7 +692,7 @@ class MUser(Base):
 	def get_completed_courses_before_date(self, date, session: Session) -> List[MCourseModulesCompletion]:
 		""" Return all course modules already completed by current user before a date """
 		#session.expire_all()
-		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True, MCourseModulesCompletion.timemodified < date)
+		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
 		return [completion.coursemodule for completion in completions]
 
 	def get_not_finished_courses_before_date(self, date, session: Session) -> List[MCourseModulesCompletion]:
