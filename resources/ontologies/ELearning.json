@@ -91,7 +91,8 @@
         "toReachGoal",
         "infoContent",
         "nextModule",
-        "help"
+        "help",
+        "pastModule"
     ],
     "system_requestable": [
         "module",

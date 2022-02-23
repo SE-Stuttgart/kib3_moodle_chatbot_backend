@@ -750,6 +750,18 @@ class MUser(Base):
 			return self.get_available_course_modules(session)[0] # return first result
 		return max(completions, key=lambda comp: comp.timemodified).coursemodule
 
+	def get_last_completed_quiz(self, session: Session) -> Union[MCourseModule, None]:
+		""" Get the course module the current user completed most recently.
+			If there is no completed module yet, return the first one
+		Returns:
+			* last completed course module (MCourseModule), if the user already completed any course module, else `None`
+		"""
+		#session.expire_all()
+		completions: List[MHVP] = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True).all()
+		if len(completions) == 0:
+			return self.get_available_course_modules(session)[0] # return first result
+		return max(completions, key=lambda comp: comp.timemodified).coursemodule
+
 	def get_not_completed_courses(self, session: Session) -> List[MCourseModule]:
 		""" Return all course modules not completed by current user """
 		#session.expire_all()

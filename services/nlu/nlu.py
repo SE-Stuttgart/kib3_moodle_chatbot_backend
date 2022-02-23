@@ -252,7 +252,14 @@ class ELearningNLU(Service):
                                 "moduleRequired" in last_act.slot_values.keys()):
                             user_act.slot = "moduleRequired"
                             user_act.type = UserActionType.Request
-                            user_act.value = last_act.slot_values['moduleName']
+                            if user_act_type in [UserActionType.Affirm, UserActionType.Confirm]:
+                                user_act.value = "true"
+                            else:
+                                if user_act_type in [UserActionType.Deny,
+                                                     UserActionType.NegativeInform]:
+                                    user_act.value = "false"
+                                else:
+                                    user_act.value = "bad"
                         if ("welcomeMsg" in last_act.slot_values.keys()) and (
                                 "moduleName" in last_act.slot_values.keys()):
                             if last_act.slot_values["welcomeMsg"] == "due_date":
