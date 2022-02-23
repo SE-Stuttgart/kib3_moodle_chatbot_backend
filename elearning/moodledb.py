@@ -676,7 +676,7 @@ class MUser(Base):
 	def get_grades(self, session: Session) -> List[MGradeGrade]:
 		""" Return all current grades of the current user (for all courses) """
 		#session.expire_all()
-		return session.query(MGradeGrade).filter(MGradeGrade._userid==self.id).all()
+		return session.query(MGradeGrade).filter(MGradeGrade._userid==self.id, MGradeGrade.finalgrade != None).all()
 
 	def get_grade_history(self, session: Session) -> List[MGradeGradesHistory]:
 		""" Return all current and past grades of the current user (for all courses) """
@@ -687,19 +687,19 @@ class MUser(Base):
 		""" Return all course modules already completed by current user """
 		#session.expire_all()
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
-		return [completion.coursemodule for completion in completions]
+		return [completion.coursemodule for completion in completions if completion.coursemodule.get_type_name(session) != "label"]
 
 	def get_completed_courses_before_date(self, date, session: Session) -> List[MCourseModulesCompletion]:
 		""" Return all course modules already completed by current user before a date """
 		#session.expire_all()
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
-		return [completion.coursemodule for completion in completions]
+		return [completion.coursemodule for completion in completions if completion.coursemodule.get_type_name(session) != "label"]
 
 	def get_not_finished_courses_before_date(self, date, session: Session) -> List[MCourseModulesCompletion]:
 		""" Return all course modules already completed by current user """
 		#session.expire_all()
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==False, MCourseModulesCompletion.timemodified < date)
-		return [completion.coursemodule for completion in completions]
+		return [completion.coursemodule for completion in completions if completion.coursemodule.get_type_name(session) != "label"]
 
 	def find_quiz_by_course_id(self, course_id, session: Session):
 		"""
