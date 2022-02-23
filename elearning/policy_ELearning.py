@@ -455,8 +455,12 @@ class ELearningPolicy(Service):
 
 		elif act.slot == "quiz_link":
 			if act.value == "false":
+				course_module_id = self.get_state(userid, COURSE_MODULE_ID)
+				if not course_module_id:
+					module_name, course_module_id = self.get_sufficient_module(userid)
+				quiz: MCourseModule = self.get_quiz_for_user_by_course_id(course_module_id, userid)[0]
 				return SysAct(act_type=SysActionType.Inform,
-							  slot_values={"motivateForQuiz": ""})
+							  slot_values={"motivateForQuiz": "", "quiz_link": quiz.get_content_link(self.session)})
 			else:
 				course_module_id = self.get_state(userid, COURSE_MODULE_ID)
 				if not course_module_id:
@@ -590,7 +594,7 @@ class ELearningPolicy(Service):
 			if not next_module:
 				return "Kein verfügbares Modul gefunden", -1
 		self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
-		return next_module.get_name(self.session), next_module.id
+		return next_module.get_content_link(self.session), next_module.id
 
 
 	def get_user_next_module_link(self, userid):
@@ -640,7 +644,7 @@ class ELearningPolicy(Service):
 	def get_insufficient_module(self, userid):
 		h_grades = self.get_user_grades(userid)
 
-		insufficient_modules = [(h_grade.get_grade_item(self.session).itemname, h_grade.get_grade_item(self.session).course.id) for
+		insufficient_modules = [(self.get_grade_link(h_grade), h_grade.get_grade_item(self.session).course.id) for
 		 h_grade in h_grades if
 		 h_grade.finalgrade and h_grade.finalgrade < h_grade.get_grade_item(
 			 self.session).gradepass or h_grade.finalgrade is None and h_grade.get_grade_item(self.session)]
@@ -648,7 +652,13 @@ class ELearningPolicy(Service):
 			return insufficient_modules[0]
 		return None, None
 
-
+	def get_grade_link(self, h_grade: MGradeGrade):
+		base_path = "http://localhost/moodle"
+		grade = h_grade.get_grade_item(self.session)
+		if grade.itemmodule == "assign":
+			return f'<a href="{base_path}/mod/assign/view.php?id={grade.id}">{grade.itemname}</a>'
+		elif grade.itemmodule == "hvp":
+			return f'<a href="{base_path}/mod/hvp/view.php?id={grade.id}">{grade.itemname}</a>'
 
 	def get_sufficient_module(self, userid):
 		h_grades = self.get_user_grades(userid)

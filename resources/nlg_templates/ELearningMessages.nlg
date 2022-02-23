@@ -199,8 +199,8 @@ template inform(suggestion, offerhelp)
 template inform(quiz_link)
         "{quiz_link}"
 
-template inform(motivateForQuiz)
-        "Wenn du kurz Zeit hast, würde ich dir empfehlen, die Quizzes trotzdem zu wiederholen: das dauert nur wenige Minuten, und du erhöhst die Chance, eine gute Note zu bekommen :-)!"
+template inform(motivateForQuiz, quiz_link)
+        "Wenn du kurz Zeit hast, würde ich dir empfehlen, die Quizzes trotzdem zu wiederholen: das dauert nur wenige Minuten, und du erhöhst die Chance, eine gute Note zu bekommen :-)!<br>{quiz_link}"
 
 template inform(nextStep)
     if nextStep="newModule"
