@@ -1,16 +1,20 @@
 
 rule inform(goal)
-    "(?<!was )(?<!könnte )(?<!kann )(?<!sollte )(?<!soll )(?<!muss )(?<!ich ){goal}(s)?{UNIT()}?"
     if goal = "neue"
-        "(ich )?(will )?((et)?was )?Neue(s)?( lernen| machen)?"
+        "(?<!könnte )(?<!kann )(?<!sollte )(?<!soll )(?<!muss )ich (will )?{TIME()}((et)?was )?Neue(s)?( lernen| machen)?"
+        "(?<!könnte )(?<!kann )(?<!sollte )(?<!soll )(?<!muss )will {TIME()}((et)?was )?Neue(s)?( lernen| machen)?"
+        "(?<!könnte )(?<!kann )(?<!sollte )(?<!soll )(?<!muss )((et)?was )Neue(s)?( lernen| machen)?"
+        "(?<!was )(?<!könnte )(?<!kann )(?<!sollte )(?<!soll )(?<!muss )(?<!ich )(?<!direkt )(?<!diesen Monat )(?<!diese Woche )(?<!heute ){goal}(s)?({UNIT()})?"
     if goal = "wiederholen"
-        "(ich )?(will )?((et)?was )?wiederholen"
+        "(ich )?(will )?({TIME()}?)((et)?was )?wiederholen"
+
 
 rule inform(finishedGoal)
     "Ich bin mit (de(m|r|n)|allen){UNIT()} fertig"
 
 rule request(goal)
     "Was {SHOULD()} ich {TIME()}?(direkt )?(abschließen|lernen|tun|machen)(\\?)?"
+    "Welche(n|s)? (Einheit(en)? | (Lern)?Inhalt(e)? | Modul(e)? )?{SHOULD()} ich {TIME()}?(direkt )?(neues|neu) (abschließen|lernen|tun|machen)(\\?)?"
     "Was {SHOULD()} ich {TIME()}?(direkt )?(neues|neu) (abschließen|lernen|tun|machen)(\\?)?"
 
 rule request(toReachGoal)
@@ -50,7 +54,9 @@ rule request(insufficient)
     "Bei welche(m|r|n){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
     "Bei welche(m|r){UNIT()} habe ich noch nicht ausreichend Punkte?"
     "Bei welche(m|r|n){UNIT()} {SHOULD()} ich mich (noch )?verbessern(\\?)?"
+    "Bei welche(m|r|n){UNIT()} {SHOULD()} ich (noch )?besser werden(\\?)?"
     "Wo {SHOULD()} ich mich (noch )?verbessern(\\?)?"
+    "Wo {SHOULD()} ich (noch )?besser werden(\\?)?"
 
 rule request(content)
     "{WHATSABOUT()}(\\?)?"
@@ -83,12 +89,12 @@ rule request(nextModule)
 rule request(infoContent)
     "Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\\?)?"
     "Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\\?)?"
-    "Wo finde ich (Info(s|rmation(en)?)? )?(über|zu )?(?P<content3>.*)(\\?)?"
-    "Wo steht ((et)?was )?(über|zu )?(?P<content6>.*)(\\?)?"
-    "Wo kann ich Info(s|rmation(en)?)? (über|zu) (?P<content4>.*) finden(\\?)?"
+    "Wo finde ich (?<!neue)((et)?was |Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\\?)?"
+    "Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\\?)?"
+    "Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\\?)?"
     "Was war (nochmal )?mit (?P<content9>.*) gemeint(\\?)?"
     "Was ist (nochmal )?mit (?P<content5>.*) gemeint(\\?)?"
-    "Wo wird (?P<content10>.*) erklärt(\\?)?"
+    "Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\\?)?"
 
 rule request(pastModule)
     "Wie kann ich ein Quiz (zum|zu dem) vorherigen (Inhalt|Modul) finden(\\?)?"
@@ -101,7 +107,9 @@ rule inform(lecture)
 
 rule request(finishTask)
     "Wie viele{UNIT()} fehlen( noch)?(\\?)?"
-    "Wie viele{UNIT()} gibt es ( noch)?(\\?)?"
+    "Wie viele{UNIT()} gibt('s|s|es)( noch)?(\\?)?"
+    "Wie viele{UNIT()} habe ich( noch)?(\\?)?"
+    "Wie viele{UNIT()} (muss|kann|soll) ich( noch)?"
 
 
 rule inform(learningTime)
@@ -210,7 +218,7 @@ function slot_synonyms(slot)
 
 function SHOULD(): "könnte|sollte|muss|soll|kann"
 function TIME(): "( )?(direkt )?(diesen Monat( )?|diese Woche( )?|heute( )?)?"
-function UNIT(): "( Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs| Qui(z|zen))"
+function UNIT(): "( (Lern)?Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs| Qui(z|zen))"
 function WHICH(): "(Welche(s|r|n|m))?"
 function WHATSABOUT(): "Worum geht('| e)s"
 function NEW(): "(ich möchte mit dem neuen )?(anfangen|beginnen|starten)"

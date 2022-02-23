@@ -380,7 +380,7 @@ class MCourseModule(Base):
 		""" Returns the <iframe/> code to embed the h5p content if this course module is h5p content, else None """
 		#session.expire_all()
 		type_info = self.get_type_name(session)
-		print("TYPE INFO", type_info)
+		# print("TYPE INFO", type_info)
 		if type_info == "hvp":
 			return f"""
 			<iframe src="http://localhost/moodle/mod/hvp/embed.php?id={self.id}" allowfullscreen="allowfullscreen"
@@ -827,7 +827,6 @@ def is_available(json_condition: str, session: Session, user: MUser) -> bool:
 
 	# check conditions
 	fullfilled = []
-	print(data)
 	for condition in data["c"]:
 		if not "type" in condition:
 			continue

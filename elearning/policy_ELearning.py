@@ -642,12 +642,10 @@ class ELearningPolicy(Service):
 		return course_modules[0].section.name
 
 	def get_insufficient_module(self, userid):
-		h_grades = self.get_user_grades(userid)
-
 		insufficient_modules = [(self.get_grade_link(h_grade), h_grade.get_grade_item(self.session).course.id) for
-		 h_grade in h_grades if
-		 h_grade.finalgrade and h_grade.finalgrade < h_grade.get_grade_item(
-			 self.session).gradepass or h_grade.finalgrade is None and h_grade.get_grade_item(self.session)]
+		 h_grade in self.get_user_grades(userid) if
+		h_grade.finalgrade < h_grade.get_grade_item(
+			 self.session).gradepass and h_grade.get_grade_item(self.session)]
 		if insufficient_modules:
 			return insufficient_modules[0]
 		return None, None
@@ -655,10 +653,9 @@ class ELearningPolicy(Service):
 	def get_grade_link(self, h_grade: MGradeGrade):
 		base_path = "http://localhost/moodle"
 		grade = h_grade.get_grade_item(self.session)
-		if grade.itemmodule == "assign":
-			return f'<a href="{base_path}/mod/assign/view.php?id={grade.id}">{grade.itemname}</a>'
-		elif grade.itemmodule == "hvp":
-			return f'<a href="{base_path}/mod/hvp/view.php?id={grade.id}">{grade.itemname}</a>'
+		type_id = self.session.query(MModule).filter(MModule.name==grade.itemmodule).first().id
+		course_module: MCourseModule = self.session.query(MCourseModule).filter(MCourseModule.instance==grade.iteminstance, MCourseModule._type_id==type_id).first()
+		return course_module.get_content_link(self.session)
 
 	def get_sufficient_module(self, userid):
 		h_grades = self.get_user_grades(userid)
@@ -672,9 +669,7 @@ class ELearningPolicy(Service):
 		return None, None
 
 	def get_user_grades(self, userid):
-		user = self.get_current_user(userid)
-		h_grades = user.get_grades(self.session)
-		return h_grades
+		return self.get_current_user(userid).get_grades(self.session)
 
 	def get_quiz_for_user_by_course_id(self, course_id: str, userid):
 		user = self.get_current_user(userid)
