@@ -50,11 +50,12 @@ rule request(insufficient)
     "Bei welche(m|r|n){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
     "Bei welche(m|r){UNIT()} habe ich noch nicht ausreichend Punkte?"
     "Bei welche(m|r|n){UNIT()} {SHOULD()} ich mich (noch )?verbessern(\\?)?"
-    "Wo kann ich mich (noch )?verbessern(\\?)?"
+    "Wo {SHOULD()} ich mich (noch )?verbessern(\\?)?"
 
 rule request(content)
     "{WHATSABOUT()}(\\?)?"
     "{WHATSABOUT()} in diese(m|r|n){UNIT()}(\\?)?"
+    "Worum geht's(\\?)?"
     # "Wo kann ich mehr Informationen|Info(s)? (zu de(m|n|r){UNIT()})|dazu finden(\\?)?"
     # "Wie viele{UNIT()} sind sie|(bei diesem Modul vorgesehen)(\\?)?"
 
@@ -107,6 +108,8 @@ rule inform(learningTime)
     "\\d+"
     "Ich habe (nur)?15 Minuten (Zeit)?"
     "Was kann ich in weniger als 15 Minuten (Zeit )?(\\?)?"
+    "Was kann ich in 15 Minuten lernen(\\?)?"
+
 
 #rule inform(repeatedModul)
     #"Okay, ich habe es nochmal gelesen und ich denke, ich hab’s verstanden."

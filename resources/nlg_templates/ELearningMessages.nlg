@@ -145,7 +145,7 @@ template inform(welcomeMsg, daysToSubmission)
     "Hallo, willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen keine Abgabe. Willst du neue Einheiten lernen oder alte wiederholen?"
 
 template inform(repeat_module_affirm, module_link)
-        "Alles klar, du findest die Inhalte zu dem Modul hier: {module_link}"
+        "Alles klar, du findest die Inhalte zu dem vorherigen Modul hier: {module_link}"
 
 template inform(repeat_module_deny)
         "Alles klar, dann wenn du bereit bist, könntest du mit einem neuen Modul anfangen!"
