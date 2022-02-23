@@ -1,23 +1,23 @@
 
 rule inform(goal)
-    "{goal}"
-    "{goal}{UNIT()}?"
-    "ich will was Neues lernen|machen"
-
+    "(?<!was )(?<!könnte )(?<!kann )(?<!sollte )(?<!soll )(?<!muss )(?<!ich ){goal}(s)?{UNIT()}?"
+    if goal = "neue"
+        "(ich )?(will )?((et)?was )?Neue(s)?( lernen| machen)?"
+    if goal = "wiederholen"
+        "(ich )?(will )?((et)?was )?wiederholen"
 
 rule inform(finishedGoal)
     "Ich bin mit (de(m|r|n)|allen){UNIT()} fertig"
 
 rule request(goal)
-    "Was {SHOULD()} ich {TIME()}(abschließen|lernen|tun|machen)(\\?)?"
-    "Was {SHOULD()} ich {TIME()}neues|neu (abschließen|lernen|tun|machen)(\\?)?"
+    "Was {SHOULD()} ich {TIME()}?(direkt ?)(abschließen|lernen|tun|machen)(\\?)?"
+    "Was {SHOULD()} ich {TIME()}?(direkt ?)(neues|neu) (abschließen|lernen|tun|machen)(\\?)?"
 
 rule request(toReachGoal)
     "Welche(s)? Ziel(e)? habe ich( für)?{TIME()}(\\?)?"
 
 rule request(newModuleYes)
     "Ja, {NEW()}"
-
 
 rule request(help)
     "Hilfe"
@@ -31,11 +31,11 @@ rule inform(finishTask)
 
 rule request(goalAlternative)
     "Was {SHOULD()} ich {TIME()}noch {TIME()}(abschlie(ß|ss)en|lernen|tun|machen)(\\?)?"
-    "{WHICH()}(andere)?{UNIT()} {SHOULD()} ich {TIME()}noch {TIME()}(lernen|abschließen)(\\?)?"
+    "{WHICH()}(andere)?{UNIT()} {SHOULD()} ich {TIME()}noch {TIME()}(lernen|abschlie(ß|ss)en)(\\?)?"
 
 rule request(repeatableModul)
     "{WHICH()}{UNIT()} {SHOULD()} ich wiederholen(\\?)?"
-    "Gibt es etwas|was zu wiederholen(\\?)?"
+    "Gibt es (set)?was zu wiederholen(\\?)?"
 
 rule request(learnableModul)
     "{WHICH()}{UNIT()} {SHOULD()} ich {TIME()}lernen(\\?)?"
@@ -44,7 +44,7 @@ rule request(needHelp)
     "Was mache ich falsch(\\?)?"
     "Wie kann ich mich verbessern(\\?)?"
     "Wie kann ich es besser machen(\\?)?"
-    "Wie kann ich (eine )?bessere Ergebnisse|Bewertungen|Bewertung|Benotung bekommen(\\?)?"
+    "Wie kann ich (eine )?bessere (Ergebnisse|Bewertungen|Bewertung|Benotung) bekommen(\\?)?"
 
 rule request(insufficient)
     "Bei welche(m|r|n){UNIT()} bin ich (noch )?nicht ausreichend(\\?)?"
@@ -74,10 +74,10 @@ rule request(submission)
 
 
 rule request(nextModule)
-    "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes tun|machen(\\?)?"
-    "Was ist mein nächstes Modul|Ziel(\\?)?"
-    "Was kann ich als nächstes machen|tun(\\?)?"
-    "Welchen|Welches Lerninhalt|Modul {SHOULD()} ich als nächstes tun|machen|abschließen|abschliessen(\\?)?"
+    "(Was|({WHICH()}{UNIT()})) {SHOULD()} ich als nächstes (tun|machen|lernen|abschließen|abschliessen)(\\?)?"
+    "Was ist (mein|das) nächste(s)? (Modul|(Lern)?Ziel)(\\?)?"
+    "Was kann ich als nächstes (machen|tun|lernen|abschließen|abschliessen)(\\?)?"
+    "(Welchen|Welches) ((Lern)?inhalt|Modul) {SHOULD()} ich als nächstes (tun|machen|lernen|abschließen|abschliessen)(\\?)?"
     "Was kommt als nächstes(\\?)?"
 
 rule request(infoContent)
@@ -91,8 +91,8 @@ rule request(infoContent)
     "Wo wird (?P<content10>.*) erklärt(\\?)?"
 
 rule request(pastModule)
-    "Wie kann ich ein Quiz (zum|zu dem) vorherigen Inhalt|Modul finden(\\?)?"
-    "Gib mir ein Quiz (zum|zu dem) vorherigen Inhalt|Modul"
+    "Wie kann ich ein Quiz (zum|zu dem) vorherigen (Inhalt|Modul) finden(\\?)?"
+    "Gib mir ein Quiz (zum|zu dem) vorherigen (Inhalt|Modul)"
 
 rule inform(lecture)
     "{rINFORM()}{lecture}"
@@ -136,8 +136,8 @@ rule inform(affirm)
 # All slots are requestable
 
 rule request(module)
-    "Welche Einheiten|Inhalte|Module könnte ich wiederholen?"
-    "(Welches Modul soll ich lernen|Was soll ich lernen|Was sollte ich heute lernen|Was muss ich lernen)\\?"
+    "Welche (Einheiten|Inhalte|Module) könnte ich wiederholen?"
+    "((Welches Modul soll ich lernen)|(Was soll ich lernen)|(Was sollte ich heute lernen)|(Was muss ich lernen))(\\?)?"
     "Wo kann ich mehr Informationen zu dem Thema finden\\?"
     "Was sollte ich sonst noch in diesem Monat abschließen\\?"
     "Welche Ziele habe ich für (diese Woche|heute)\\?"
@@ -168,7 +168,7 @@ rule request(quiz_link)
 
 rule request(lecture)
     "Welche {synonyms(lecture, "Einheit")} könnte ich wiederholen\\?"
-    "Welches {synonyms(lecture, "Modul")} (soll ich lernen|Was soll ich lernen|Was sollte ich heute lernen|Was kann ich lernen|Was muss ich lernen)\\?"
+    "Welches {synonyms(lecture, "Modul")} (soll ich lernen|Was soll ich lernen|Was sollte ich heute lernen|Was kann ich lernen|Was muss ich lernen)(\\?)?"
     "Wo kann ich mehr Informationen zu dem Thema finden\\?"
 
 rule request(lecture_link)
@@ -209,7 +209,7 @@ function slot_synonyms(slot)
 
 
 function SHOULD(): "könnte|sollte|muss|soll|kann"
-function TIME(): "( )?(diesen Monat( )?|diese Woche( )?|heute( )?)?"
+function TIME(): "( )?(direkt )?(diesen Monat( )?|diese Woche( )?|heute( )?)?"
 function UNIT(): "( Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs| Qui(z|zen))"
 function WHICH(): "(Welche(s|r|n|m))?"
 function WHATSABOUT(): "Worum geht('| e)s"
@@ -225,7 +225,7 @@ function DONTCARE(): "(i\\ dont\\ care)"
 function DONTCAREWHAT(): "(i\\ dont\\ care\\ what\\ )"
 function DONTCAREABOUT(): "(i\\ dont\\ care\\ about\\ )"
 function rREQUEST(): "(\\\\b|^|\\ )(?<!{DONTCARE()})({WHAT()}\\ {IT()}|{CYTM()}|{CIG()})"
-function WANT(): "(suche|möchte wissen|will|will( wissen|Info( |s |rmationen )?über)?)*"
+function WANT(): "suche|(möchte wissen)|(will( wissen)?)( )?Info(s|(rmationen)?) (über)?"
 function WBG(): "(\\ ((would|seems\\ to)\\ be\\ (good|nice)($|[^\\?]$)|seems\\ (good|nice)($|[^\\?]$)))"
 function rINFORM(): "(\\\\b|^|\\ ){WANT()}"
 function rINFORM_DONTCARE(): "{DONTCARE()} ((what|which|about)(\\ (it\\'*s*|the))*)+"

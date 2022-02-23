@@ -100,23 +100,18 @@ class GUIServer(Service):
     def forward_message_to_websocket(self, user_id, sys_utterance: str = None):
         user_id = int(user_id)
 
+        hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
+        # manage recording of chat history
+        if self.max_history_length > 0:
+            if len(hist) > self.max_history_length:
+                del hist[0]
+            hist.append({"content": sys_utterance, "format": "text", "party": "system"})
+        self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
         if not user_id in self.websockets:
             # store messages during page transition where socket is closed
             print("MISSED MSG", sys_utterance)
-            hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
-            hist.append(json.dumps([{"content": sys_utterance, "format": "text", "party": "system"}]))
-            self.set_state(user_id, GUIServer.TURN_HISTORY, hist)
         else:
             asyncio.set_event_loop(self.loopy_loop)
-
-            # manage recording of chat history
-            hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
-            if self.max_history_length > 0:
-                hist.append({"content": sys_utterance, "format": "text", "party": "system"})
-                if len(hist) > self.max_history_length:
-                    del hist[0]
-            self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
-
             # forward message to moodle frontend
             self.websockets[user_id].write_message(json.dumps([{"content": sys_utterance, "format": "text", "party": "system"}]))
     

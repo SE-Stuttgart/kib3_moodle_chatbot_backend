@@ -250,7 +250,6 @@ class ELearningPolicy(Service):
 		if repeatContent == "oldcontent":
 			moduleName = random.choice(old_finished_modules)
 		link = self.get_link_by_course_module_id(moduleName.id)
-		print("REPEATABLE CONTENT", repeatContent)
 		contentType = moduleName.get_type_name(self.session)
 		return SysAct(act_type=SysActionType.Inform,
 					  slot_values={"moduleName": moduleName.section.name, "repeatContent": repeatContent, "link": link,

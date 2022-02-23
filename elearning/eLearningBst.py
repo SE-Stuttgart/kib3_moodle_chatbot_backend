@@ -25,7 +25,6 @@ class ELearningBST(Service):
     def update_bst(self, user_id: str, user_acts: List[UserAct] = None) \
             -> dict(beliefstate=BeliefState):
         # TODO beatrice: store relevant information from user acts here
-        print("TODO Beatrice: eLearningBst.py: hier Informationen aus User Acts in BST schreiben")
         return {'beliefstate': {}}
 
     def dialog_start(self, user_id: str):
