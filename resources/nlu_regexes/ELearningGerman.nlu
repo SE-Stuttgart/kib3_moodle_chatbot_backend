@@ -107,7 +107,7 @@ rule inform(lecture)
 
 rule request(finishTask)
     "Wie viele{UNIT()} fehlen( noch)?(\\?)?"
-    "Wie viele{UNIT()} gibt('s|s|es)( noch)?(\\?)?"
+    "Wie viele{UNIT()} gibt('s|s| es)( noch)?(\\?)?"
     "Wie viele{UNIT()} habe ich( noch)?(\\?)?"
     "Wie viele{UNIT()} (muss|kann|soll) ich( noch)?"
 
