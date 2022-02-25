@@ -98,7 +98,6 @@ class ELearningPolicy(Service):
 			resets the policy after each dialog
 		"""
 		if not self.get_state(user_id, TURNS):
-			print("POLICY STARTING")
 			self.set_state(user_id, TURNS, 0)
 			self.set_state(user_id, FIRST_TURN, True)
 			self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
@@ -122,9 +121,13 @@ class ELearningPolicy(Service):
 			finalgrade = float(moodle_event['other']['finalgrade'])
 			if finalgrade == gradeItem.grademax:
 				# all questions correct
+				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - all questions correct, finalgrade: {finalgrade}")
+				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - all questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'positiveFeedback': 'True', 'completedQuiz': 'True'})}")
 				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedQuiz": "True"})}
 			else:
 				# not all questions correct
+				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions incorrect, finalgrade: {finalgrade}")
+				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'negativeFeedback': 'True', 'finishedQuiz': 'True'})}")
 				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})}
 
 		elif event_name == """\\core\\event\\course_module_completion_updated""":
@@ -169,11 +172,8 @@ class ELearningPolicy(Service):
 
 
 					# first time completion
+					self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - first time completion, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'positiveFeedback': 'True', 'completedModul': 'True'})}")
 					return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedModul": "True"})}
-
-
-
-
 
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate"], pub_topics=["sys_act", "sys_state", "html_content"])
@@ -193,7 +193,7 @@ class ELearningPolicy(Service):
 						action
 
 		"""
-		print("USER ACTS\n", user_acts)
+		# print("USER ACTS\n", user_acts)
 
 		turns = self.get_state(user_id, TURNS) + 1
 		self.set_state(user_id, TURNS, turns)
@@ -203,6 +203,7 @@ class ELearningPolicy(Service):
 			self.set_state(user_id, FIRST_TURN, False)
 			sys_act = self.start_msg(user_id)
 			sys_state["last_act"] = sys_act
+			self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
 			return {'sys_act': sys_act, "sys_state": sys_state}
 		# after first turn
 		for act in user_acts:
@@ -214,7 +215,10 @@ class ELearningPolicy(Service):
 					if slot == "quiz_links":
 						# we have a link - add html embed code to display quiz inline in chat
 						result["html_content"] = sys_act.slot_values[slot]
+				self.logger.dialog_turn(f"# USER {user_id} # POLICY - {result['sys_act']}")
 				return result
+		
+		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {SysAct(act_type=SysActionType.Bad)}")
 		return {"sys_act": SysAct(act_type=SysActionType.Bad), "sys_state": sys_state}
 
 	def get_current_user(self, userid) -> MUser:
@@ -276,7 +280,6 @@ class ELearningPolicy(Service):
 		submission_name = None
 
 		for assignment in self.get_open_assignments(userid):
-			print("ASSIGNMENT", assignment.name, assignment.course, assignment.duedate)
 			if not next_submission or assignment.duedate < due_date:
 				next_submission = assignment
 				due_date = next_submission.duedate
@@ -288,7 +291,6 @@ class ELearningPolicy(Service):
 			for module in course_modules:
 				if module.get_type_name(self.session) == "assign":
 					course_module_section = module.section
-					print("NAME", course_module_section.name)
 					# course_module_name = course_module_section.name
 					course_module_name = module.get_name(self.session) + " im Abschnitt " + course_module_section.name
 					due_date = due_date.strftime("%d.%m.%y, %H:%M:%S")
@@ -324,7 +326,6 @@ class ELearningPolicy(Service):
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
 			book_links = get_book_links(self.session, act.text)
-			print("LINKS", book_links)
 			if book_links:
 				book_link_str = ", ".join(f'<a href="{link}">{book_links[link]}</a>' for link in book_links)
 			else:
@@ -466,8 +467,6 @@ class ELearningPolicy(Service):
 				if not course_module_id:
 					module_name, course_module_id = self.get_sufficient_module(userid)
 				quiz: MCourseModule = self.get_quiz_for_user_by_course_id(course_module_id, userid)[0]
-				print("QUIZ", quiz)
-				print("QUIZ LINK", quiz.get_hvp_embed_html(self.session))
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"quiz_link": quiz.get_content_link(self.session)})
 
@@ -697,7 +696,6 @@ class ELearningPolicy(Service):
 
 
 	def get_module_and_next_due_date(self, userid) -> Tuple[str, None]:
-		print("USERID", userid)
 		open_assignments = self.get_open_assignments(userid)
 		if not open_assignments:
 			return None, None

@@ -78,7 +78,9 @@ class ELearningNLG(Service):
         Returns:
             dict: a dict containing the system utterance
         """
-        return {'sys_utterance': self.generate_system_utterance(sys_act)}
+        message = self.generate_system_utterance(sys_act)
+        self.logger.dialog_turn(f"# USER {user_id} # NLG - {message}")
+        return {'sys_utterance': message}
 
 
     def generate_system_utterance(self, sys_act: SysAct = None) -> str:
@@ -95,7 +97,6 @@ class ELearningNLG(Service):
         """
         rule_found = True
         message = ""
-        print(sys_act)
         try:
             message = self.templates.create_message(sys_act)
         except BaseException as error:
@@ -109,7 +110,6 @@ class ELearningNLG(Service):
             self.logger.info("System Action: " + str(sys_act.type)
                              + " - Slots: " + str(sys_act.slot_values))
 
-        # self.logger.dialog_turn("System Action: " + message)
         return message
 
 

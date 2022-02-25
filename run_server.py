@@ -25,10 +25,10 @@ def load_elearning_domain():
     from services.nlg.nlg import ELearningNLG
     from services.nlu.nlu import ELearningNLU
     domain = JSONLookupDomain('ELearning', display_name="ELearning")
-    e_learning_nlu = ELearningNLU(domain=domain)
-    e_learning_policy = ELearningPolicy(domain=domain)
+    e_learning_nlu = ELearningNLU(domain=domain, logger=logger)
+    e_learning_policy = ELearningPolicy(domain=domain, logger=logger)
     e_learning_bst = ELearningBST(domain=domain)
-    e_learning_nlg = ELearningNLG(domain=domain)
+    e_learning_nlg = ELearningNLG(domain=domain, logger=logger)
     return domain, [e_learning_nlu, e_learning_bst, e_learning_policy, e_learning_nlg]
 
 #  setup dialog system
@@ -72,7 +72,7 @@ class GUIServer(Service):
     @PublishSubscribe(pub_topics=['user_utterance'])
     def user_utterance(self, user_id, domain_idx = 0, message = ""):
         try:
-            self.logger.dialog_turn(f"# USER {user_id} # USR-UTTERANCE ({self.domains[domain_idx].get_domain_name()}) - {message}")
+            self.logger.dialog_turn(f"# USER {user_id} # USR-UTTERANCE - {message}")
 
             # manage recording of chat history
             hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
@@ -109,7 +109,8 @@ class GUIServer(Service):
         self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
         if not user_id in self.websockets:
             # store messages during page transition where socket is closed
-            print("MISSED MSG", sys_utterance)
+            # print("MISSED MSG", sys_utterance)
+            pass
         else:
             asyncio.set_event_loop(self.loopy_loop)
             # forward message to moodle frontend
@@ -150,31 +151,30 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
         return int(uri[start:])
 
     def open(self, *args):
-        print("opening connection")
+        # print("opening connection")
         self.userid = self._extract_token(self.request.uri)
-        print(' - user', self.userid)
+        logger.dialog_turn(f"# USER {self.userid} # SERVER - Connecting")
         if self.userid:
             gui_service.websockets[self.userid] = self
  
     def on_message(self, message):
         data = json.loads(message)
-        print("got message", data)
+        # print("got message", data)
         # print("user ids correct?", data['userid'] == self.userid)
         if self.userid:
             topic = data['topic']
             domain_index = data['domain']
             print(" - domain index", domain_index)
             if topic == 'start_dialog':
-                logger.dialog_turn(f"# USER {self.userid} # DIALOG-START ({domains[domain_index].get_domain_name()})")
+                logger.dialog_turn(f"# USER {self.userid} # DIALOG-START")
                 ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True}, user_id=self.userid)
             elif topic == 'user_utterance':
                 gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, message=data['msg'])
     
     def on_close(self):
-        print('closing')
         # find right connection to delete
+        logger.dialog_turn(f"# USER {self.userid} # SOCKET-CLOSE")
         if self.userid in gui_service.websockets:
-           logger.dialog_turn(f"# USER {self.userid} # SOCKET-CLOSE")
            del gui_service.websockets[self.userid]
 
     def check_origin(self, *args, **kwargs):
@@ -183,11 +183,12 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
 
 class MoodleEventHandler(tornado.web.RequestHandler):
     def get(self):
-        self.write("GET: Hello, world")
+        pass
+        # self.write("GET: Hello, world")
 
     def post(self):
         event_data = json.loads(self.request.body)
-        print("GOT MOODLE EVENT", event_data)
+        # print("GOT MOODLE EVENT", event_data)
         
         user_id = int(event_data['userid'])
         gui_service.moodle_event(user_id=user_id, event_data=event_data)

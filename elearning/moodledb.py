@@ -58,7 +58,7 @@ def connect_to_moodle_db(host='127.0.0.1', port=3306, user='moodledude', pwd='Pa
 	# NOTE: isolation level is important because moodle doesn't seem to commit to DB -> session data will be stale
 	print("connecting...")
 	print(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4")
-	engine = create_engine(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4", echo=False, future=True, isolation_level="READ UNCOMMITTED")
+	engine = create_engine(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4", echo=False, future=True, isolation_level="READ UNCOMMITTED", pool_pre_ping=True, pool_recycle=3600, pool_reset_on_return=None)
 	conn = engine.connect()
 	print("done")
 	return engine, conn

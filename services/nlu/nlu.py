@@ -114,7 +114,6 @@ class ELearningNLU(Service):
     def dialog_start(self, user_id: str):
         started = self.get_state(user_id, self.DIALOG_STARTED) # check if user started new dialog or continues existing one
         if not started:
-            print("NLU STARTING")
             self.set_state(user_id, self.DIALOG_STARTED, True)
             self.set_state(user_id, self.LAST_ACT, None)
             self.set_state(user_id, self.LAST_OFFER, None)
@@ -167,7 +166,8 @@ class ELearningNLU(Service):
                 user_acts.append(UserAct(text=user_utterance if user_utterance else "",
                                               act_type=UserActionType.Bad))
         self._assign_scores(user_acts)
-        self.logger.dialog_turn("User Actions: %s" % str(user_acts))
+
+        self.logger.dialog_turn(f"# USER {user_id} # NLU - {user_acts}")
         result['user_acts'] = user_acts
 
         return result
