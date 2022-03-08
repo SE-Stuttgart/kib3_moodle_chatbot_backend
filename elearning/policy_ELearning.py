@@ -325,7 +325,7 @@ class ELearningPolicy(Service):
 	def get_sys_act(self, act: UserAct, userid) -> SysAct:
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
-			book_links = get_book_links(self.session, act.text)
+			book_links = get_book_links(course_id=2, searchTerm=act.text, word_context_length=3)
 			if book_links:
 				book_link_str = ", ".join(f'<a href="{link}">{book_links[link]}</a>' for link in book_links)
 			else:
