@@ -218,7 +218,7 @@ function slot_synonyms(slot)
 
 function SHOULD(): "könnte|sollte|muss|soll|kann"
 function TIME(): "( )?(direkt )?(diesen Monat( )?|diese Woche( )?|heute( )?)?"
-function UNIT(): "( (Lern)?Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Kurs| Qui(z|zen))"
+function UNIT(): "( (Lern)?Einheit(en)?| Inhalt(en)?| Modul(e|en)?| Thema| Themen| Kurs| Qui(z|zen|zes|ze))"
 function WHICH(): "(Welche(s|r|n|m))?"
 function WHATSABOUT(): "Worum geht('| e)s"
 function NEW(): "(ich möchte mit dem neuen )?(anfangen|beginnen|starten)"
