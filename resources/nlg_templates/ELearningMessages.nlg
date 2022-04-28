@@ -1,6 +1,6 @@
 # ---------------NEW RULES - IMS COURSE MESSAGES-------------------------#
 
-template welcomemsg(): "Willkommen zum IMS Lehrveranstaltungs Chat Bot. Wie kann ich dir weiterhelfen?" # Ändern? Antje 
+template welcomemsg(): "Willkommen zum IMS Lehrveranstaltungs Chat Bot. Wie kann ich dir weiterhelfen?"
 template welcomemsg(help): "Ich habe dich leider nicht verstanden. Könntest du mir noch einmal sagen, wonach du suchst."
 template welcomemsg(more) : "Ḱann ich dir bei noch etwas anderem behilflich sein?"
 template bad() : "Entschuldige, ich bin etwas durcheinander. Könntest du mir noch einmal sagen, wonach du suchst."
