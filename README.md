@@ -7,7 +7,7 @@ This repository contains the code for the chatbot server backend.
 1. Clone code
 2. Create a virtual environment and install the requirements into it: `pip install -r requirements_server.txt`
 3. Open the file `config.py` in the main folder. 
-  1. Change the IP addresses and ports to match your Moodle webserver and database server configurations.
+   Change the IP addresses and ports to match your Moodle webserver and database server configurations.
      E.g., if everything is running on the same machine, the IP addresses should all be the host address of that machine.
      For testing on your local machine, you could set all of these to `127.0.0.1`.
      The default web server port should be `8080` if not changed during the Moodle configuration process.
