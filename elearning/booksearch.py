@@ -4,6 +4,8 @@ from typing import Dict
 import httplib2
 import urllib
 
+from config import MOODLE_SERVER_ADDR
+
 
 
 def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3) -> Dict:
@@ -21,7 +23,7 @@ def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3
             "word_context_length": word_context_length
     }
     try:
-        response = http_client.request("http://193.196.53.252/webservice/rest/server.php",
+        response = http_client.request(f"http://{MOODLE_SERVER_ADDR()}/webservice/rest/server.php",
             method="POST",
             headers={'Content-type': 'application/x-www-form-urlencoded'},
             body=urllib.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode
@@ -32,14 +34,20 @@ def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3
         """
         links = {}
         for search_result in data:
-            links[search_result['Url']] = search_result['Filename'] + ": " + search_result['Context']
+            context = search_result['Context']
+            if "?universität" in context:
+                context = context.split("?universität")[0]
+            if "universität stuttgart" in context:
+                context = context.split("universität stuttgart")[0]
+            
+            links[search_result['Url']] = search_result['Filename'] + ": " + context
         return links
     except:
         print(traceback.format_exc())
-        return {"http://193.196.53.252": "Fehler bei Suche"}
+        return {f"http://{MOODLE_SERVER_ADDR()}": "Fehler bei Suche"}
 
 if __name__ == "__main__":
     # connect to database
-    for result in get_book_links(course_id=2, searchTerm="Koordinatensystem", word_context_length=3):
+    for result in get_book_links(course_id=4, searchTerm="Koordinatensystem", word_context_length=3):
         print(result)
     

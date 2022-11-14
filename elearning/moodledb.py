@@ -17,6 +17,8 @@ from sqlalchemy.types import TypeDecorator
 from pathlib import Path
 from urllib.parse import quote_plus as urlquote
 
+from config import MOODLE_SERVER_ADDR, MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT
+
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -54,7 +56,7 @@ class CompletionState(TypeDecorator):
 END Helper classes
 """
 
-def connect_to_moodle_db(host='127.0.0.1', port=3306, user='moodledude', pwd='Password2!', dbname='moodle'):
+def connect_to_moodle_db(host=MOODLE_SERVER_DB_ADDR, port=MOODLE_SERVER_DB_PORT, user='moodle', pwd='m@0dl3ing', dbname='moodle'):
 	# NOTE: isolation level is important because moodle doesn't seem to commit to DB -> session data will be stale
 	print("connecting...")
 	print(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4")
@@ -360,7 +362,7 @@ class MCourseModule(Base):
 		# TODO Dirk: ist es richtig, dass das erste Element genommen werden muss? Wenn ich nach dem content eines Moduls (Section)frage, wird mir den Link zu dem assignement vorgeschlagen
 		# Falsche Links bekommen
 		#session.expire_all()
-		base_path = "http://localhost/moodle"
+		base_path = f"http://{MOODLE_SERVER_ADDR()}"
 		type_info = self.get_type_name(session)
 		if type_info == "book":
 			return f'<a href="{base_path}/mod/book/view.php?id={self.id}">{self.get_name(session)}</a>' # &chapter={}
@@ -383,7 +385,7 @@ class MCourseModule(Base):
 		# print("TYPE INFO", type_info)
 		if type_info == "hvp":
 			return f"""
-			<iframe src="http://localhost/moodle/mod/hvp/embed.php?id={self.id}" allowfullscreen="allowfullscreen"
+			<iframe src="http://{MOODLE_SERVER_ADDR()}/mod/hvp/embed.php?id={self.id}" allowfullscreen="allowfullscreen"
 				title="Multiple Choice: Welche Zusammenhänge sind kausal?" width="350" height="350" frameborder="0"></iframe>
 			<script src="../../mod/hvp/library/js/h5p-resizer.js" charset="UTF-8"></script>
 			"""
@@ -496,7 +498,7 @@ class MCourseSection(Base):
 	
 	def get_link(self):
 		""" Get link to course section """
-		return f"http://localhost/moodle/course/view.php?id={self._course_id}&section={self._section_id}"
+		return f"http://{MOODLE_SERVER_ADDR()}/course/view.php?id={self._course_id}&section={self._section_id}"
 
 	def is_completed(self, user: "MUser", session: Session) -> bool:
 		""" Query if user has completed this course section (= all course modules inside this course section).

@@ -30,6 +30,7 @@ import urllib
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.functions import next_value
 from sqlalchemy.sql.sqltypes import DateTime
+from config import MOODLE_SERVER_ADDR
 
 from elearning.booksearch import get_book_links
 from services.service import PublishSubscribe
@@ -47,7 +48,6 @@ from utils.useract import UserActionType
 LAST_ACCESSED_COURSEMODULE = 'last_accessed_coursemodule'
 NEXT_SUGGESTED_COURSEMODULE = 'next_suggested_coursemodule'
 COURSE_MODULE_ID = 'course_module_id'
-COURSE_ID = 'course_id'
 ASSIGN_ID = 'assign_id'
 TURNS = 'turns'
 FIRST_TURN = 'first_turn'
@@ -114,6 +114,12 @@ class ELearningPolicy(Service):
 		event_name = moodle_event['eventname'].lower().strip()
 		event_action = moodle_event['action'].lower().strip()
 
+		print("=================")
+		print("EVENT")
+		print(event_name)
+		print(moodle_event)
+		print("=================")
+
 		if event_name == """\\core\\event\\user_graded""":
 			# extract grade info
 			gradeItem: MGradeItem = self.session.query(MGradeItem).get(int(moodle_event['other']['itemid']))
@@ -130,54 +136,54 @@ class ELearningPolicy(Service):
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'negativeFeedback': 'True', 'finishedQuiz': 'True'})}")
 				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})}
 
-		elif event_name == """\\core\\event\\course_module_completion_updated""":
-			# TODO: make sure message fires only the first time a course module was completed by a user
-			# is this a session cache problem? 
-			# self.session.expire_all()
-			# Lese die Statusänderung aus dem Event aus
-			updated_completion_state = moodle_event['other']['completionstate']
-			# get related course module to be able to check if it was a quiz, book, PDF, ...
-			course_module: MCourseModule = self.session.query(MCourseModule).get(moodle_event['contextinstanceid'])
-			course_module_type = course_module.get_type_name(self.session)
+		# elif event_name == """\\core\\event\\course_module_completion_updated""":
+		# 	# TODO: make sure message fires only the first time a course module was completed by a user
+		# 	# is this a session cache problem? 
+		# 	# self.session.expire_all()
+		# 	# Lese die Statusänderung aus dem Event aus
+		# 	updated_completion_state = moodle_event['other']['completionstate']
+		# 	# get related course module to be able to check if it was a quiz, book, PDF, ...
+		# 	course_module: MCourseModule = self.session.query(MCourseModule).get(moodle_event['contextinstanceid'])
+		# 	course_module_type = course_module.get_type_name(self.session)
 
-			if course_module_type in ['book', 'resource', 'label']:
-				# completed book or pdf
-				# completion: MCourseModulesCompletion = self.session.query(MCourseModulesCompletion).get(moodle_event['objectid'])
-				if updated_completion_state == 1:
-					# update book, pdf or label if either any of them were marked as completed
-					for section_module in course_module.section.modules:
-						if section_module.get_type_name(self.session) in ['book', 'resource', 'label']:
-							completion_query = self.session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user_id, MCourseModulesCompletion._coursemoduleid==section_module.id)
-							# TODO Seite sollte nach Refresh alle PDFs, buecher und labels als fertig markieren
-							if completion_query.count() == 0 or completion_query.first().completed == False:
-								# mark as completed
-								http_client = httplib2.Http(".cache")
-								body={
-										"wstoken": "03720a912f518f0c2213b63e949e6dc7",
-										"wsfunction": "core_completion_override_activity_completion_status",
-										"moodlewsrestformat": "json",
-										"userid": int(user_id),
-										"cmid": section_module.id,
-										"newstate": 1
-								}
-								try:
-									response = http_client.request("http://193.196.53.252/webservice/rest/server.php",
-										method="POST",
-										headers={'Content-type': 'application/x-www-form-urlencoded'},
-										body=urllib.parse.urlencode(body))[1]
-								except:
-									print(traceback.format_exc())
-
-
+		# 	if course_module_type in ['book', 'resource', 'label']:
+		# 		# completed book or pdf
+		# 		# completion: MCourseModulesCompletion = self.session.query(MCourseModulesCompletion).get(moodle_event['objectid'])
+		# 		if updated_completion_state == 1:
+		# 			# update book, pdf or label if either any of them were marked as completed
+		# 			for section_module in course_module.section.modules:
+		# 				if section_module.get_type_name(self.session) in ['book', 'resource', 'label']:
+		# 					completion_query = self.session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user_id, MCourseModulesCompletion._coursemoduleid==section_module.id)
+		# 					# TODO Seite sollte nach Refresh alle PDFs, buecher und labels als fertig markieren
+		# 					if completion_query.count() == 0 or completion_query.first().completed == False:
+		# 						# mark as completed
+		# 						http_client = httplib2.Http(".cache")
+		# 						body={
+		# 								"wstoken": "03720a912f518f0c2213b63e949e6dc7",
+		# 								"wsfunction": "core_completion_override_activity_completion_status",
+		# 								"moodlewsrestformat": "json",
+		# 								"userid": int(user_id),
+		# 								"cmid": section_module.id,
+		# 								"newstate": 1
+		# 						}
+		# 						try:
+		# 							response = http_client.request("http://193.196.53.252/webservice/rest/server.php",
+		# 								method="POST",
+		# 								headers={'Content-type': 'application/x-www-form-urlencoded'},
+		# 								body=urllib.parse.urlencode(body))[1]
+		# 						except:
+		# 							print(traceback.format_exc())
 
 
-					# first time completion
-					self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - first time completion, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'positiveFeedback': 'True', 'completedModul': 'True'})}")
-					return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedModul": "True"})}
 
 
-	@PublishSubscribe(sub_topics=["user_acts", "beliefstate"], pub_topics=["sys_act", "sys_state", "html_content"])
-	def choose_sys_act(self, user_id: str, beliefstate: dict, user_acts: List[UserAct]) -> dict(sys_act=SysAct,html_content=str):
+		# 			# first time completion
+		# 			self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - first time completion, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'positiveFeedback': 'True', 'completedModul': 'True'})}")
+		# 			return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedModul": "True"})}
+
+
+	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_act", "sys_state", "html_content"])
+	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
 		"""
 			Responsible for walking the policy through a single turn. Uses the current user
 			action and system belief state to determine what the next system action should be.
@@ -194,7 +200,7 @@ class ELearningPolicy(Service):
 
 		"""
 		# print("USER ACTS\n", user_acts)
-
+		# print("COURSE ID", courseid)
 		turns = self.get_state(user_id, TURNS) + 1
 		self.set_state(user_id, TURNS, turns)
 		sys_state = {}
@@ -207,7 +213,7 @@ class ELearningPolicy(Service):
 			return {'sys_act': sys_act, "sys_state": sys_state}
 		# after first turn
 		for act in user_acts:
-			sys_act = self.get_sys_act(act, user_id)
+			sys_act = self.get_sys_act(act, user_id, courseid)
 			if sys_act:
 				sys_state["last_act"] = sys_act
 				result = {"sys_act": sys_act, "sys_state": sys_state}
@@ -215,6 +221,7 @@ class ELearningPolicy(Service):
 					if slot == "quiz_links":
 						# we have a link - add html embed code to display quiz inline in chat
 						result["html_content"] = sys_act.slot_values[slot]
+				# print("SYSACT", result['sys_act'].slot_values)
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY - {result['sys_act']}")
 				return result
 		
@@ -306,7 +313,7 @@ class ELearningPolicy(Service):
 	def get_new_goal_system_act(self, userid):
 		module_name, course_module_id = self.get_user_next_module(userid)
 		if module_name is None:
-			return SysAct(act_type=SysActionType.Inform, slot_values="all_finished")
+			return SysAct(act_type=SysActionType.Inform, slot_values={"all_finished": "true"})
 		self.set_state(userid, COURSE_MODULE_ID, course_module_id)
 		return SysAct(act_type=SysActionType.Inform,
 					  slot_values={"moduleName": module_name, "moduleRequirements": "true", "moduleRequired": "true"})
@@ -322,17 +329,16 @@ class ELearningPolicy(Service):
 		return matches
 		# TODO beatrice: hier aus matches ausgeben, was du ausgeben willst (die ganze Liste oder nur ein Kursmodul)
 
-	def get_sys_act(self, act: UserAct, userid) -> SysAct:
+	def get_sys_act(self, act: UserAct, userid, courseid) -> SysAct:
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
-			book_links = get_book_links(course_id=2, searchTerm=act.text, word_context_length=3)
+			book_links = get_book_links(course_id=courseid, searchTerm=act.text, word_context_length=2)
 			if book_links:
 				book_link_str = ", ".join(f'<a href="{link}">{book_links[link]}</a>' for link in book_links)
 			else:
 				book_link_str = "None"
 			return SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 		if act.type == UserActionType.Request and act.slot == "content":
-			course_id = self.get_state(userid, COURSE_ID)
 			course_module_id = self.get_state(userid, COURSE_MODULE_ID)
 			if course_module_id:
 				link = self.get_link_by_course_module_id(course_module_id)
@@ -488,8 +494,7 @@ class ELearningPolicy(Service):
 						  slot_values={"contentTaskRequired": "x"})
 
 		elif act.slot == "welcomeMsgNearAffirm":
-			course_id = self.get_state(userid, COURSE_ID)
-			quizzes = self.get_quiz_for_user_by_course_id(course_id, userid)
+			quizzes = self.get_quiz_for_user_by_course_id(courseid, userid)
 			if len(quizzes) == 0:
 				return SysAct(act_type=SysActionType.Request,
 							  slot_values={"fitForSubmission":"", "newTask":""})
@@ -498,8 +503,7 @@ class ELearningPolicy(Service):
 						  slot_values={"fitForTest": "true", "link": quizzes[0].get_content_link(self.session)})
 
 		elif act.slot == "welcomeMsgNearDeny":
-			course_id = self.get_state(userid, COURSE_ID)
-			quizzes = self.get_quiz_for_user_by_course_id(course_id, userid)
+			quizzes = self.get_quiz_for_user_by_course_id(courseid, userid)
 			if len(quizzes) == 0:
 				return SysAct(act_type=SysActionType.Request,
 							  slot_values={"fitForSubmission": "", "newTask": ""})
@@ -650,7 +654,7 @@ class ELearningPolicy(Service):
 		return None, None
 
 	def get_grade_link(self, h_grade: MGradeGrade):
-		base_path = "http://localhost/moodle"
+		base_path = f"http://{MOODLE_SERVER_ADDR()}"
 		grade = h_grade.get_grade_item(self.session)
 		type_id = self.session.query(MModule).filter(MModule.name==grade.itemmodule).first().id
 		course_module: MCourseModule = self.session.query(MCourseModule).filter(MCourseModule.instance==grade.iteminstance, MCourseModule._type_id==type_id).first()
@@ -700,7 +704,6 @@ class ELearningPolicy(Service):
 		if not open_assignments:
 			return None, None
 		min_assigns = min(open_assignments, key=attrgetter('duedate'))
-		self.set_state(userid, COURSE_ID, min_assigns.course)
 		self.set_state(userid, ASSIGN_ID, min_assigns.id)
 		return min_assigns.name, min_assigns.duedate
 

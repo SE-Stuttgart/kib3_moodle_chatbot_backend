@@ -113,7 +113,9 @@ class SysAct(Transmittable):
     def _slot_value_dict_to_str(self, slot_value_dict):
         """ convert dictionary to slot1=value1, slot2=value2, ... string """
         stringrep = []
+        # print("DICT", slot_value_dict)
         for slot in slot_value_dict:
+            # print("CHECKING SLOT", slot)
             if slot_value_dict[slot]:
                 if isinstance(slot_value_dict, list):
                     # there are values specified for slot, add them

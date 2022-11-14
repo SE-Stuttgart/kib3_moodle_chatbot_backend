@@ -8,6 +8,7 @@ from threading import Thread, RLock
 from typing import List, Dict, Union, Iterable, Any
 from datetime import datetime, timedelta
 import importlib
+from config import DS_SERVER_IP_ADDR
 
 import zmq
 from zmq import Context
@@ -102,7 +103,7 @@ class Service:
     """
 
     def __init__(self, domain: Union[str, Domain] = "", sub_topic_domains: Dict[str, str] = {}, pub_topic_domains: Dict[str, str] = {},
-                 ds_host_addr: str = "127.0.0.1", sub_port: int = 65533, pub_port: int = 65534, protocol: str = "tcp",
+                 ds_host_addr: str = DS_SERVER_IP_ADDR, sub_port: int = 65533, pub_port: int = 65534, protocol: str = "tcp",
                  debug_logger: DiasysLogger = None, identifier: str = None):
 
         self.is_training = False
@@ -571,9 +572,9 @@ class DialogSystem:
         """
         Args:
             sub_port(int): subscriber port
-            sub_addr(str): IP-address or domain name of proxy subscriber interface (e.g. 127.0.0.1 for your local machine)
+            sub_addr(str): IP-address or domain name of proxy subscriber interface (e.g. 193.196.53.252 for your local machine)
             pub_port(str): publisher port
-            pub_addr(str): IP-address or domain name of proxy publisher interface (e.g. 127.0.0.1 for your local machine) 
+            pub_addr(str): IP-address or domain name of proxy publisher interface (e.g. 193.196.53.252 for your local machine) 
             protocol(str): either 'inproc' or 'tcp'
             debug_logger (DiasysLogger): if not None, all message traffic will be logged to the logger instance
         """
@@ -591,8 +592,8 @@ class DialogSystem:
 
         # start proxy thread
         self._proxy_dev = ThreadProxy(in_type=zmq.XSUB, out_type=zmq.XPUB)  # , mon_type=zmq.XSUB)
-        self._proxy_dev.bind_in(f"{protocol}://127.0.0.1:{pub_port}")
-        self._proxy_dev.bind_out(f"{protocol}://127.0.0.1:{sub_port}")
+        self._proxy_dev.bind_in(f"{protocol}://{DS_SERVER_IP_ADDR}:{pub_port}")
+        self._proxy_dev.bind_out(f"{protocol}://{DS_SERVER_IP_ADDR}:{sub_port}")
         self._proxy_dev.start()
         time.sleep(2)
         self._sub_port = sub_port
@@ -609,7 +610,7 @@ class DialogSystem:
         ctx = Context.instance()
         self._control_channel_pub = ctx.socket(zmq.PUB)
         self._control_channel_pub.sndhwm = 1100000
-        self._control_channel_pub.connect(f"{protocol}://127.0.0.1:{pub_port}")
+        self._control_channel_pub.connect(f"{protocol}://{DS_SERVER_IP_ADDR}:{pub_port}")
         self._control_channel_sub = ctx.socket(zmq.SUB)
 
         # register services (local and remote)
@@ -626,7 +627,7 @@ class DialogSystem:
                 remote_services[getattr(service, 'identifier')] = service
         self._register_remote_services(remote_services, reg_port)
 
-        self._control_channel_sub.connect(f"{protocol}://127.0.0.1:{sub_port}")
+        self._control_channel_sub.connect(f"{protocol}://{DS_SERVER_IP_ADDR}:{sub_port}")
         self._setup_dialog_end_listener()
 
         time.sleep(0.25)
@@ -648,7 +649,7 @@ class DialogSystem:
         # Socket to receive registration requests
         ctx = Context.instance()
         reg_service = ctx.socket(zmq.REP)
-        reg_service.bind(f'tcp://127.0.0.1:{reg_port}')
+        reg_service.bind(f'tcp://{DS_SERVER_IP_ADDR}:{reg_port}')
 
         while len(remote_services) > 0:
             # call next remote service
@@ -699,7 +700,7 @@ class DialogSystem:
         self._end_socket = ctx.socket(zmq.SUB)
         # subscribe to dialog end from all domains
         self._end_socket.setsockopt(zmq.SUBSCRIBE, bytes(Topic.DIALOG_END, encoding="ascii"))
-        self._end_socket.connect(f"{self.protocol}://127.0.0.1:{self._sub_port}")
+        self._end_socket.connect(f"{self.protocol}://{DS_SERVER_IP_ADDR}:{self._sub_port}")
 
         # # add to list of local topics
         # if Topic.DIALOG_END not in self._local_sub_topics:

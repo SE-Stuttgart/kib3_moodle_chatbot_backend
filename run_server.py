@@ -10,12 +10,9 @@ import json
 from services.service import PublishSubscribe, Service, DialogSystem
 from utils.logger import DiasysLogger, LogLevel
 
-# to get a string like this run: openssl rand -hex 32
-SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 logger = DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_lvl=LogLevel.DIALOGS)
 
 def load_elearning_domain():
@@ -69,8 +66,8 @@ class GUIServer(Service):
             self.websockets[user_id].write_message(json.dumps(hist))
 
 
-    @PublishSubscribe(pub_topics=['user_utterance'])
-    def user_utterance(self, user_id, domain_idx = 0, message = ""):
+    @PublishSubscribe(pub_topics=['user_utterance', 'courseid'])
+    def user_utterance(self, user_id, domain_idx = 0, courseid=0, message = ""):
         try:
             self.logger.dialog_turn(f"# USER {user_id} # USR-UTTERANCE - {message}")
 
@@ -83,7 +80,8 @@ class GUIServer(Service):
             self.set_state(user_id, GUIServer.TURN_HISTORY, hist)
 
             # forward message from moodle frontend to dialog system backend
-            return {f'user_utterance/{self.domains[domain_idx].get_domain_name()}': message}
+            return {f'user_utterance/{self.domains[domain_idx].get_domain_name()}': message,
+                    f'courseid/{self.domains[domain_idx].get_domain_name()}': courseid}
         except:
             print("ERROR in GUIService - user_utterance: user=", user_id, "domain_idx=", domain_idx, "message=", message)
             import traceback
@@ -151,7 +149,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
         return int(uri[start:])
 
     def open(self, *args):
-        # print("opening connection")
+        # print("openng connection")
         self.userid = self._extract_token(self.request.uri)
         logger.dialog_turn(f"# USER {self.userid} # SERVER - Connecting")
         if self.userid:
@@ -164,12 +162,13 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
         if self.userid:
             topic = data['topic']
             domain_index = data['domain']
+            courseid = int(data['courseid'])
             print(" - domain index", domain_index)
             if topic == 'start_dialog':
                 logger.dialog_turn(f"# USER {self.userid} # DIALOG-START")
-                ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True}, user_id=self.userid)
+                ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index].get_domain_name()}': True, f'courseid/{domains[domain_index].get_domain_name()}': courseid}, user_id=self.userid)
             elif topic == 'user_utterance':
-                gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, message=data['msg'])
+                gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])
     
     def on_close(self):
         # find right connection to delete
@@ -188,10 +187,10 @@ class MoodleEventHandler(tornado.web.RequestHandler):
 
     def post(self):
         event_data = json.loads(self.request.body)
-        # print("GOT MOODLE EVENT", event_data)
+        print("GOT MOODLE EVENT", event_data)
         
-        user_id = int(event_data['userid'])
-        gui_service.moodle_event(user_id=user_id, event_data=event_data)
+        # user_id = int(event_data['userid'])
+        # gui_service.moodle_event(user_id=user_id, event_data=event_data)
 
 def make_app():
     return tornado.web.Application([
