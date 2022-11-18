@@ -17,7 +17,7 @@ from sqlalchemy.types import TypeDecorator
 from pathlib import Path
 from urllib.parse import quote_plus as urlquote
 
-from config import MOODLE_SERVER_ADDR, MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT
+from config import MOODLE_SERVER_ADDR, MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -72,7 +72,7 @@ class MFile(Base):
 		WARNING: This function might not work on all possible moodle server configurations, 
 				 thus we have to wait for a plugin from Kasra's students to search file contents from the php side instead the python side.
 	""" 
-	__tablename__ = 'm_files'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}files'
 
 	id = Column(BIGINT(10), primary_key=True)
 	contenthash = Column(String(40, 'utf8mb4_bin'), nullable=False, index=True, server_default=text("''"))
@@ -100,7 +100,7 @@ class MBookChapter(Base):
 	"""
 	Access parent Book via MBookChapter.book
 	"""
-	__tablename__ = 'm_book_chapters'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}book_chapters'
 
 	id = Column(BIGINT(10), primary_key=True)
 
@@ -117,13 +117,13 @@ class MBookChapter(Base):
 
 	importsrc = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
 	
-	_bookid = Column(BIGINT(10), ForeignKey("m_book.id"), nullable=False, index=True, name="bookid")
+	_bookid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}book.id"), nullable=False, index=True, name="bookid")
 
 	def get_parent_book(self):
 		return self.book
 
 class MBook(Base):
-	__tablename__ = 'm_book'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}book'
 
 	id = Column(BIGINT(10), primary_key=True)
 	course = Column(BIGINT(10), nullable=False, server_default=text("'0'"))
@@ -150,7 +150,7 @@ class MGradeItem(Base):
 
 	Access related course via MGradeItem.course
 	"""
-	__tablename__ = 'm_grade_items'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}grade_items'
 
 	id = Column(BIGINT(10), primary_key=True)
 
@@ -172,7 +172,7 @@ class MGradeItem(Base):
 	timemodified = Column(UnixTimestamp)
 
 	# internal databasae table mapping information
-	_courseid = Column(BIGINT(10), ForeignKey('m_course.id'), index=True, name='courseid')
+	_courseid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), index=True, name='courseid')
 
 	def get_parent_course(self):
 		return self.course
@@ -183,7 +183,7 @@ class MGradeItem(Base):
 
 class MGradeGradesHistory(Base):
 	""" Lists all previous and current grades per user and course """
-	__tablename__ = 'm_grade_grades_history'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}grade_grades_history'
 
 	id = Column(BIGINT(10), primary_key=True)
 	oldid = Column(BIGINT(10), nullable=False, index=True) # old or current MGradeGrade.id 
@@ -220,7 +220,7 @@ class MGradeGradesHistory(Base):
 
 class MGradeGrade(Base):
 	""" Current grade for a user in a course """
-	__tablename__ = 'm_grade_grades'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}grade_grades'
 
 	id = Column(BIGINT(10), primary_key=True)
 
@@ -251,7 +251,7 @@ class MUserLastacces(Base):
 		* which course was last accessed
 		* and when
 	"""
-	__tablename__ = 'm_user_lastaccess'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}user_lastaccess'
 
 	id = Column(BIGINT(10), primary_key=True)
 
@@ -263,8 +263,8 @@ class MUserLastacces(Base):
 	user = relationship("MUser", back_populates="last_accessed_course", uselist=False) # user object
 
 	# internal database mapping info
-	_courseid = Column(BIGINT(10), ForeignKey('m_course.id'), nullable=False, index=True, server_default=text("'0'"), name='courseid')
-	_userid = Column(BIGINT(10), ForeignKey('m_user.id'), nullable=False, index=True, server_default=text("'0'"), name='userid')
+	_courseid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), nullable=False, index=True, server_default=text("'0'"), name='courseid')
+	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), nullable=False, index=True, server_default=text("'0'"), name='userid')
 
 	def __repr__(self) -> str:
 		""" Pretty printing """
@@ -274,7 +274,7 @@ class MUserLastacces(Base):
 
 
 class MResource(Base):
-	__tablename__ = 'm_resource'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}resource'
 
 	# TODO link relationships
 	id = Column(BIGINT(10), primary_key=True)
@@ -289,7 +289,7 @@ class MResource(Base):
 
 class MModule(Base):
 	""" Internal moodle content type mapping: Lookup e.g. for a MCourseModule what type it is """
-	__tablename__ = 'm_modules'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}modules'
 
 	id = Column(BIGINT(10), primary_key=True)
 	name = Column(String(20, 'utf8mb4_bin'), nullable=False, index=True, server_default=text("''"))
@@ -301,7 +301,7 @@ class MCourseModulesCompletion(Base):
 
 	Access to parent courseodule: MCourseModulesCompletion.coursemodule
 	"""
-	__tablename__ = 'm_course_modules_completion'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules_completion'
 
 	id = Column(BIGINT(10), primary_key=True)
 
@@ -312,8 +312,8 @@ class MCourseModulesCompletion(Base):
 	viewed = Column(SMALLINT(), nullable=True, server_default=text("'0'"))
 
 	# internal database mapping info
-	_coursemoduleid = Column(BIGINT(10), ForeignKey("m_course_modules.id"), nullable=False, index=True, name="coursemoduleid")
-	_userid = Column(BIGINT(10), ForeignKey("m_user.id"), nullable=False, name="userid") # TODO relation to user
+	_coursemoduleid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules.id"), nullable=False, index=True, name="coursemoduleid")
+	_userid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}user.id"), nullable=False, name="userid") # TODO relation to user
 
 	def __repr__(self) -> str:
 		""" Pretty printing """
@@ -323,7 +323,7 @@ class MCourseModulesCompletion(Base):
 
 class MHVP(Base):
 	# TODO finish
-	__tablename__ = 'm_hvp'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}hvp'
 
 	# TODO link relationships
 	id = Column(BIGINT(10), primary_key=True)
@@ -343,7 +343,7 @@ class MCourseModule(Base):
 	Access parent course: MCourseModule.course
 	Access parent section: MCourseModule.section
 	"""
-	__tablename__ = 'm_course_modules'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules'
 
 	id = Column(BIGINT(10), primary_key=True)
 	added = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
@@ -352,8 +352,8 @@ class MCourseModule(Base):
 	completions = relationship("MCourseModulesCompletion", backref="coursemodule")
 
 	# internal database mapping info
-	_section_id = Column(BIGINT(10), ForeignKey('m_course_sections.id'), nullable=False, server_default=text("'0'"), name='section')
-	_course_id = Column(BIGINT(10), ForeignKey('m_course.id'), name="course")
+	_section_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_sections.id'), nullable=False, server_default=text("'0'"), name='section')
+	_course_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), name="course")
 	_type_id = Column(String(255, 'utf8mb4_bin'), name='module') # type of content, e.g. resource, book, ...
 	instance = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
 	visible = Column(SMALLINT(), nullable=False, server_default=text("'1'"))
@@ -440,7 +440,7 @@ class MCourseSection(Base):
 		* list of modules belonging to this course section
 	"""
 	# parent course: MCourseModule.course
-	__tablename__ = 'm_course_sections'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_sections'
 
 	id = Column(BIGINT(10), primary_key=True)
 
@@ -460,7 +460,7 @@ class MCourseSection(Base):
 	modules = relationship("MCourseModule", backref="section")
 
 	# internal database mapping info
-	_course_id = Column(BIGINT(10), ForeignKey('m_course.id'), name='course')
+	_course_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), name='course')
 	_section_id = Column(BIGINT(10), nullable=False, server_default=text("'0'"), name='section')
 
 
@@ -531,7 +531,7 @@ class MCourse(Base):
 		* list of sections in this course
 		* list of gradable items in this course, e.g. quizzes
 	"""
-	__tablename__ = 'm_course'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}course'
 
 	# general course info
 	id = Column(BIGINT(10), primary_key=True)
@@ -560,12 +560,12 @@ class MAssignGrade(Base):
 	"""
 	Access MAssign via MAssignGrade.assign
 	"""
-	__tablename__ = 'm_assign_grades'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}assign_grades'
 
 	id = Column(BIGINT(10), primary_key=True)
 	
-	_assign_id = Column(BIGINT(10), ForeignKey('m_assign.id'), nullable=False, index=True, name="assign")
-	userid = Column(BIGINT(10), ForeignKey("m_user.id"), nullable=False, index=True)
+	_assign_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}assign.id'), nullable=False, index=True, name="assign")
+	userid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}user.id"), nullable=False, index=True)
 
 	timecreated = Column(UnixTimestamp, nullable=True)
 	timemodified = Column(UnixTimestamp, nullable=True)
@@ -575,7 +575,7 @@ class MAssignGrade(Base):
 
 
 class MAssign(Base):
-	__tablename__ = 'm_assign'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}assign'
 
 	id = Column(BIGINT(10), primary_key=True)
 	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
@@ -597,12 +597,12 @@ class MAssign(Base):
 
 class MAssignSubmission(Base):
 	""" Access related assign via MAssignSubmission.assign """
-	__tablename__ = 'm_assign_submission'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}assign_submission'
 
 	id = Column(BIGINT(10), primary_key=True)
 
-	_assign_id = Column(BIGINT(10), ForeignKey("m_assign.id"), nullable=False, index=True, name='assignment')
-	_user_id = Column(BIGINT(10), ForeignKey("m_user.id"), nullable=False, index=True, name="userid")
+	_assign_id = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}assign.id"), nullable=False, index=True, name='assignment')
+	_user_id = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}user.id"), nullable=False, index=True, name="userid")
 
 	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
@@ -615,7 +615,7 @@ class MAssignSubmission(Base):
 
 class MTag(Base):
 	""" Inside the tags, we store information like estimated duration of a course module """
-	__tablename__ = 'm_tag'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}tag'
 
 	id = Column(BIGINT(10), primary_key=True)
 
@@ -628,7 +628,7 @@ class MTag(Base):
 
 class MTagInstance(Base):
 	""" Access tag via MTagInstance.tag """
-	__tablename__ = 'm_tag_instance'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}tag_instance'
 
 	id = Column(BIGINT(10), primary_key=True)
 
@@ -638,7 +638,7 @@ class MTagInstance(Base):
 	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 
-	_tagid = Column(BIGINT(10), ForeignKey("m_tag.id"), nullable=False, index=True, name='tagid')
+	_tagid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}tag.id"), nullable=False, index=True, name='tagid')
 
 
 
@@ -653,7 +653,7 @@ class MUser(Base):
 		* list of completed courses
 		* last completed course module
 	"""
-	__tablename__ = 'm_user'
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}user'
 
 	# user information
 	id = Column(BIGINT(10), primary_key=True)
