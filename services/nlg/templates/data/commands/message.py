@@ -66,5 +66,8 @@ class Message(Command):
                 component.component_type == MessageComponentType.PYTHON_CODE:
                 code = component.value + '$'  # CodeParser expects end of statement
                 expression = CODE_PARSER.parse(code)[0]
-                output += expression.evaluate(parameters)
+                eval = expression.evaluate(parameters)
+                if eval is None:
+                    eval = "None"
+                output += eval
         return output
