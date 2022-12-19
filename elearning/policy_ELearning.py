@@ -431,8 +431,9 @@ class ELearningPolicy(Service):
 
 		elif act.slot == "firstGoal":
 			first_goal = self.first_open_module(userid, courseid)
+			module_link = first_goal.get_content_link(self.session)
 			return SysAct(act_type=SysActionType.Inform,
-						  slot_values={"moduleName": first_goal, "firstGoal": first_goal})
+						  slot_values={"moduleName": module_link})
 
 		elif act.slot == "needHelp":
 			# useful information:
@@ -635,10 +636,10 @@ class ELearningPolicy(Service):
 		user = self.get_current_user(userid)
 		return len(user.get_completed_courses(self.session, courseid=courseid))
 
-	def first_open_module(self, userid, courseid):
+	def first_open_module(self, userid, courseid) -> MCourseModule:
 		user = self.get_current_user(userid)
 		course_modules = user.get_incomplete_available_course_modules(self.session, courseid=courseid)
-		return course_modules[0].section.name
+		return course_modules[0]
 
 	def get_insufficient_module(self, userid, courseid):
 		insufficient_modules = [(self.get_grade_link(h_grade), h_grade.get_grade_item(self.session).course.id) for

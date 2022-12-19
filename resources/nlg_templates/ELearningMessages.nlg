@@ -74,7 +74,7 @@ template inform(all_finished)
         "Du hast alle Module abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"
 
 
-template inform(moduleName, firstGoal)
+template inform(moduleName)
         "Das erste ist {moduleName}"
 
 template request(learningTime)
