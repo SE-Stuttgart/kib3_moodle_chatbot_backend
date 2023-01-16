@@ -299,7 +299,7 @@ class MCourseModulesCompletion(Base):
 	"""
 	Information about what MCourseModule was finished when by what user.
 
-	Access to parent courseodule: MCourseModulesCompletion.coursemodule
+	Access to parent coursemodule: MCourseModulesCompletion.coursemodule
 	"""
 	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules_completion'
 
@@ -416,6 +416,9 @@ class MCourseModule(Base):
 			return "Glossar"
 		elif type_info == "hvp":
 			return session.query(MHVP).get(self.instance).name
+		elif type_info == "page":
+			# Section hat ein Attribut name, dass modul selbst nicht
+			return self.section.name
 		else: 
 			return None
 	
@@ -752,7 +755,13 @@ class MUser(Base):
 		"""
 		#session.expire_all()
 		completions: List[MCourseModulesCompletion] = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True).all()
+		print("completions: ", completions)
+		for course in completions:
+			print("course ", course.coursemodule.get_name(session))
+			print("time modified: ", course.timemodified)
 		completions = list(filter(lambda comp: comp.coursemodule.get_type_name(session) in include_types and comp.coursemodule._course_id==courseid, completions))
+		print("completions: ", completions)
+		print("what is thaht: ", max(completions, key=lambda comp: comp.timemodified).coursemodule)
 		if len(completions) == 0:
 			return self.get_available_course_modules(session, courseid=courseid)[0] # return first result
 		return max(completions, key=lambda comp: comp.timemodified).coursemodule

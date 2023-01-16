@@ -236,7 +236,7 @@ class ELearningPolicy(Service):
 	def get_repeatable_modul_sys_act(self, userid, courseid):
 		two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=2)
 		old_finished_modules = self.get_modules(since_date=two_weeks_ago, is_finished=True, userid=userid, courseid=courseid)
-		insufficient_modules = self.get_modules_by_grade(grade_threshold=0.6, userid=userid, coursid=courseid)
+		insufficient_modules = self.get_modules_by_grade(grade_threshold=0.6, userid=userid, courseid=courseid)
 		open_modules = self.get_modules(since_date=two_weeks_ago, is_finished=False, userid=userid, courseid=courseid)
 		repeat_content_choices = []
 		if len(old_finished_modules) > 0:
@@ -382,7 +382,7 @@ class ELearningPolicy(Service):
 			if act.value == "neue":
 				return self.get_new_goal_system_act(userid, courseid)
 			if act.value == "wiederholen":
-				return self.get_repeatable_modul_sys_act(userid)
+				return self.get_repeatable_modul_sys_act(userid, courseid)
 		elif act.type == UserActionType.Request and act.slot == "moduleRequired":
 			if act.value == "true":
 				module_link, course_module_id = self.get_user_next_module_link(userid, courseid)
@@ -567,11 +567,14 @@ class ELearningPolicy(Service):
 
 	def get_user_next_module(self, userid, courseid):
 		# while loop ends in infinite loop if all courses are completed
+		print("here")
 		user = self.get_current_user(userid)
-
+		print("user: ", user)
 		last_completed: MCourseModule = user.get_last_completed_coursemodule(self.session, courseid)
+		print("last_completed: ", last_completed)
 		self.set_state(userid, LAST_ACCESSED_COURSEMODULE, last_completed)
 		if not last_completed:
+			print("not last completed")
 			# new user - no completed modules so far
 			next_module = user.get_available_course_modules(self.session, courseid=courseid)[0]
 			self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
@@ -580,21 +583,26 @@ class ELearningPolicy(Service):
 		# existing user, already completed some content
 		next_module: MCourseModule = last_completed.section.get_next_available_module(last_completed, self.get_current_user(userid), self.session)
 		if next_module:
+			print("next_module: ", next_module)
 			self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
+			print("current_module_name: ", last_completed.get_name(self.session))
+			print("next_module_name: ", next_module.get_name(self.session))
 			return next_module.get_name(self.session), next_module.id
 
-		# next course module in secion of last completed module is not available - choose available one from other section
+		# next course module in section of last completed module is not available - choose available one from other section
 		# next_module = user.get_available_course_modules(self.session)[0]
 		# print("EXISTING USER -> SECTION COMPLETE -> ", next_module.get_name(self.session), next_module.get_type_name(self.session))
-		next_sections = user.get_incomplete_available_course_sections(self.session, courseid)
+		next_sections = user.get_incomplete_available_course_sections(self.session, courseid) # Problem: gibt schon abgeschlossenen wieder
+		print("availabel sections: ", next_sections)
 		if next_sections:
+			print("next_sections")
 			next_section: MCourseSection = next_sections[0]
 			next_module: MCourseModule = next_section.get_next_available_module(currentModule=None, user=self.get_current_user(userid), session=self.session)
 
 			if not next_module:
 				return "Kein verfügbares Modul gefunden", -1
 		self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
-		return next_module.get_content_link(self.session), next_module.id
+		return next_module.get_name(self.session), next_module.id
 
 
 	def get_user_next_module_link(self, userid, courseid):

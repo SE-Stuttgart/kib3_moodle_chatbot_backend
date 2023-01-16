@@ -69,7 +69,9 @@ template inform(moduleName, finishContent)
 template inform(moduleName, submission)
         "Am {submission} für {moduleName}"
         # "Heute ist die Frist für {moduleName}. Schau nochmal nach, ob alles richtig ist!"
-
+    if submission = "-"
+        "Es gibt im Moment keine Abgaben."
+  
 template inform(all_finished)
         "Du hast alle Module abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"
 
