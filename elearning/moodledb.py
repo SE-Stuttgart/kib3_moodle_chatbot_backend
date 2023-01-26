@@ -514,7 +514,8 @@ class MCourseSection(Base):
 			completion state (bool): True, if user completed this course section, else False
 		"""
 		#session.expire_all()
-		all_section_module_ids = set([course_module.id for course_module in session.query(MCourseModule).filter(MCourseModule._section_id==self.id).all()])
+		all_section_module_ids = set([course_module.id for course_module in session.query(MCourseModule).filter(MCourseModule._section_id==self.id, MCourseModule._type_id!=16).all()])
+		
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id).all()
 		completed_section_modules = [completion._coursemoduleid for completion in completions if completion._coursemoduleid in all_section_module_ids]
 		return len(all_section_module_ids.difference(completed_section_modules)) == 0
@@ -755,13 +756,8 @@ class MUser(Base):
 		"""
 		#session.expire_all()
 		completions: List[MCourseModulesCompletion] = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True).all()
-		print("completions: ", completions)
-		for course in completions:
-			print("course ", course.coursemodule.get_name(session))
-			print("time modified: ", course.timemodified)
 		completions = list(filter(lambda comp: comp.coursemodule.get_type_name(session) in include_types and comp.coursemodule._course_id==courseid, completions))
-		print("completions: ", completions)
-		print("what is thaht: ", max(completions, key=lambda comp: comp.timemodified).coursemodule)
+		
 		if len(completions) == 0:
 			return self.get_available_course_modules(session, courseid=courseid)[0] # return first result
 		return max(completions, key=lambda comp: comp.timemodified).coursemodule
@@ -819,7 +815,9 @@ class MUser(Base):
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).filter(MCourseSection._course_id==courseid):
-			if not section.is_completed(self, session) and is_available_course_sections(session, self, section) and section.name and not section.name.lower().startswith("ki und maschinelles lernen") and not section.name.lower().startswith("spiel zum einstieg"):
+			if (not section.is_completed(self, session) and is_available_course_sections(session, self, section) 
+				and section.name and not section.name.lower().startswith("ki und maschinelles lernen") 
+				and not section.name.lower().startswith("nicht-finale version")  and not section.name.lower().startswith("spiel zum einstieg")):
 				available.append(section)
 		return available
 
@@ -827,7 +825,7 @@ class MUser(Base):
 		""" Pretty printing """
 		return f"""User {self.username} ({self.id})
 			- Last login: {self.lastlogin}
-			- Last accessed course: {self.last_accessed_course.course.fullname if self.last_accessed_course else None}
+			- Last accessed course: {self.last_accessed_course.course if self.last_accessed_course else None}
 		"""
 		# - Grades: {self.get_grades()}
 

@@ -331,6 +331,7 @@ class ELearningPolicy(Service):
 	def get_sys_act(self, act: UserAct, userid, courseid) -> SysAct:
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
+			# TODO schöner
 			book_links = get_book_links(course_id=courseid, searchTerm=act.text, word_context_length=2)
 			if book_links:
 				book_link_str = ", ".join(f'<a href="{link}">{book_links[link]}</a>' for link in book_links)
@@ -567,14 +568,10 @@ class ELearningPolicy(Service):
 
 	def get_user_next_module(self, userid, courseid):
 		# while loop ends in infinite loop if all courses are completed
-		print("here")
 		user = self.get_current_user(userid)
-		print("user: ", user)
 		last_completed: MCourseModule = user.get_last_completed_coursemodule(self.session, courseid)
-		print("last_completed: ", last_completed)
 		self.set_state(userid, LAST_ACCESSED_COURSEMODULE, last_completed)
 		if not last_completed:
-			print("not last completed")
 			# new user - no completed modules so far
 			next_module = user.get_available_course_modules(self.session, courseid=courseid)[0]
 			self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
@@ -583,19 +580,14 @@ class ELearningPolicy(Service):
 		# existing user, already completed some content
 		next_module: MCourseModule = last_completed.section.get_next_available_module(last_completed, self.get_current_user(userid), self.session)
 		if next_module:
-			print("next_module: ", next_module)
 			self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
-			print("current_module_name: ", last_completed.get_name(self.session))
-			print("next_module_name: ", next_module.get_name(self.session))
 			return next_module.get_name(self.session), next_module.id
 
 		# next course module in section of last completed module is not available - choose available one from other section
 		# next_module = user.get_available_course_modules(self.session)[0]
 		# print("EXISTING USER -> SECTION COMPLETE -> ", next_module.get_name(self.session), next_module.get_type_name(self.session))
 		next_sections = user.get_incomplete_available_course_sections(self.session, courseid) # Problem: gibt schon abgeschlossenen wieder
-		print("availabel sections: ", next_sections)
 		if next_sections:
-			print("next_sections")
 			next_section: MCourseSection = next_sections[0]
 			next_module: MCourseModule = next_section.get_next_available_module(currentModule=None, user=self.get_current_user(userid), session=self.session)
 
