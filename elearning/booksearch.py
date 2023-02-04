@@ -36,7 +36,14 @@ def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3
         {'Filename': 'Das Koordinatensystem', 'PDF Pagenum': 1, 'Url': 'http://193.196.53.252:80/mod/book/view.php?id=19&chapterid=34', 'Matched String': 'Koordinatensystem', 'Context': '... das Koordinatensystem was ist wo?foto ...'}
         """
         links = {}
+        files = {}
         for search_result in data:
+            if search_result['filename'] in files:
+                files[search_result['filename']] += 1
+            else: 
+                files[search_result['filename']] = 0
+        for search_result in data:
+            
             print(search_result)
             print("-------------------------------------")
             context = search_result['context_snippet']
@@ -44,9 +51,13 @@ def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3
                 context = context.split("?universität")[0]
             if "universität stuttgart" in context:
                 context = context.split("universität stuttgart")[0]
-            
-            links[search_result['book_chapter_url']] = search_result['filename'] + ": " + context
-        print("links: ", links)
+            if  0 < files[search_result['filename']] < 3:
+                links[search_result['book_chapter_url']] = search_result['filename'] + ": " + context
+            elif files[search_result['filename']] == -1:
+                None
+            else: 
+                links[search_result['book_chapter_url']] = search_result['filename']
+                files[search_result['filename']] = -1
         return links
     except:
         print(traceback.format_exc())

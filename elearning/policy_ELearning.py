@@ -334,7 +334,7 @@ class ELearningPolicy(Service):
 			# TODO schöner
 			book_links = get_book_links(course_id=courseid, searchTerm=act.text, word_context_length=2)
 			if book_links:
-				book_link_str = ", ".join(f'<a href="{link}">{book_links[link]}</a>' for link in book_links)
+				book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link]}</a>' for link in book_links)
 			else:
 				book_link_str = "None"
 			return SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
