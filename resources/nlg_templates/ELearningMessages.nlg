@@ -99,7 +99,8 @@ template inform(positiveFeedback, alreadyFinishedOne, repeat)
             "Sehr gut! Dann starte nochmal das Quiz, damit du auch dieses Modul abschließen kannst!"
 
 template inform(motivational, taskLeft)
-        "{taskLeft}, du hast schon {motivational} geschafft!Die restlichen Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"
+        "{taskLeft}, du hast schon {motivational} geschafft! Die restlichen Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"
+
 template inform(NoMotivational, taskLeft)
         "{taskLeft}, du hast leider {NoMotivational} geschafft 😩  Du könntest jetzt anfangen! Die Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"
 
@@ -205,7 +206,7 @@ template inform(suggestion, offerhelp)
 
 
 template inform(quiz_link)
-        "{quiz_link}"
+        "Hier ist ein Link zum Quiz: {quiz_link}"
 
 template inform(motivateForQuiz, quiz_link)
         "Wenn du kurz Zeit hast, würde ich dir empfehlen, die Quizzes trotzdem zu wiederholen: das dauert nur wenige Minuten, und du erhöhst die Chance, eine gute Note zu bekommen :-)!<br>{quiz_link}"

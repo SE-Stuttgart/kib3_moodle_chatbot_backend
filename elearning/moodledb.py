@@ -699,6 +699,15 @@ class MUser(Base):
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
 		return [completion.coursemodule for completion in completions if completion.coursemodule.get_type_name(session) in include_types and completion.coursemodule._course_id==courseid]
 
+	def is_completed(self, session: Session, module_id: int ,courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> bool:
+		""" Return wheteher a module  is completed by this user or not """
+		#session.expire_all()
+		completions = self.get_completed_courses(session, courseid, include_types)
+		for completion in completions:
+			if module_id == completion.id:
+				return True
+		return False
+
 	def get_completed_courses_before_date(self, date, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModulesCompletion]:
 		""" Return all course modules already completed by current user before a date """
 		#session.expire_all()
@@ -756,8 +765,9 @@ class MUser(Base):
 		"""
 		#session.expire_all()
 		completions: List[MCourseModulesCompletion] = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True).all()
-		completions = list(filter(lambda comp: comp.coursemodule.get_type_name(session) in include_types and comp.coursemodule._course_id==courseid, completions))
 		
+		completions = list(filter(lambda comp: comp.coursemodule.get_type_name(session) in include_types and comp.coursemodule._course_id==courseid, completions))
+
 		if len(completions) == 0:
 			return self.get_available_course_modules(session, courseid=courseid)[0] # return first result
 		return max(completions, key=lambda comp: comp.timemodified).coursemodule

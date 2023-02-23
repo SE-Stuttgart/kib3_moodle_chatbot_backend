@@ -214,6 +214,7 @@ class ELearningPolicy(Service):
 		# after first turn
 		for act in user_acts:
 			sys_act = self.get_sys_act(act, user_id, courseid)
+			print("SysAct: ", sys_act)
 			if sys_act:
 				sys_state["last_act"] = sys_act
 				result = {"sys_act": sys_act, "sys_state": sys_state}
@@ -234,6 +235,12 @@ class ELearningPolicy(Service):
 		return user
 
 	def get_repeatable_modul_sys_act(self, userid, courseid):
+		"""
+			Get a (random) module to repeate. 3 different types:
+			- finished
+			- insufficient
+			- open
+		"""
 		two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=2)
 		old_finished_modules = self.get_modules(since_date=two_weeks_ago, is_finished=True, userid=userid, courseid=courseid)
 		insufficient_modules = self.get_modules_by_grade(grade_threshold=0.6, userid=userid, courseid=courseid)
@@ -280,7 +287,7 @@ class ELearningPolicy(Service):
 		Return the next upcoming incomplete submission
 		"""
 		# Beispiel Use Cases:
-		# Wann ist die erste Abgabe?
+		# Wann ist die nächste Abgabe?
 		next_submission = None
 		due_date = None
 		submission_name = None
@@ -329,6 +336,8 @@ class ELearningPolicy(Service):
 		# TODO beatrice: hier aus matches ausgeben, was du ausgeben willst (die ganze Liste oder nur ein Kursmodul)
 
 	def get_sys_act(self, act: UserAct, userid, courseid) -> SysAct:
+
+		print("Useract: ", act)
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
 			# TODO schöner
@@ -339,16 +348,21 @@ class ELearningPolicy(Service):
 				book_link_str = "None"
 			return SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 		if act.type == UserActionType.Request and act.slot == "content":
+			# question about current topic, e.g. "Worum geht es?"
+			# Ersetzt durch oberes UserAct?
 			course_module_id = self.get_state(userid, COURSE_MODULE_ID)
 			if course_module_id:
 				link = self.get_link_by_course_module_id(course_module_id)
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"modulContent": "modulContent", "link": link})
+		
 		if act.slot == "repeatableModul":
 			return self.get_repeatable_modul_sys_act(userid, courseid)
+
 		elif act.slot == "learnableModul":
 			return SysAct(act_type=SysActionType.Request,
 						  slot_values={"learningTime": ""})
+
 		elif act.slot == "learningTime":
 			import re
 			regex = r"\d+"
@@ -362,8 +376,10 @@ class ELearningPolicy(Service):
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"moduleName": link, "hasModule": "true" if hasModule else "false"})
 			return {"sys_act": SysAct(act_type=SysActionType.Bad)}
+
 		elif act.slot == "submission":
 			return self.get_submission_sys_act(userid, courseid)
+
 		elif act.slot == "finishedGoal":
 			nextStep = random.choice(["test", "repeatQuiz"])
 			if nextStep == "test":
@@ -372,18 +388,22 @@ class ELearningPolicy(Service):
 			if nextStep == "repeatQuiz":
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"positiveFeedback": "cool", "repeatQuiz": "true"})
+
 		elif act.slot == "goal" and act.type == UserActionType.Request:
 			return SysAct(act_type=SysActionType.Request,
 						  slot_values={"goal": ""})
+
 		elif act.slot == "goalAlternative" or act.slot == "toReachGoal":
 			module_name, open_task = self.find_open_tasks(userid, courseid)
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"moduleName": module_name, "finishContent": open_task})
+
 		elif act.slot == "goal" and act.type == UserActionType.Inform:
 			if act.value == "neue":
 				return self.get_new_goal_system_act(userid, courseid)
 			if act.value == "wiederholen":
 				return self.get_repeatable_modul_sys_act(userid, courseid)
+
 		elif act.type == UserActionType.Request and act.slot == "moduleRequired":
 			if act.value == "true":
 				module_link, course_module_id = self.get_user_next_module_link(userid, courseid)
@@ -403,6 +423,7 @@ class ELearningPolicy(Service):
 		elif act.slot == "finishTask" and act.type == UserActionType.Inform:
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"nextStep": random.choice(["newModule", "repeatConcepts", "repeatContents"])})
+		
 		elif act.slot == "finishTask" and act.type == UserActionType.Request:
 			open_modules = self.total_open_modules(userid, courseid)
 			completed_modules = self.total_completed_modules(userid, courseid)
@@ -412,23 +433,16 @@ class ELearningPolicy(Service):
 			else:
 				return SysAct(act_type=SysActionType.Inform,
 							  slot_values={"NoMotivational": f"{completed_modules} von {open_modules + completed_modules}", "taskLeft": str(open_modules)})
+		
 		elif act.slot == "finishGoal":
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"positiveFeedback": "positiveFeedback", "repeatQuiz": ""})
+
 		elif act.slot == "nextModule":
 			module_link, course_module_id = self.get_user_next_module_link(userid, courseid)
 			self.set_state(userid, COURSE_MODULE_ID, course_module_id)
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"nextModule": "", "moduleName": module_link})
-		elif act.slot == "infoContent":
-			# regex für mögliche Inputs implementiert
-			# ToDo: Suchfunktion in Moodle implementieren
-			return SysAct(act_type=SysActionType.Inform,
-						  slot_values={"modulContent": "a", "value": "answer"})
-
-		elif act.slot == "content":
-			return SysAct(act_type=SysActionType.Inform,
-						  slot_values={"modulContent": "a", "value": "content"})
 
 		elif act.slot == "firstGoal":
 			first_goal = self.first_open_module(userid, courseid)
@@ -480,13 +494,16 @@ class ELearningPolicy(Service):
 		elif act.type == UserActionType.Thanks:
 			return SysAct(act_type=SysActionType.RequestMore,
 						  slot_values={"moduleContent": "x"})
+
 		elif act.type == UserActionType.RequestMore:
 			if self.get_state(userid, MODE) == 'new':
 				return self.get_new_goal_system_act(userid, courseid)
 			return SysAct(act_type=SysActionType.RequestMore, slot_values={"end": ""})
+
 		elif act.type == UserActionType.Deny:
 			return SysAct(act_type=SysActionType.Inform,
 						  slot_values={"positiveFeedback": "", "offerHelp": ""})
+						  
 		elif act.type == UserActionType.Bye:
 			return SysAct(act_type=SysActionType.Bye)
 
@@ -568,9 +585,12 @@ class ELearningPolicy(Service):
 
 	def get_user_next_module(self, userid, courseid):
 		# while loop ends in infinite loop if all courses are completed
+		# Wie werden "Lücken" oder andere Reihenfolgen behandelt?
+
 		user = self.get_current_user(userid)
 		last_completed: MCourseModule = user.get_last_completed_coursemodule(self.session, courseid)
 		self.set_state(userid, LAST_ACCESSED_COURSEMODULE, last_completed)
+
 		if not last_completed:
 			# new user - no completed modules so far
 			next_module = user.get_available_course_modules(self.session, courseid=courseid)[0]
@@ -579,6 +599,10 @@ class ELearningPolicy(Service):
 
 		# existing user, already completed some content
 		next_module: MCourseModule = last_completed.section.get_next_available_module(last_completed, self.get_current_user(userid), self.session)
+
+		# muss hier oder in get_next_available_module getestet werden ob nächstes modul nicht schon abgeschlossen ist
+		# Was ist mit nicht "abschliessbaren" modules?
+
 		if next_module:
 			self.set_state(userid, NEXT_SUGGESTED_COURSEMODULE, next_module)
 			return next_module.get_name(self.session), next_module.id
@@ -680,6 +704,9 @@ class ELearningPolicy(Service):
 		return user.find_quiz_by_course_module_id(course_module_id, self.session)
 
 	def start_msg(self, userid, courseid):
+		"""
+			Start the conversation with first message
+		"""
 		module_name, due_date = self.get_module_and_next_due_date(userid, courseid)
 		if not due_date:
 			return SysAct(act_type=SysActionType.Inform,
