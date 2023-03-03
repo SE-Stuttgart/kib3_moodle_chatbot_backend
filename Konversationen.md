@@ -1,5 +1,3 @@
-## Elearning NLG
-
 <table border = true ; border-collapse= collapse>
   <thead bgcolor=#00688b>
     <tr>
@@ -13,7 +11,6 @@
     </tr>
   </thead>
   <tbody>
-	  
     <tr>
       <td>Start</td>
       <td>-</td>
@@ -23,12 +20,10 @@
       <td>3,2,1 Tage?</td>
       <td>Formulierung "zu deinem Bot?" passend? und "Morgen" nur für 1 Tag korrekt</td>
     </tr>
-	
     <tr>
       <th bgcolor=#00688b colspan="7">Suche</th>
-	</tr>
-	
-	<tr>
+    </tr>	
+    <tr>
       <td>"Wo finde ich Infos zu Regression?"</td>
       <td>request(infoContent)</td>
       <td>inform(modulContent, link)</td>
@@ -48,11 +43,9 @@
       <td>In welcher Umgebung wird gefragt?!</td>
       <td>In Course site gibt es keine antwort -> in mehreren Umgebungen fragen! wahrscheinlich ersetzt durch request(infoContent) von oben!</td>
     </tr>
-    
     <tr>
       <th bgcolor=#00688b colspan="7">Request</th>
-	</tr>
-    
+    </tr>
     <tr>
       <td>"Was soll ich machen?"</td>
       <td>request(goal)</td>
@@ -114,7 +107,7 @@
       <td>"Kann ich etwas neues lernen?"</td>
       <td>inform(goal)</td>
       <td>inform(moduleRequirements, moduleName, moduleRequired); inform(all_finished)</td>
-      <td>"Alles klar. Es gibt neues Material zu ..., für das du die Voraussetzungen erfüllst. Erinnerst du dich noch an das vorherige Modul?";" Du hast alle Module abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"</td>
+      <td>"Alles klar. Es gibt neues Material zu ..., für das du die Voraussetzungen erfüllst. Erinnerst du dich noch an das vorherige Modul?";" Du hast alle Module 		abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"</td>
       <td>❓</td>
       <td>Alle Module geschafft</td>
       <td>Bei falscher Reihenfolge (bzw manueller ab-/anwählen) werden falsche Module vorgeschlagen -> wichtig?</td>
@@ -182,12 +175,9 @@
       <td>Quiz schon bearbeitet; Quiz existiert nicht</td>
       <td>Es werden nicht spezifisch Quizze vorgeschlagen! Falsch bei falscher Reihenfolge</td>
     </tr>
-    
     <tr>
       <th bgcolor=#00688b colspan="7">Inform</th>
-	</tr>
-	
-    
+    </tr>
     <tr>
       <td>"Ich habe ... Minuten Zeit"</td>
       <td>inform(learningTime)</td>
@@ -234,12 +224,10 @@
       <td>Alle abgeschlossen</td>
       <td>Bei falscher Reihenfolge (bzw manueller ab-/anwählen) werden falsche Module vorgeschlagen -> wichtig?</td>
     </tr>
-	
-	<tr>
+    <tr>
       <th bgcolor=#00688b colspan="7">General</th>
-	</tr>
-	
-	<tr>
+    </tr>
+    <tr>
       <td>"danke"</td>
       <td>Thanks</td>
       <td>reqmore(moduleContent)</td>
@@ -285,11 +273,9 @@
       <td>-</td>
       <td>-</td>
     </tr>
-	
-	<tr>
+    <tr>
       <th bgcolor=#00688b colspan="7">Nicht implementiert</th>
-	</tr>
-    
+    </tr>
     <tr>
       <td>-</td>
       <td>request(moduleRequired) (existiert aber nicht)</td>
@@ -308,10 +294,7 @@
       <td>-</td>
       <td>SysAct wird bei inform(finishedGoal) benutzt -> das hier überflüssig</td>
     </tr>
-	
-	
-	
-	<tr>
+    <tr>
       <td>"Anfrage"</td>
       <td>UserAct</td>
       <td>SysAct</td>
