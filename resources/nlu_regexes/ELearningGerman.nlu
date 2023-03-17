@@ -39,7 +39,7 @@ rule request(goalAlternative)
 
 rule request(repeatableModul)
     "{WHICH()}{UNIT()} {SHOULD()} ich wiederholen(\\?)?"
-    "Gibt es (set)?was zu wiederholen(\\?)?"
+    "Gibt es (et)?was zu wiederholen(\\?)?"
 
 rule request(learnableModul)
     "{WHICH()}{UNIT()} {SHOULD()} ich {TIME()}lernen(\\?)?"

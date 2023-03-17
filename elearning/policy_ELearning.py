@@ -341,9 +341,9 @@ class ELearningPolicy(Service):
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
 			# TODO schöner
-			book_links = get_book_links(course_id=courseid, searchTerm=act.text, word_context_length=2)
+			book_links = get_book_links(course_id=courseid, searchTerm=act.text, word_context_length=5)
 			if book_links:
-				book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link]}</a>' for link in book_links)
+				book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
 			else:
 				book_link_str = "None"
 			return SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})

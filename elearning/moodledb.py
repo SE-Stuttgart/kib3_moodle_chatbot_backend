@@ -514,7 +514,9 @@ class MCourseSection(Base):
 			completion state (bool): True, if user completed this course section, else False
 		"""
 		#session.expire_all()
-		all_section_module_ids = set([course_module.id for course_module in session.query(MCourseModule).filter(MCourseModule._section_id==self.id, MCourseModule._type_id!=16).all()])
+		page_id = session.query(MModule).filter(MModule.name=="page").all() #with_entities(text("id"))
+		
+		all_section_module_ids = set([course_module.id for course_module in session.query(MCourseModule).filter(MCourseModule._section_id==self.id, MCourseModule._type_id!=page_id[0].id).all()])
 		
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id).all()
 		completed_section_modules = [completion._coursemoduleid for completion in completions if completion._coursemoduleid in all_section_module_ids]

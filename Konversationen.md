@@ -110,7 +110,7 @@
       <td>"Alles klar. Es gibt neues Material zu ..., für das du die Voraussetzungen erfüllst. Erinnerst du dich noch an das vorherige Modul?";" Du hast alle Module 		abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"</td>
       <td>❓</td>
       <td>Alle Module geschafft</td>
-      <td>Bei falscher Reihenfolge (bzw manueller ab-/anwählen) werden falsche Module vorgeschlagen -> wichtig?</td>
+      <td>Bei falscher Reihenfolge (bzw manueller ab-/anwählen) werden falsche Module vorgeschlagen -> wichtig?; get_available_course_modules in moodledb.py test auf None</td>
     </tr>
     <tr>
       <td>"Wie viele Einheiten fehlen noch?"</td>

@@ -44,19 +44,17 @@ def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3
                 files[search_result['filename']] = 0
         for search_result in data:
             
-            print(search_result)
-            print("-------------------------------------")
             context = search_result['context_snippet']
             if "?universität" in context:
                 context = context.split("?universität")[0]
             if "universität stuttgart" in context:
                 context = context.split("universität stuttgart")[0]
             if  0 < files[search_result['filename']] < 3:
-                links[search_result['book_chapter_url']] = search_result['filename'] + ": " + context
+                links[search_result['book_chapter_url']] = [search_result['filename'] + ": ", context]
             elif files[search_result['filename']] == -1:
                 None
-            else: 
-                links[search_result['book_chapter_url']] = search_result['filename']
+            else:
+                links[search_result['book_chapter_url']] = [search_result['filename'], ""]
                 files[search_result['filename']] = -1
         return links
     except:
