@@ -1,0 +1,68 @@
+Kann ich die vorherigen Einheiten erneut besuchen?; SuggestRepetition
+Kann ich meine Suche auf Bücher beschränken?; ChangeConfig
+Ich möchte meine Suche erweitern. Kannst du mir weitere Ergebnisse präsentieren?; LoadMoreSearchResults
+Was kann ich in einer halben Stunde lernen?; InformTimeConstraint
+Kannst du mir dabei helfen, nur Bücher zu finden?; ChangeConfig
+Welche Module sollten ich mir noch genauer ansehen?; SuggestImprovement
+Wo kann ich meine Kenntnisse noch verbessern?; SuggestImprovement
+Modul erledigt!; GetNextModule
+Kannst du mir sagen, was du kannst?; Help
+Was kann ich wiederholen?; SuggestRepetition
+Aloha!; Greet
+Gibt es Ressourcen, die mir bei der Regression helfen können?; SearchForContent
+Welche Inhalte sollte ich noch genauer studieren?; SuggestImprovement
+Ich will jetzt nur Bücher.; ChangeConfig
+Was sind weitere verfügbare Lernmodule?; RequestAlternativeNextModule
+Kannst du mir sagen, was der Begriff Regression bedeutet?; SearchForDefinition
+Welche Themen kann ich erneut durchgehen?; SuggestRepetition
+Ich schätze das sehr!; Thanks
+Welche anderen Module kann ich absolvieren?; RequestAlternativeNextModule
+Gibt es noch weitere Ergebnisse, die du mir zeigen kannst?; LoadMoreSearchResults
+Gibt es einen Test, um mein Wissen zu diesem Thema zu testen?; RequestTest
+Kann ich eine Übungsprüfung machen, um meine Prüfungsfähigkeiten zu verbessern?; RequestTest
+Welche Bücher oder Artikel behandeln das Thema Regression?; SearchForContent
+Ich bin bereit für neue Herausforderungen nach Abschluss dieses Moduls.; GetNextModule
+Wo muss ich mich noch verbessern?; SuggestImprovement
+Modul abgeschlossen!; GetNextModule
+Ich habe begrenzte Zeit heute, welche Einheit empfiehlst du mir?; InformTimeConstraint
+Mission accomplished!; GetNextModule
+Gibt es eine Option, nur Buchvorschläge zu erhalten?; ChangeConfig
+Welche Aspekte sollte ich noch weiter vertiefen?; SuggestImprovement
+Welches Thema steht als nächstes zur Verfügung?; GetNextModuleFrage
+Wie viele Module gibt es?; GetProgress
+Gibt es eine Möglichkeit, nur nach Büchern zu suchen?; ChangeConfig
+Mein Zeitrahmen ist drei Monate, um den Kurs zu beenden.; InformCompletionGoal
+Ich möchte den Kurs innerhalb von drei Monaten fertigstellen.; InformCompletionGoal
+Kannst du meine Suche auf Bücher beschränken?; ChangeConfig
+Ich bin sehr dankbar!; Thanks
+Ich hätte gerne Zugriff auf alle relevanten Ergebnisse, die mit meiner Suche übereinstimmen.; LoadMoreSearchResults
+Ich will in drei Monaten fertig sein.; InformCompletionGoal
+Was gibt es noch zu lernen?; GetNextModuleFrage
+Ich habe mir das Ziel gesetzt, den Kurs in drei Monaten abzuschließen.; InformCompletionGoal
+Gibt es einen Test, um mein Wissen zu diesem Thema zu testen?; RequestTest
+Welche Dienste bietest du an?; Help
+Herzlichen Dank!; Thanks
+Was bist du in der Lage zu tun?; Help
+Kannst du mir Vorschläge geben, welche Einheiten ich wiederholen sollte?; SuggestRepetition
+Servus!; Greet
+Ich habe heute nur 30 Minuten; InformTimeConstraint
+Willkommen!; Greet
+Wo finde ich Tutorials zur Regression?; SearchForContent
+Ich brauche Informationen über die Regression. Wo kann ich sie finden?; SearchForContent
+Gibt es eine Möglichkeit, das vorherige Modul nochmal durchzugehen?; SuggestRepetition
+Innerhalb von drei Monaten will ich den Kurs beendet haben.; InformCompletionGoal
+Hey!; Greet
+Schön, dich zu sehen!; Greet
+Kann ich eine Quizprüfung absolvieren, um zu sehen, wie gut ich das Thema kenne?; RequestTest
+Welche Einheit/Thema kann ich erneut bearbeiten?; SuggestRepetition
+Wo kann ich mich über die Anwendung der Regression in der Praxis informieren?; SearchForContent
+Mein Wunsch ist es, in drei Monaten mit dem Kurs durchzukommen.; InformCompletionGoal
+Ist es möglich, eine Prüfung zu diesem Thema zu machen?; RequestTest
+Zeige mir weitere Ergebnisse.; LoadMoreSearchResults
+Was sind die grundlegenden Konzepte von Regression?; SearchForDefinition
+Ich schätze es sehr!; Thanks
+Aufgabe erfüllt!; GetNextModule
+Was ist die nächste Lektion?; GetNextModuleFrage
+Was kannst du eigentlich?; Help
+Wo kann ich nützliche Ressourcen zur Regression finden?; SearchForContent
+Guten Tag!; Greet
