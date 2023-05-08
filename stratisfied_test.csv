@@ -1,0 +1,315 @@
+Bis bald und alles Gute!; Bye
+Bis später.; Bye
+Wir sehen uns später.; Bye
+Bis dann.; Bye
+Wir sprechen uns bald wieder.; Bye
+Bis bald.; Bye
+Wir sehen uns bald wieder.; Bye
+Es war schön, mit dir zu sprechen. Tschüss!; Bye
+Bis zum nächsten Gespräch.; Bye
+Tschüssi!; Bye
+Ich verabschiede mich.; Bye
+Es war schön, mit dir zu sprechen.; Bye
+Mach's gut und bis zum nächsten Mal.; Bye
+Wir sprechen uns bald wieder, okay?; Bye
+Bis zum nächsten Mal und eine gute Zeit.; Bye
+Tschö mit ööö!; Bye
+Auf Wiederhören.; Bye
+Ich bin nur an Buchquellen interessiert.; ChangeConfig
+Ich will jetzt nur Bücher.; ChangeConfig
+Können wir die Suche auf Buchquellen eingrenzen?; ChangeConfig
+Ich bevorzuge es, mich nur auf Bücher zu konzentrieren.; ChangeConfig
+Bitte empfehle mir nur Bücher.; ChangeConfig
+Könntest du dich auf Bücher spezialisieren?; ChangeConfig
+Ich bevorzuge Buchempfehlungen.; ChangeConfig
+Ich möchte nur Bücher als Suchergebnisse sehen.; ChangeConfig
+Bitte filtere die Ergebnisse, um nur Bücher anzuzeigen.; ChangeConfig
+Ich würde gerne nur Buchvorschläge bekommen.; ChangeConfig
+Ich bin auf der Suche nach Büchern, kannst du mir helfen?; ChangeConfig
+Ich hätte gerne eine Buch-spezifische Suche.; ChangeConfig
+Ich möchte nur Buchempfehlungen bekommen.; ChangeConfig
+Kann ich nur Buchempfehlungen bekommen?; ChangeConfig
+Gibt es eine Option, nur Buchressourcen zu durchsuchen?; ChangeConfig
+Lass mich nur Bücher finden, bitte.; ChangeConfig
+Ich will nur nach Büchern suchen.; ChangeConfig
+Ich habe alle Anforderungen des Moduls vollständig erfüllt.; GetNextModule
+Das aktuelle Modul ist für mich abgeschlossen und ich bin bereit für den nächsten Schritt.; GetNextModule
+Ich habe alle erforderlichen Schritte in diesem Modul abgeschlossen.; GetNextModule
+Ich habe alle Themen des Moduls durchgearbeitet und bin nun fertig.; GetNextModule
+Das aktuelle Kapitel wurde von mir erfolgreich abgeschlossen und ich bin bereit für den nächsten Schritt.; GetNextModule
+Die Bearbeitung des Moduls ist für mich abgeschlossen.; GetNextModule
+Ich habe alle Anweisungen des Moduls erfolgreich befolgt.; GetNextModule
+Ich habe alle Aufgaben in diesem Modul erfolgreich gemeistert.; GetNextModule
+Das aktuelle Kapitel wurde von mir abgeschlossen.; GetNextModule
+Das aktuelle Kapitel wurde von mir vollständig durchgearbeitet.; GetNextModule
+Ich habe alle Schritte und Aufgaben in diesem Modul erfüllt und bin nun fertig.; GetNextModule
+Ich habe alle Aufgaben in diesem Modul erledigt und bin nun bereit für das nächste Kapitel.; GetNextModule
+Ich habe alle Aufgaben erfolgreich erledigt.; GetNextModule
+Ich habe alle Anforderungen des Moduls erfolgreich gemeistert.; GetNextModule
+Ich habe alle Übungen in diesem Modul erfolgreich abgeschlossen.; GetNextModule
+Was sind die nächsten Kapitel?; GetNextModuleFrage
+Was ist das nächste Kapitel?; GetNextModuleFrage
+Welche Lektion sollte ich als Nächstes angehen?; GetNextModuleFrage
+Was ist die nächste Etappe auf meiner Lernreise?; GetNextModuleFrage
+Welches Wissen ist als nächstes dran?; GetNextModuleFrage
+Was kann ich als nächstes lernen?; GetNextModuleFrage
+Welche Inhalte sind als nächstes geplant?; GetNextModuleFrage
+Welche Themenbereiche kommen als nächstes?; GetNextModuleFrage
+Welches Thema sollte ich als Nächstes angehen, um meine Kenntnisse zu erweitern?; GetNextModuleFrage
+Was ist das nächste Lernziel?; GetNextModuleFrage
+Was kann ich als nächstes erwarten?; GetNextModuleFrage
+Was ist der nächste Kursinhalt?; GetNextModuleFrage
+Was sind die nächsten Schritte, die ich unternehmen sollte?; GetNextModuleFrage
+Was kann ich als nächstes in Angriff nehmen?; GetNextModuleFrage
+Was sind meine nächsten Lernziele?; GetNextModuleFrage
+Welche Lektion kommt nach dieser?; GetNextModuleFrage
+Was sind die nächsten Schritte im Lernprozess?; GetNextModuleFrage
+Wie viele Module gibt es insgesamt in diesem Kurs?; GetProgress
+Kannst du mir sagen, wie viele Abschnitte noch vor mir liegen?; GetProgress
+Wie viele Themen muss ich noch lernen, bevor der Kurs beendet ist?; GetProgress
+Wie viele Module gibt es?; GetProgress
+Wie viele Lernabschnitte muss ich noch durchgehen?; GetProgress
+Kannst du mir sagen, wie viele Themen ich noch durchgehen muss?; GetProgress
+Wie viele Lernmodule habe ich noch vor mir?; GetProgress
+Wie viele Einheiten muss ich noch absolvieren, bevor der Kurs abgeschlossen ist?; GetProgress
+Gibt es noch weitere Lerninhalte, die ich absolvieren muss?; GetProgress
+Wie viele Unterrichtseinheiten sind noch zu absolvieren?; GetProgress
+Wie viele Einheiten stehen noch an?; GetProgress
+Gibt es noch weitere Teile des Kurses, die ich durchlaufen muss?; GetProgress
+Wie viele Unterrichtseinheiten sind noch übrig?; GetProgress
+Wie viele Lerneinheiten stehen noch aus?; GetProgress
+Wie viele Kapitel muss ich noch lernen?; GetProgress
+Wie viele Abschnitte habe ich bereits abgeschlossen?; GetProgress
+In wie viele Bereiche ist der Kurs unterteilt?; GetProgress
+Was hast du heute vor?; Greet
+Hey, was gibt es Neues?; Greet
+Huhu!; Greet
+Wie läuft's?; Greet
+Wie geht es dir heute?; Greet
+Grüße!; Greet
+Guten Morgen!; Greet
+Grüße!; Greet
+Hi!; Greet
+Wie läuft es heute?; Greet
+Schön, dass du hier bist!; Greet
+Was gibt's Neues bei dir?; Greet
+Wie geht es dir heute?; Greet
+Guten Tag, wie geht es dir?; Greet
+Wie geht's?; Greet
+Hiho!; Greet
+Wie kann ich dir heute weiterhelfen?; Greet
+Hallo!; Greet
+Tag!; Greet
+Schön dich zu sehen!; Greet
+Wie geht's dir heute?; Greet
+Wie kann ich dich benutzen?; Help
+Kannst du mich begleiten?; Help
+Was für Funktionen hast du?; Help
+Kannst du mir assistieren?; Help
+Wie kann ich dich bedienen?; Help
+Wie kann ich dich optimieren?; Help
+Hilfe; Help
+Wie kann ich dich verbessern?; Help
+Kannst du mir beistehen?; Help
+Was sind deine Stärken?; Help
+Wie kann ich dich verwenden?; Help
+Was kannst du eigentlich?; Help
+Habe Fragen, kannst du helfen?; Help
+Was sind deine Grenzen?; Help
+Kannst du mich aufklären und unterstützen?; Help
+Welche Aufgaben sind für dich geeignet?; Help
+Wäre dankbar für deine Ratschläge.; Help
+In drei Monaten möchte ich alle Aufgaben des Kurses erledigt haben.; InformCompletionGoal
+Ich möchte den Kurs erfolgreich innerhalb von drei Monaten abgeschlossen haben.; InformCompletionGoal
+Ich habe mir vorgenommen, in drei Monaten den Kurs zu beenden.; InformCompletionGoal
+Ich will in drei Monaten alle Themen des Kurses durchgearbeitet haben.; InformCompletionGoal
+Ich will in drei Monaten erfolgreich den Kurs abgeschlossen haben.; InformCompletionGoal
+Mein Ziel ist es, in drei Monaten den Kurs erfolgreich durchzulaufen.; InformCompletionGoal
+Ich habe den Plan, in drei Monaten den Kurs erfolgreich zu absolvieren.; InformCompletionGoal
+Mein Ziel ist es, in drei Monaten das Kurszertifikat zu erhalten und meine Fähigkeiten zu verbessern.; InformCompletionGoal
+Ich beabsichtige, innerhalb von drei Monaten mit dem Kurs fertig zu sein.; InformCompletionGoal
+Innerhalb von drei Monaten möchte ich den Kurs beendet haben.; InformCompletionGoal
+Mein Ziel ist es, den Kurs in drei Monaten abzuschließen.; InformCompletionGoal
+Ich möchte den Kurs in drei Monaten beendet haben.; InformCompletionGoal
+Ich möchte den Kurs in drei Monaten abgeschlossen haben, um meine Kenntnisse zu vertiefen.; InformCompletionGoal
+Ich plane, in drei Monaten den Kurs erfolgreich zu absolvieren.; InformCompletionGoal
+Mein Ziel ist es, innerhalb von drei Monaten fertig zu werden.; InformCompletionGoal
+Welches Modul passt in meinen Zeitrahmen von 30 Minuten?; InformTimeConstraint
+Welche Einheiten/Module/Themen sind kurz genug, um in nur 30 Minuten abgeschlossen zu werden?; InformTimeConstraint
+Ich möchte eine kurze Lerneinheit finden, die ich in 30 Minuten schaffen kann. Was schlagen Sie vor?; InformTimeConstraint
+Ich möchte in 30 Minuten etwas erledigen, was soll ich lernen?; InformTimeConstraint
+Ich habe nur eine halbe Stunde Zeit, was ist das Beste, was ich tun kann?; InformTimeConstraint
+Ich habe heute nur eine halbe Stunde Zeit, was kann ich in dieser Zeit lernen?; InformTimeConstraint
+Ich habe nicht viel Zeit, aber ich möchte trotzdem etwas lernen, was empfiehlst du mir?; InformTimeConstraint
+Welches Modul kann ich schnell erledigen, um meine Lernzeit zu maximieren.; InformTimeConstraint
+Welches Modul kann ich in 30 Minuten abschließen?; InformTimeConstraint
+Gibt es ein Modul, das ich in nur 30 Minuten erledigen kann?; InformTimeConstraint
+Was kann ich in einer halben Stunde lernen, um das Beste aus meiner Zeit zu machen?; InformTimeConstraint
+Kannst du mir eine kurze Lektion vorschlagen, die ich in 30 Minuten absolvieren kann?; InformTimeConstraint
+Was wäre die effektivste Art, meine 30 Minuten Lernzeit zu nutzen?; InformTimeConstraint
+Welche Module/Einheiten/Themen sind in einer kurzen Zeitspanne erlernbar?; InformTimeConstraint
+Kannst du mir bitte alle weiteren verfügbaren Resultate anzeigen?; LoadMoreSearchResults
+Ich möchte gerne alle weiteren passenden Ergebnisse angezeigt bekommen.; LoadMoreSearchResults
+Kannst du mir bitte alle weiteren relevanten Suchergebnisse zeigen?; LoadMoreSearchResults
+Gibt es noch weitere relevante Informationen zu diesem Thema, die ich überprüfen sollte?; LoadMoreSearchResults
+Kannst du mir weitere Resultate zu meinem Thema zeigen?; LoadMoreSearchResults
+Könntest du mir bitte weitere passende Ergebnisse präsentieren?; LoadMoreSearchResults
+Könntest du mir bitte weitere relevante Suchergebnisse anzeigen?; LoadMoreSearchResults
+Ich benötige weitere Suchergebnisse, um meine Recherche zu vervollständigen.; LoadMoreSearchResults
+Gibt es noch weitere Ergebnisse, die ich überprüfen sollte?; LoadMoreSearchResults
+Könntest du mir bitte weitere passende Suchergebnisse präsentieren?; LoadMoreSearchResults
+Kannst du mir bitte weitere relevante Informationen zu diesem Thema anzeigen?; LoadMoreSearchResults
+Könntest du mir bitte noch mehr passende Ergebnisse zeigen?; LoadMoreSearchResults
+Könntest du mir bitte noch mehr relevante Ergebnisse zeigen?; LoadMoreSearchResults
+Könntest du mir bitte weitere Suchergebnisse zeigen, die meiner Suche entsprechen?; LoadMoreSearchResults
+Ich benötige mehr Suchergebnisse, um meine Recherche zu vervollständigen. Kannst du mir bitte weiterhelfen?; LoadMoreSearchResults
+Das kann ich nicht zulassen.; No
+Keine Chance.; No
+Das ist nicht der Fall, den ich kenne.; No
+Das kann ich nicht akzeptieren.; No
+Nein, das ist nicht der Fall.; No
+Das ist nicht meine Kenntnis.; No
+Nein, das ist nicht zutreffend.; No
+Das ist nicht erwartet.; No
+Keineswegs.; No
+Das ist nicht die Antwort, die ich suche.; No
+Das kann ich nicht bestätigen.; No
+Das ist nicht zutreffend.; No
+Das ist nicht meine Wahrnehmung.; No
+Das ist nicht erlaubt.; No
+Das ist nicht gestattet.; No
+Das ist nicht der Fall, den ich sehe.; No
+Nicht gerechtfertigt.; No
+Gibt es weitere Lernmaterialien, die ich nutzen kann?; RequestAlternativeNextModule
+Welche weiteren Lernquellen stehen zur Verfügung?; RequestAlternativeNextModule
+Gibt es andere Module, die für mich geeignet sind?; RequestAlternativeNextModule
+Was steht als Nächstes auf der Liste?; RequestAlternativeNextModule
+Welche anderen Inhalte gibt es, die ich noch nicht erkundet habe?; RequestAlternativeNextModule
+Gibt es andere Module, die mich herausfordern könnten?; RequestAlternativeNextModule
+Welche weiteren Themen könnten mir helfen, meine Ziele zu erreichen?; RequestAlternativeNextModule
+Was sind meine anderen Möglichkeiten, um mehr zu lernen?; RequestAlternativeNextModule
+Welche weiteren Lektionen stehen zur Verfügung?; RequestAlternativeNextModule
+Gibt es weitere Themen, die ich erkunden kann?; RequestAlternativeNextModule
+Gibt es andere Module, die mich interessieren könnten?; RequestAlternativeNextModule
+Welche anderen Ressourcen kann ich nutzen, um mein Wissen zu erweitern?; RequestAlternativeNextModule
+Was sind meine Optionen, um meine Fähigkeiten zu erweitern?; RequestAlternativeNextModule
+Was wäre ein guter nächster Schritt für mich?; RequestAlternativeNextModule
+Gibt es noch andere Themen, die ich in Angriff nehmen kann?; RequestAlternativeNextModule
+Was gibt es noch zu lernen?; RequestAlternativeNextModule
+Welche weiteren Lernmaterialien gibt es?; RequestAlternativeNextModule
+Ich würde gerne mein Wissen in diesem Thema durch einen Test überprüfen, geht das?; RequestTest
+Kann ich einen Test machen, um mein Verständnis für das Thema zu verbessern?; RequestTest
+Gibt es einen Test, den ich machen kann, um mein Wissen zu vertiefen?; RequestTest
+Kannst du mir einen Test vorschlagen, um mein Verständnis für das Thema zu stärken?; RequestTest
+Ich würde gerne einen Test zu diesem Thema absolvieren, gibt es einen verfügbaren?; RequestTest
+Ich möchte mein Wissen in diesem Bereich testen, gibt es einen Test dafür?; RequestTest
+Wäre es machbar, einen Test zu diesem Thema zu machen, um meine Vorbereitung zu bestätigen?; RequestTest
+Kann ich einen Test absolvieren, um meine Kompetenz in diesem Thema zu überprüfen?; RequestTest
+Wäre es möglich, einen Test zum Thema zu machen, um meine Fähigkeiten zu verbessern?; RequestTest
+Wäre es möglich, einen Test zu diesem Thema zu machen, um meine Fähigkeiten zu verbessern?; RequestTest
+Wäre es ratsam, einen Test zu diesem Thema zu machen, um meine Vorbereitung zu testen?; RequestTest
+Gibt es einen Test, um mein Wissen in diesem Thema zu überprüfen?; RequestTest
+Kann ich ein Quiz oder einen Test zu diesem Thema absolvieren?; RequestTest
+Wo kann ich erfahren, wie man die Stichprobengröße in der Regression bestimmt?; SearchForContent
+Wo kann ich Daten finden, um Regression zu üben?; SearchForContent
+Wo kann ich eine Einführung in Regression finden?; SearchForContent
+Wo kann ich Beispiele für Regression in der realen Welt finden?; SearchForContent
+Welche Bibliotheken und Tools sind für die Regression geeignet?; SearchForContent
+Gibt es eine spezielle Datenbank, die sich auf Regression spezialisiert hat?; SearchForContent
+Wo kann ich mit Fachleuten über Regression sprechen?; SearchForContent
+Wo finde ich Informationen darüber, wie man die Modellierung von Zeitreihendaten in der Regression durchführt?; SearchForContent
+Wo kann ich Ressourcen über Regression finden?; SearchForContent
+Gibt es eine bestimmte Website, auf der ich Informationen über Regression finden kann?; SearchForContent
+Welche Websites bieten Informationen über Regression?; SearchForContent
+Wie führt man die Residuenanalyse in der Regression durch?; SearchForContent
+Wo finde ich Lernmaterialien zu Regression?; SearchForContent
+Wo finde ich Informationen zur Interpretation von Regressionsergebnissen?; SearchForContent
+Wo kann ich Videos oder Webinare finden, die Regression erklären?; SearchForContent
+Wie führt man die Ensemble-Regression durch?; SearchForContent
+Wo finde ich Informationen darüber, wie man die Ridge- und Lasso-Regression durchführt?; SearchForContent
+Was sind einige häufige Anwendungen von Regression in der Datenanalyse?; SearchForDefinition
+Welche Arten von Regression gibt es und wie unterscheiden sie sich voneinander?; SearchForDefinition
+Was ist der Unterschied zwischen Regression und Korrelation?; SearchForDefinition
+Könntest du mir eine kurze Erklärung für den Begriff Regression geben?; SearchForDefinition
+Wie kann ich eine Regression in Python durchführen?; SearchForDefinition
+Was ist das Ziel der Regressionsdiagnostik?; SearchForDefinition
+Was sind die Anwendungen und Vorteile von Regression?; SearchForDefinition
+Was sind die besten Ressourcen für Regressionstutorials?; SearchForDefinition
+Wie können Fehler in der Regressionsergebnisse minimiert werden?; SearchForDefinition
+Was sind die grundlegenden Konzepte hinter der Regression?; SearchForDefinition
+Was versteht man unter Regression und wie wird es zur Vorhersage von Daten genutzt?; SearchForDefinition
+Wie kann die Regression bei der Vorhersage zukünftiger Ereignisse helfen?; SearchForDefinition
+Was ist die Bedeutung der Regressionsanalyse in der Psychologie?; SearchForDefinition
+Was ist der Unterschied zwischen linearer und nichtlinearer Regression?; SearchForDefinition
+Was sind die Vorteile und Einschränkungen der Regression?; SearchForDefinition
+Wie kann ich die Multikollinearität in der Regression berücksichtigen?; SearchForDefinition
+Was ist das Bestimmtheitsmaß in der Regression?; SearchForDefinition
+Welche Module sollten noch bearbeitet werden?; SuggestImprovement
+Welche Themen sind für mich noch neu?; SuggestImprovement
+In welchen Themen kann ich mich noch steigern?; SuggestImprovement
+Welche Bereiche benötigen noch Aufmerksamkeit und Übung?; SuggestImprovement
+Welche Themen sollte ich noch vertiefen?; SuggestImprovement
+Wo brauche ich noch mehr Übung und Vertiefung?; SuggestImprovement
+Welche Themen sollten noch behandelt werden, um mich weiterzuentwickeln?; SuggestImprovement
+In welchen Einheiten sollte ich noch weiter lernen?; SuggestImprovement
+Wo kann ich noch wachsen und mich weiterentwickeln?; SuggestImprovement
+In welchen Einheiten habe ich noch Lernbedarf?; SuggestImprovement
+In welchen Themenbereichen sollte ich noch mehr Erfahrung sammeln?; SuggestImprovement
+Welche Bereiche sollten noch stärker bearbeitet werden?; SuggestImprovement
+In welchen Bereichen muss ich noch mehr tun?; SuggestImprovement
+Wo habe ich noch Wissenslücken?; SuggestImprovement
+Wo kann ich meine Kenntnisse noch erweitern?; SuggestImprovement
+Wo kann ich noch Fortschritte erzielen?; SuggestImprovement
+Gibt es noch Themen, die ich nicht ausreichend verstanden habe?; SuggestImprovement
+Welches Thema soll ich noch einmal durchgehen?; SuggestRepetition
+Welche Lernmodule sollten noch einmal durchgegangen werden, um meine Fähigkeiten zu verbessern?; SuggestRepetition
+Welche Lektionen sollten noch einmal durchgegangen werden, um meine Fähigkeiten zu verbessern?; SuggestRepetition
+Welche Einheiten sollten noch einmal durchgegangen werden, um meine Kenntnisse zu verbessern?; SuggestRepetition
+Welche Lektionen sollte ich mir erneut anschauen?; SuggestRepetition
+Was ist das nächste Thema, das ich noch einmal durchgehen sollte?; SuggestRepetition
+Gibt es ein bestimmtes Modul, das ich noch einmal durcharbeiten sollte?; SuggestRepetition
+Kann ich die Einheiten, die ich bereits abgeschlossen habe, noch einmal durchgehen?; SuggestRepetition
+In welchem Bereich sollte ich noch einmal üben?; SuggestRepetition
+Welche Themen sollten erneut behandelt werden?; SuggestRepetition
+Welche Themen sollten noch einmal durchgegangen werden, um meine Fähigkeiten zu verbessern?; SuggestRepetition
+Was sind die Themen, die ich noch einmal durchgehen sollte, um meine Fähigkeiten zu verbessern?; SuggestRepetition
+Wo finde ich die Themen, die ich bereits bearbeitet habe?; SuggestRepetition
+Was kann ich wiederholen?; SuggestRepetition
+Welches Thema kann ich noch einmal durchgehen?; SuggestRepetition
+In welchem Bereich muss ich noch einmal üben, um mich zu verbessern?; SuggestRepetition
+Kann ich die Module, die ich bereits bearbeitet habe, noch einmal durchgehen?; SuggestRepetition
+Ich kann dir gar nicht genug danken!; Thanks
+Ich bin dir unendlich dankbar!; Thanks
+Ich bin so dankbar für deine wertvolle Unterstützung!; Thanks
+Das ist sehr nett von dir!; Thanks
+Ich danke dir für deine Freundlichkeit!; Thanks
+Ich bin froh, dass du da bist!; Thanks
+Ich danke dir vielmals!; Thanks
+Das ist sehr großzügig von dir, vielen Dank!; Thanks
+Wow, danke!; Thanks
+Ich bin froh, dass es dich gibt, danke!; Thanks
+Du hast meine Erwartungen übertroffen, danke!; Thanks
+Das ist sehr großzügig von dir, danke!; Thanks
+Vielen Dank!; Thanks
+Ich bin wirklich dankbar für deine Zeit!; Thanks
+Ich bin wirklich froh, dass es dich gibt!; Thanks
+Ich bin dir unendlich dankbar!; Thanks
+Das ist eindeutig.; Yes
+So ist es und nicht anders.; Yes
+Unbedingt.; Yes
+Absolut einverstanden.; Yes
+Ja, das ist die Wahrheit.; Yes
+Genau das meine ich auch.; Yes
+Ja, das ist korrekt.; Yes
+Ja, das passt.; Yes
+Ganz genau.; Yes
+Ja, das ist genau das.; Yes
+Das stimmt.; Yes
+Richtig erkannt.; Yes
+Auf jeden Fall.; Yes
+Ganz genau.; Yes
+Das hast du richtig erkannt.; Yes
+Definitiv.; Yes
+Alles klar.; Yes
+Korrekt.; Yes
+Auf den Punkt gebracht.; Yes
