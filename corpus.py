@@ -75,8 +75,19 @@ class Corpus:
         
         return corpus_train, train_labels, corpus_test, test_labels
             
-                        
-    
+    def load_corpus_per_inform(self, source_dir):
+        files = os.listdir(source_dir)
+        corpus = []
+        for filename in files:
+                corpus_temp = []
+                with open(source_dir + filename, 'r', encoding="utf-8") as f_in:
+                    for line in f_in:
+                        corpus_temp.append(line.replace('\n', ''))
+                corpus.append((filename.replace('.csv', ''), corpus_temp))
+        return corpus
+        
+
+        
     def save_corpus(self, train_file, test_file):
         with open(train_file, 'w') as f:
             f.write(self.corpus_train)

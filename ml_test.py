@@ -9,13 +9,41 @@ This script outputs for various queries the top 5 most similar sentences in the 
 from sentence_transformers import SentenceTransformer, util
 import torch
 import pickle
+import random
+import time
 from corpus import Corpus
 
 def get_embeddings(embedder, corpus):
-    print("Encoding corpus...")
+    #print("Encoding corpus...")
     corpus_embeddings = embedder.encode(corpus, convert_to_tensor=True)
     #corpus_embeddings = util.normalize_embeddings(corpus_embeddings)
     return corpus_embeddings
+
+def cross_validation(corpus_per_inform):
+    embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german')
+    for inform in corpus_per_inform:
+        scores = []
+        for sentence in inform[1]:
+            corpus_test = inform[1].copy()
+            corpus_test.remove(sentence)
+            corpus_embeddings = get_embeddings(embedder, corpus_test)
+            query_embedding = embedder.encode(sentence, convert_to_tensor=True)
+            #query_embedding = util.normalize_embedding(query_embedding
+        
+            # We use cosine-similarity and torch.topk to find the highest 5 scores
+            cos_scores = util.cos_sim(query_embedding, corpus_embeddings)[0]
+            top_results = torch.topk(cos_scores, k=1)
+            scores.append(top_results[0][0].item())
+        print("inform: ", inform[0])
+        print("scores: ", scores)
+        print("mean: ", sum(scores)/len(scores))
+        print("max: ", max(scores))
+        print("min: ", min(scores))
+        print("\n====================================================\n")
+        
+
+
+
 
 def manual(embedder, corpus_train, train_labels, corpus_embeddings = None):
     while(True):
@@ -33,6 +61,7 @@ def manual(embedder, corpus_train, train_labels, corpus_embeddings = None):
 
         # Find the closest 5 sentences of the corpus for each query sentence based on cosine similarity
         top_k = min(5, len(corpus_train))
+        time_start = time.time()
         query_embedding = embedder.encode(query, convert_to_tensor=True)
         #query_embedding = util.normalize_embedding(query_embedding)
 
@@ -40,11 +69,11 @@ def manual(embedder, corpus_train, train_labels, corpus_embeddings = None):
         # We use cosine-similarity and torch.topk to find the highest 5 scores
         cos_scores = util.cos_sim(query_embedding, corpus_embeddings)[0]
         top_results = torch.topk(cos_scores, k=top_k)
-
+        time_end = time.time()
         
         print("\n\n======================\n\n")
         print("Query:", query)
-        print("\nTop 5 most similar sentences in corpus:")
+        print("\nTop 5 most similar sentences in corpus in ", time_end-time_start, "seconds:")
 
         for score, idx in zip(top_results[0], top_results[1]):
             print(corpus_train[idx], "(Score: {:.4f})".format(score))
@@ -82,7 +111,7 @@ def main():
     corpus = Corpus()
     while(True):
         print("---------------------------")
-        print("Do you want to... \n 1.make one csv \n 2.load corpus with strasfied sampling \n 3.load the full corpus \n 4.load cached embeddings \n 5.exit")
+        print("Do you want to... \n 1.make one csv \n 2.load corpus with strasfied sampling \n 3. Cross Validation \n 4.load the full corpus \n 5.load cached embeddings \n 6.exit")
         choice = input()
         
         match choice:
@@ -93,6 +122,9 @@ def main():
             case '2':
                 corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./big_corpus/', 'stratisfied')
             case '3':
+                corpus = corpus.load_corpus_per_inform('./big_corpus/')
+                cross_validation(corpus)
+            case '4':
                 corpus_train, train_labels = corpus.load_corpus('big_corpus_train.csv')
                 corpus_test, test_labels = corpus.load_corpus('big_corpus_test.csv')
                 corpus_embeddings = None
@@ -101,14 +133,14 @@ def main():
                 print("train_labels: ", len(train_labels))
                 print("test_labels: ", len(test_labels))
 
-            case '4':
+            case '5':
                 with open('embeddings.pkl', "rb") as fIn:
                     stored_data = pickle.load(fIn)
                     corpus_train = stored_data['sentences']
                     corpus_embeddings = stored_data['embeddings']
                     train_labels = stored_data['labels']
                 corpus_test, test_labels = corpus.load_corpus('big_corpus_test.csv')
-            case '5':
+            case '6':
                 exit()
             case _:
                 print("Invalid input")
@@ -121,12 +153,12 @@ def main():
         #embedder = SentenceTransformer('all-MiniLM-L6-v2') # 90.9 MB
         #embedder = SentenceTransformer('distilbert-multilingual-nli-stsb-quora-ranking') # 539 MB
         #embedder = SentenceTransformer('symanto/sn-xlm-roberta-base-snli-mnli-anli-xnli') # 1.11 GB
-        #embedder = SentenceTransformer('aari1995/German_Semantic_STS_V2') # 1.34 GB
+        embedder = SentenceTransformer('aari1995/German_Semantic_STS_V2') # 1.34 GB
         #embedder = SentenceTransformer('bert-base-multilingual-uncased') # 672 MB
         #embedder = SentenceTransformer('deutsche-telekom/gbert-large-paraphrase-cosine')
         #embedder = SentenceTransformer('Sahajtomar/German-semantic')
         #embedder = SentenceTransformer('clips/mfaq')
-        embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german')
+        #embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german')
         #embedder = SentenceTransformer('PM-AI/sts_paraphrase_xlm-roberta-base_de-en')
         #embedder = SentenceTransformer('nblokker/debatenet-2-cat')
         print("Number parameter: ", sum(p.numel() for p in embedder.parameters()))
