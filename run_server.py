@@ -20,7 +20,7 @@ def load_elearning_domain():
     from elearning.policy_ELearning import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
     from services.nlg.nlg import ELearningNLG
-    from services.nlu.nlu import ELearningNLU
+    from services.nlu.nluNew import ELearningNLU
     domain = JSONLookupDomain('ELearning', display_name="ELearning")
     e_learning_nlu = ELearningNLU(domain=domain, logger=logger)
     e_learning_policy = ELearningPolicy(domain=domain, logger=logger)

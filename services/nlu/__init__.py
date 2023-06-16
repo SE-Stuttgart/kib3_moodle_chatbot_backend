@@ -17,4 +17,4 @@
 #
 ###############################################################################
 
-from .nlu import ELearningNLU
+from .nluOld import ELearningNLU

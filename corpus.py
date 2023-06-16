@@ -42,6 +42,18 @@ class Corpus:
                 labels.append(line[1].replace('\n', ''))
         return corpus, labels
     
+    def remove_duplicates(self, source_dir):
+        files = os.listdir(source_dir)
+        for filename in files:
+            corpus = []
+            with open(source_dir + filename, 'r', encoding="utf-8") as f_in:
+                for line in f_in:
+                    corpus.append(line.replace('\n', ''))
+            corpus = list(set(corpus))
+            with open(source_dir + filename, 'w', encoding="utf-8") as fout:
+                for i in range(0, len(corpus)):
+                    fout.write(corpus[i] + '\n')
+    
     def load_stratisfied(self, source_dir, destination_dir, split=0.8):
         files = os.listdir(source_dir)
         corpus = []
