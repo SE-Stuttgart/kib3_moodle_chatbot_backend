@@ -42,7 +42,7 @@ from utils.logger import DiasysLogger
 from utils import UserAct
 from elearning.moodledb import MAssign, MAssignSubmission, MCourse, MCourseModulesCompletion, MCourseSection, MGradeGrade, MGradeItem, connect_to_moodle_db, Base, MUser, MCourseModule, \
 	get_time_estimate_module, get_time_estimates, MModule
-from utils.useract import UserActionType
+from utils.useract import UserActionType, UserAct
 
 
 LAST_ACCESSED_COURSEMODULE = 'last_accessed_coursemodule'
@@ -199,8 +199,12 @@ class ELearningPolicy(Service):
 						action
 
 		"""
-		# print("USER ACTS\n", user_acts)
+		print("USER ACTS\n", user_acts)
 		# print("COURSE ID", courseid)
+		acts = []
+		for act in user_acts:
+			acts.append(self.map_on_old_user_act(act))
+		user_acts = acts
 		turns = self.get_state(user_id, TURNS) + 1
 		self.set_state(user_id, TURNS, turns)
 		sys_state = {}
@@ -228,6 +232,57 @@ class ELearningPolicy(Service):
 		
 		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {SysAct(act_type=SysActionType.Bad)}")
 		return {"sys_act": SysAct(act_type=SysActionType.Bad), "sys_state": sys_state}
+
+
+	def map_on_old_user_act(self, user_act: UserAct) -> UserAct:
+		"""
+		Maps an new user act to the old user act while sysact is not implemented
+		"""
+		if user_act is not None:
+			if user_act.slot == 'InformTimeConstraint':
+				return UserAct(UserActionType.Inform, slot="learningTime", text="60") # only 60 minutes for now
+			elif user_act.slot == 'LoadMoreSearchResults':
+				return UserAct(UserActionType.Bad)
+			elif user_act.slot == 'Greet':
+				return UserAct(UserActionType.Bad)
+			elif user_act.slot == 'SearchForContent':
+				return UserAct(UserActionType.Request, slot = "infoContent", text = user_act.text)
+			elif user_act.slot == 'No':
+				return user_act
+			elif user_act.slot == 'InformCompletionGoal':
+				return UserAct(UserActionType.Bad)
+			elif user_act.slot == 'GetNextModule':
+				return UserAct(UserActionType.Request, slot ="nextModule")
+			elif user_act.slot == 'GetProgress':
+				return UserAct(UserActionType.Inform, slot ="finishTask")
+			elif user_act.slot == 'RequestTest':		
+				return UserAct(UserActionType.Request, slot="finishedGoal")
+			elif user_act.slot == 'SuggestImprovement': 
+				return UserAct(UserActionType.Request, slot="needHelp")
+			elif user_act.slot == 'InformCompletionGoal':
+				return UserAct(UserActionType.Bad)
+			elif user_act.slot == 'Yes':
+				return user_act
+			elif user_act.slot == 'SearchForDefinition':
+				return UserAct(UserActionType.Request, slot = "infoContent", text = user_act.text)
+			elif user_act.slot == 'SuggestRepetition':
+				return UserAct(UserActionType.Request, slot = "repeatableModul")
+			elif user_act.slot == 'Thanks':
+				return user_act
+			elif user_act.slot == 'ChangeConfig':
+				return UserAct(UserActionType.Bad)
+			elif user_act.type == UserActionType.Bye:
+				return user_act
+			elif user_act.slot == 'Help':
+				return UserAct(UserActionType.Request, slot="help")
+			else:
+				return UserAct(UserActionType.Bad)
+		else:
+			return UserAct(UserActionType.Bad)
+		
+		
+		
+
 
 	def get_current_user(self, userid) -> MUser:
 		""" Get Moodle user by id from Chat Interface (or start run_chat with --userid=...) """

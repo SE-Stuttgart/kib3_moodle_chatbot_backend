@@ -13,8 +13,8 @@ class Utterance_Mapper():
         """
         self.model = embedder_model
         self.embedder = SentenceTransformer(embedder_model)
-        self.threshold = 0.96
-        file_path = os.path.join(os.getcwd(), 'corpus_embeddings.pkl')
+        self.threshold = 0.945
+        file_path = os.path.join(os.getcwd(), 'short_corpuscorpus_embeddings.pkl')
         print(file_path)
         with open(file_path, "rb") as fIn:
             stored_data = pickle.load(fIn)
@@ -41,13 +41,28 @@ class Utterance_Mapper():
         """
         query_embedding = self.embedder.encode(utterance, convert_to_tensor=True)
         cos_scores = util.pytorch_cos_sim(query_embedding, self.embeddings)[0]
-        top_results = torch.topk(cos_scores, k=1)
-        print( "Query: {}, label: {}, score: {}   ".format(utterance, self.labels[top_results[1]], top_results[0]))
-        if top_results[0] > self.threshold:
-            label = self.labels[top_results[1]]
+        #top_result = torch.topk(cos_scores, k=5)
+        #print(top_result)
+        top_result = torch.max(cos_scores, dim=0)
+        #print(top_result)
+        print( "Query: {}, label: {}, score: {}   ".format(utterance, self.labels[top_result[1]], top_result[0]))
+        if top_result[0] > self.threshold:
+            label = self.labels[top_result[1]]
         else:
             label = "bad"
         return label
+    
+    def get_informable_slots(self):
+        """
+        Returns the informable slots of the domain.
+        """
+        return list(set(self.labels))
+    
+    def get_requestable_slots(self):
+        """
+        Returns the requestable slots of the domain.
+        """
+        return list(set(self.labels))
     
     
 

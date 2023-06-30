@@ -73,13 +73,13 @@ def cross_validation_across_informs(corpus_per_inform, corpus_full):
     print("min: ", min(scores))
     print("\n====================================================\n")
 
-def make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels):
+def make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, name=""):
     embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german', device='cuda:0')
     #embedder = SentenceTransformer('aari1995/German_Semantic_STS_V2', device='cuda:0')
     corpus = corpus_train + corpus_test
     labels = train_labels + test_labels
     corpus_embeddings = get_embeddings(embedder, corpus)
-    with open('corpus_embeddings.pkl', "wb") as fOut:
+    with open(name + 'corpus_embeddings.pkl', "wb") as fOut:
         pickle.dump({'sentences': corpus, 'embeddings': corpus_embeddings, 'labels': labels  }, fOut, protocol=pickle.HIGHEST_PROTOCOL)
    
 def manual(embedder, corpus_train, train_labels, corpus_embeddings = None):
@@ -124,13 +124,13 @@ def manual(embedder, corpus_train, train_labels, corpus_embeddings = None):
             print(corpus[hit['corpus_id']], "(Score: {:.4f})".format(hit['score']))
         """
 
-def automatic(embedder, corpus_train, train_labels, corpus_test, test_labels, corpus_embeddings = None, threshold = 0.97):
+def automatic(embedder, corpus_train, train_labels, corpus_test, test_labels, corpus_embeddings = None, threshold = 0.97, name=""):
 
     # top_k here
     if(corpus_embeddings == None):
             corpus_embeddings = get_embeddings(embedder, corpus_train)
 
-    with open('embeddings.pkl', "wb") as fOut:
+    with open(name + 'embeddings.pkl', "wb") as fOut:
         pickle.dump({'sentences': corpus_train, 'embeddings': corpus_embeddings, 'labels': train_labels  }, fOut, protocol=pickle.HIGHEST_PROTOCOL)
 
     query_embeddings = embedder.encode(corpus_test, convert_to_tensor=True)
@@ -236,9 +236,9 @@ def main():
                 print("Done making csv")
                 continue
             case '2':
-                corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./short_corpus2/', 'stratisfied')              
+                corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./short_corpus_paranthesis/', 'stratisfied')              
                 corpus_embeddings = None
-                make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels)
+                make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, "short_corpus")
             case '3':
                 corpus_informs = corpus.load_corpus_per_inform('./short_corpus2/')
                 cross_validation(corpus_informs)
