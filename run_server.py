@@ -16,8 +16,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 logger = DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_lvl=LogLevel.DIALOGS)
 
 def load_elearning_domain():
+    print("LOADING ELEARNING DOMAIN")
     from utils.domain.jsonlookupdomain import JSONLookupDomain
-    from elearning.policy_ELearning import ELearningPolicy
+    from elearning.policy_ELearningNew import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
     from services.nlg.nlg import ELearningNLG
     from services.nlu.nluNew import ELearningNLU

@@ -771,7 +771,11 @@ class MUser(Base):
 		completions = list(filter(lambda comp: comp.coursemodule.get_type_name(session) in include_types and comp.coursemodule._course_id==courseid, completions))
 
 		if len(completions) == 0:
-			return self.get_available_course_modules(session, courseid=courseid)[0] # return first result
+			available_modules = self.get_available_course_modules(session, courseid=courseid)
+			if len(available_modules) == 0:
+				return available_modules[0] # return first result
+			else:
+				return None
 		return max(completions, key=lambda comp: comp.timemodified).coursemodule
 
 	def get_last_completed_quiz(self, session: Session, courseid: int) -> Union[MCourseModule, None]:

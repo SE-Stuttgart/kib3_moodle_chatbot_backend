@@ -395,7 +395,7 @@ class ELearningPolicy(Service):
 		print("Useract: ", act)
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
-			# TODO schöner
+			# done
 			book_links = get_book_links(course_id=courseid, searchTerm=act.text, word_context_length=5)
 			if book_links:
 				book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
@@ -419,6 +419,7 @@ class ELearningPolicy(Service):
 						  slot_values={"learningTime": ""})
 
 		elif act.slot == "learningTime":
+			#done
 			import re
 			regex = r"\d+"
 			matches = re.search(regex, act.text, re.MULTILINE | re.IGNORECASE)
