@@ -20,7 +20,7 @@ import datetime
 import decimal
 import random
 from operator import attrgetter
-from re import L
+import re
 import traceback
 from typing import List, Tuple
 
@@ -50,6 +50,7 @@ NEXT_SUGGESTED_COURSEMODULE = 'next_suggested_coursemodule'
 COURSE_MODULE_ID = 'course_module_id'
 ASSIGN_ID = 'assign_id'
 TURNS = 'turns'
+LAST_USER_ACT = 'last_act'
 FIRST_TURN = 'first_turn'
 CURRENT_SUGGESTIONS = 'current_suggestions'
 MODE = 'mode'
@@ -98,6 +99,7 @@ class ELearningPolicy(Service):
 			resets the policy after each dialog
 		"""
 		if not self.get_state(user_id, TURNS):
+			self.set_state(user_id, LAST_USER_ACT, None)
 			self.set_state(user_id, TURNS, 0)
 			self.set_state(user_id, FIRST_TURN, True)
 			self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
@@ -176,10 +178,9 @@ class ELearningPolicy(Service):
 					# What can I learn in 5 minutes?...
 
 					# search for the number of minutes in the user act
-					import re
 					regex = r"\d+"
 					matches = re.search(regex, user_act.text, re.MULTILINE | re.IGNORECASE)
-					print("matches", matches[0])
+					
 					if matches:
 						# find the right module for this time constraint
 						incomplete_modules_with_time_est = get_time_estimates(self.session, self.get_current_user(user_id), courseid=courseid)
@@ -192,7 +193,19 @@ class ELearningPolicy(Service):
 							link = module_names[0].get_content_link(self.session)
 							sys_act = SysAct(act_type=SysActionType.Inform,
 										slot_values={"moduleName": link, "hasModule": "true" if hasModule else "false"})
-					sys_act = SysAct(act_type=SysActionType.Bad)
+						else:
+							sys_act = SysAct(act_type=SysActionType.Inform,
+										slot_values={"moduleName": None, "hasModule": "true" if hasModule else "false"})
+
+					# if no time is found, return an ask for the time specifically
+					# not in nlg yet
+					# set last act
+					else:
+						self.set_state(user_id, LAST_USER_ACT, user_act)
+						
+						sys_act = SysAct(act_type=SysActionType.Request,
+						slot_values={"learningTime": "empty"})
+						#sys_act = SysAct(act_type=SysActionType.Bad)
 				
 				elif user_act.slot == 'LoadMoreSearchResults':
 					# TODO: implement
@@ -203,8 +216,14 @@ class ELearningPolicy(Service):
 					sys_act = SysAct(act_type=SysActionType.Inform,
 					  slot_values={"welcomeMsg": "repeat", "daysToSubmission": "empty"})
 					
-				elif user_act.slot == 'SearchForContent':
-					book_links = get_book_links(course_id=courseid, searchTerm=user_act.text, word_context_length=5)
+				elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
+					reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
+					matches = re.match(reg, user_act.text, re.I).groupdict()
+					for key in matches.keys():
+						if key.startswith("content") and matches.get(key):
+							search_term = matches.get(key)
+					
+					book_links = get_book_links(course_id=courseid, searchTerm=search_term, word_context_length=5)
 					if book_links:
 						book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
 					else:
@@ -257,14 +276,6 @@ class ELearningPolicy(Service):
 						  slot_values={"suggestion": random.choice(["quiz", "learningTime", "offerHelp"]),
 									   "offerhelp": "content"})
 	
-				elif user_act.slot == 'SearchForDefinition':
-					book_links = get_book_links(course_id=courseid, searchTerm=user_act.text, word_context_length=5)
-					if book_links:
-						book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
-					else:
-						book_link_str = "None"
-					sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-				
 				elif user_act.slot == 'SuggestRepetition':
 					# TODO: complicated -> adapt
 					sys_act = self.get_repeatable_modul_sys_act(user_id, courseid)
@@ -285,9 +296,10 @@ class ELearningPolicy(Service):
 						  slot_values={"help":"x"})
 				
 				else:
-					return SysAct(act_type=SysActionType.Bad)
+					print("Unknown user act: ", user_act)
+					sys_act = SysAct(act_type=SysActionType.Bad)
 			else:
-				return SysAct(act_type=SysActionType.Bad)
+				sys_act = SysAct(act_type=SysActionType.Bad)
 			
 		sys_state["last_act"] = sys_act
 		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
