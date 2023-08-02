@@ -1,5 +1,5 @@
 from sentence_transformers import SentenceTransformer, util
-import pickle
+import numpy
 import torch
 import os
 
@@ -11,16 +11,22 @@ class Utterance_Mapper():
         """
         Initializes the Utterance_Mapper.
         """
+        # set device to cuda or cpu
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.model = embedder_model
-        self.embedder = SentenceTransformer(embedder_model)
+        self.embedder = SentenceTransformer(embedder_model, device=self.device)
         self.threshold = 0.945
-        file_path = os.path.join(os.getcwd(), 'short_corpuscorpus_embeddings.pkl')
+        file_path = os.path.join(os.getcwd(), 'corpus_embeddings.pkl')
         print(file_path)
-        with open(file_path, "rb") as fIn:
-            stored_data = pickle.load(fIn)
-            self.corpus = stored_data['sentences']
-            self.embeddings = stored_data['embeddings']
-            self.labels = stored_data['labels']
+        #with open(file_path, "rb") as fIn:
+        #    stored_data = pickle.load(fIn)
+        data_dict = torch.load('embeddings.pt', map_location=self.device)
+
+        # Retrieve the embeddings and labels from the dictionary
+        self.corpus = data_dict['corpus']
+        self.embeddings = data_dict['embeddings']
+        self.labels = data_dict['labels']
     
     def get_most_similar(self, utterance):
         """

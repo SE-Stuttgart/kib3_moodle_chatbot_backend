@@ -49,7 +49,8 @@ def cross_validation(corpus_per_inform):
         
 
 def cross_validation_across_informs(corpus_per_inform, corpus_full):
-    embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german', device='cuda:0')
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german', device=device)
     #embedder = SentenceTransformer('aari1995/German_Semantic_STS_V2', device='cuda:0')
     scores = []
     for inform in corpus_per_inform:
@@ -74,14 +75,27 @@ def cross_validation_across_informs(corpus_per_inform, corpus_full):
     print("\n====================================================\n")
 
 def make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, name=""):
-    embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german', device='cuda:0')
+    
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german', device=device)
     #embedder = SentenceTransformer('aari1995/German_Semantic_STS_V2', device='cuda:0')
     corpus = corpus_train + corpus_test
     labels = train_labels + test_labels
     corpus_embeddings = get_embeddings(embedder, corpus)
-    with open(name + 'corpus_embeddings.pkl', "wb") as fOut:
-        pickle.dump({'sentences': corpus, 'embeddings': corpus_embeddings, 'labels': labels  }, fOut, protocol=pickle.HIGHEST_PROTOCOL)
-   
+    #with open(name + 'corpus_embeddings.pkl', "wb") as fOut:
+    #    pickle.dump({'sentences': corpus, 'embeddings': corpus_embeddings, 'labels': labels  }, fOut, protocol=pickle.HIGHEST_PROTOCOL)
+    # Create a dictionary to store embeddings and labels
+    data_dict = {
+        'embeddings': corpus_embeddings,
+        'corpus': corpus,
+        'labels': labels
+    }
+
+    # Save the dictionary to a file using torch.save()
+    torch.save(data_dict, 'embeddings.pt')
+
+
+
 def manual(embedder, corpus_train, train_labels, corpus_embeddings = None):
     while(True):
 
@@ -275,6 +289,7 @@ def main():
 
         print("loading model... \n")
         
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         #embedder = SentenceTransformer('distiluse-base-multilingual-cased-v2') # 539 MB
         #embedder = SentenceTransformer('all-MiniLM-L6-v2', device='cuda') # 90.9 MB
         #embedder = SentenceTransformer('distilbert-multilingual-nli-stsb-quora-ranking') # 539 MB
@@ -284,7 +299,7 @@ def main():
         #embedder = SentenceTransformer('deutsche-telekom/gbert-large-paraphrase-cosine')
         #embedder = SentenceTransformer('Sahajtomar/German-semantic')
         #embedder = SentenceTransformer('clips/mfaq')
-        embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german', device='cuda')
+        embedder = SentenceTransformer('PM-AI/bi-encoder_msmarco_bert-base_german', device=device)
         #embedder = SentenceTransformer('PM-AI/sts_paraphrase_xlm-roberta-base_de-en')
         #embedder = SentenceTransformer('nblokker/debatenet-2-cat')
         print("Number parameter: ", sum(p.numel() for p in embedder.parameters()))
