@@ -7,7 +7,7 @@ import config
 
 
 
-def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3) -> Dict:
+def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Dict:
     """
     Args:
         word_context_length: how many words before and after the search term should be included in search result
@@ -42,6 +42,7 @@ def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3
                 files[search_result['filename']] += 1
             else: 
                 files[search_result['filename']] = 0
+
         for search_result in data:
             
             context = search_result['context_snippet']
@@ -56,6 +57,20 @@ def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3
             else:
                 links[search_result['book_chapter_url']] = [search_result['filename'], ""]
                 files[search_result['filename']] = -1
+              
+
+        # only give back the specified number of results, if start -1 give back all results
+        # if start out of range, give back empty dict, if end out of range, give back all results
+        
+        if start!=-1:
+            if start < len(links) and end < len(links):
+                links = dict(list(links.items())[start:end])
+            elif start < len(links) and end >= len(links):
+                links = dict(list(links.items())[start:])
+            else:
+                return {}
+        print(links)
+        
         return links
     except:
         print(traceback.format_exc())

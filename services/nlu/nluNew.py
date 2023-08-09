@@ -49,6 +49,7 @@ class ELearningNLU(Service):
     LAST_REQUESTED_SLOT = 'last_requested_slot'
     SLOTS_REQUESTED = 'slots_requested'
     SLOTS_INFORMED = 'slots_informed'
+    SEARCH_COUNTER = 'search_counter'
 
 
     def __init__(self, domain: JSONLookupDomain, logger: DiasysLogger = DiasysLogger(),
@@ -91,6 +92,7 @@ class ELearningNLU(Service):
             self.set_state(user_id, self.DIALOG_STARTED, True)
             self.set_state(user_id, self.LAST_ACT, None)
             self.set_state(user_id, self.LAST_OFFER, None)
+            self.set_state(user_id, self.SEARCH_COUNTER, 0)
             self.set_state(user_id, self.LAST_REQUESTED_SLOT, None)
             self.set_state(user_id, self.SLOTS_REQUESTED, set())
             self.set_state(user_id, self.SLOTS_INFORMED, set())
@@ -98,8 +100,6 @@ class ELearningNLU(Service):
     @PublishSubscribe(sub_topics=["user_utterance"], pub_topics=["user_acts"])
     def extract_user_acts(self, user_id: str, user_utterance: str = None) -> dict(user_acts=List[UserAct]):
         print("extract_user_acts")
-        print(self.uttance_mapper.get_informable_slots())
-        print(self.uttance_mapper.get_requestable_slots())
 
         """
         Responsible for detecting user acts with their respective slot-values from the user
@@ -115,20 +115,51 @@ class ELearningNLU(Service):
         """
         start = time.time()
         result = {}
-        
+        #print(self.uttance_mapper.get_labels())
         if user_utterance is not None:
             user_utterance = user_utterance.strip()
             user_act = self.uttance_mapper.get_most_similar_label("\"" +user_utterance + "\"")
-            print("user_act: ", user_act)
+            
             # user_requestable selber erstellen und abfragen
-            if user_act == "Bye":
+            last_act = self.get_state(user_id, self.LAST_ACT)
+
+            if last_act and "modulContent" in last_act.slot_values and last_act.type == SysActionType.Request:
+                # if last was search but search term was not found -> last sysact asked for search term -> now user gives search term
+                user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform, slot="SearchTerm")
+                self.set_state(user_id, self.SEARCH_COUNTER, 3)
+                
+            elif user_act == "Bye":
+
                 user_act = UserAct(text=user_utterance, act_type=UserActionType.Bye)
             elif user_act == "Thanks":
                 user_act = UserAct(text=user_utterance, act_type=UserActionType.Thanks)
+            elif user_act == "LoadMoreSearchResults" or user_act == "Yes":
+                # if last act was SearchForDefinition or SearchForContent then get more results
+                
+                if 'modulContent' in last_act.slot_values and last_act.type == SysActionType.Inform:
+                
+                #if last_act and (last_act == "SearchForDefinition" or last_act == "SearchForContent"):
+                    # increase search counter
+                    search_counter = self.get_state(user_id, self.SEARCH_COUNTER)
+                    user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform, slot="LoadMoreSearchResults: " + str(search_counter))
+                    
+                    search_counter += 3
+                    self.set_state(user_id, self.SEARCH_COUNTER, search_counter)
+                else:
+                    user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform,
+                           slot=user_act)
+                    self._add_inform(user_id, user_act.slot)
+            elif user_act == "SearchForDefinition" or user_act == "SearchForContent":
+                # set search counter to 3
+                self.set_state(user_id, self.SEARCH_COUNTER, 3)
+                user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform, slot=user_act)
+            
+            # im moment alle requestable slots
             elif user_act in self.USER_REQUESTABLE:
                 user_act = UserAct(text=user_utterance, act_type=UserActionType.Request,
                            slot=user_act)
                 self._add_request(user_id, user_act.slot)
+ 
             elif user_act in self.USER_INFORMABLE:
                 user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform,
                            slot=user_act)

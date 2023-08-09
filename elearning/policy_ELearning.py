@@ -199,12 +199,12 @@ class ELearningPolicy(Service):
 						action
 
 		"""
-		print("USER ACTS\n", user_acts)
+		#print("USER ACTS\n", user_acts)
 		# print("COURSE ID", courseid)
-		acts = []
-		for act in user_acts:
-			acts.append(self.map_on_old_user_act(act))
-		user_acts = acts
+		#acts = []
+		#for act in user_acts:
+		#	acts.append(self.map_on_old_user_act(act))
+		#user_acts = acts
 		turns = self.get_state(user_id, TURNS) + 1
 		self.set_state(user_id, TURNS, turns)
 		sys_state = {}
@@ -240,45 +240,48 @@ class ELearningPolicy(Service):
 		"""
 		if user_act is not None:
 			if user_act.slot == 'InformTimeConstraint':
-				return UserAct(UserActionType.Inform, slot="learningTime", text="60") # only 60 minutes for now
+				return UserAct(act_type =UserActionType.Inform, slot="learningTime", text="60") # only 60 minutes for now
 			elif user_act.slot == 'LoadMoreSearchResults':
-				return UserAct(UserActionType.Bad)
+				return UserAct(act_type =UserActionType.Bad)
 			elif user_act.slot == 'Greet':
-				return UserAct(UserActionType.Bad)
+				return UserAct(act_type =UserActionType.Bad)
 			elif user_act.slot == 'SearchForContent':
-				return UserAct(UserActionType.Request, slot = "infoContent", text = user_act.text)
+				return UserAct(act_type =UserActionType.Request, slot = "infoContent", text = user_act.text)
 			elif user_act.slot == 'No':
 				return user_act
 			elif user_act.slot == 'InformCompletionGoal':
-				return UserAct(UserActionType.Bad)
+				return UserAct(act_type =UserActionType.Bad)
 			elif user_act.slot == 'GetNextModule':
-				return UserAct(UserActionType.Request, slot ="nextModule")
+				return UserAct(act_type =UserActionType.Request, slot ="nextModule")
 			elif user_act.slot == 'GetProgress':
-				return UserAct(UserActionType.Inform, slot ="finishTask")
+				return UserAct(act_type =UserActionType.Inform, slot ="finishTask")
 			elif user_act.slot == 'RequestTest':		
-				return UserAct(UserActionType.Request, slot="finishedGoal")
+				return UserAct(act_type =UserActionType.Request, slot="finishedGoal")
 			elif user_act.slot == 'SuggestImprovement': 
-				return UserAct(UserActionType.Request, slot="needHelp")
+				return UserAct(act_type =UserActionType.Request, slot="needHelp")
 			elif user_act.slot == 'InformCompletionGoal':
-				return UserAct(UserActionType.Bad)
+				return UserAct(act_type =UserActionType.Bad)
 			elif user_act.slot == 'Yes':
 				return user_act
 			elif user_act.slot == 'SearchForDefinition':
-				return UserAct(UserActionType.Request, slot = "infoContent", text = user_act.text)
+				print("SEARCH FOR DEFINITION", user_act.text)
+				print(len(user_act.text))
+				print(type(user_act.text))
+				return UserAct(act_type =UserActionType.Request, slot = "infoContent", text = user_act.text)
 			elif user_act.slot == 'SuggestRepetition':
-				return UserAct(UserActionType.Request, slot = "repeatableModul")
+				return UserAct(act_type =UserActionType.Request, slot = "repeatableModul")
 			elif user_act.slot == 'Thanks':
 				return user_act
 			elif user_act.slot == 'ChangeConfig':
-				return UserAct(UserActionType.Bad)
+				return UserAct(act_type =UserActionType.Bad)
 			elif user_act.type == UserActionType.Bye:
 				return user_act
 			elif user_act.slot == 'Help':
-				return UserAct(UserActionType.Request, slot="help")
+				return UserAct(act_type =UserActionType.Request, slot="help")
 			else:
-				return UserAct(UserActionType.Bad)
+				return UserAct(act_type =UserActionType.Bad)
 		else:
-			return UserAct(UserActionType.Bad)
+			return UserAct(act_type =UserActionType.Bad)
 		
 		
 		
@@ -396,7 +399,9 @@ class ELearningPolicy(Service):
 		if act.type == UserActionType.Request and act.slot == "infoContent":
 			# search by Content, e.g. "Wo finde ich Infos zu Regression?"
 			# done
+			print("Text: ", act.text)
 			book_links = get_book_links(course_id=courseid, searchTerm=act.text, word_context_length=5)
+			print("Book links: ", book_links)
 			if book_links:
 				book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
 			else:

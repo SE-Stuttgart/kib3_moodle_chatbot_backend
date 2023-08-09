@@ -83,10 +83,16 @@ template request(learningTime)
     "Wie viel Zeit hast du heute, um etwas zu lernen (bitte gib die Zeit in Minuten an)?"
 
 template inform(modulContent, link)
-    "Gut, dass du fragst! Du kannst hier mehr Informationen finden: {link}"
+    "Gut, dass du fragst! Du kannst hier mehr Informationen finden: {link} Sag mir wenn du mehr Antworten sehen willst."
+
     if link = "None"
-        "Leider konnte ich keine Ergebnisse zu deiner Eingabe finden :( Versuche es mal anders auszudrücken!"
+        "Leider konnte ich keine Ergebnisse zu deiner Eingabe finden. Hast du noch eine andere Frage?"
     
+    if link = "End"
+        "Das war alles, was ich zu deiner Frage finden konnte. Hast du noch eine andere Frage?"
+
+template request(modulContent)
+    "Könntest du mir bitte nochmal nur den Suchbegriff nennen?"
 
 template inform(notImplementedYet)
     "Leider ist diese Funktionalität noch nicht implementiert, wir arbeiten dran!"

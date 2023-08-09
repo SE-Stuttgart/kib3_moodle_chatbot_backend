@@ -70,5 +70,10 @@ class Utterance_Mapper():
         """
         return list(set(self.labels))
     
+    def get_labels(self):
+        """
+        Returns the labels of the domain.
+        """
+        return list(set(self.labels))
     
 

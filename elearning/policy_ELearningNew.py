@@ -55,6 +55,7 @@ FIRST_TURN = 'first_turn'
 CURRENT_SUGGESTIONS = 'current_suggestions'
 MODE = 'mode'
 S_INDEX = 's_index'
+LAST_SEARCH = 'last_search'
 
 class ELearningPolicy(Service):
 	""" Base class for handcrafted policies.
@@ -102,6 +103,7 @@ class ELearningPolicy(Service):
 			self.set_state(user_id, LAST_USER_ACT, None)
 			self.set_state(user_id, TURNS, 0)
 			self.set_state(user_id, FIRST_TURN, True)
+			self.set_state(user_id, LAST_SEARCH, {})
 			self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
 			self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
 
@@ -155,7 +157,7 @@ class ELearningPolicy(Service):
 						action
 
 		"""
-		print("USER ACTS\n", user_acts)
+		#print("USER ACTS\n", user_acts)
 
 		# update the turn count
 		turns = self.get_state(user_id, TURNS) + 1
@@ -207,10 +209,19 @@ class ELearningPolicy(Service):
 						slot_values={"learningTime": "empty"})
 						#sys_act = SysAct(act_type=SysActionType.Bad)
 				
-				elif user_act.slot == 'LoadMoreSearchResults':
-					# TODO: implement
-					sys_act = SysAct(act_type=SysActionType.Bad)
-				
+				elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
+					# load more search results
+					# get the last search term and counter (from the nlu)
+					search_term = self.get_state(user_id, LAST_SEARCH)
+					counter = int(user_act.slot.split(":")[-1])
+					book_links = get_book_links(course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
+					if book_links:
+						book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
+					else:
+						book_link_str = "End"
+					sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
+
+
 				elif user_act.slot == 'Greet':
 					# repeat welcome message
 					sys_act = SysAct(act_type=SysActionType.Inform,
@@ -218,17 +229,36 @@ class ELearningPolicy(Service):
 					
 				elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
 					reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
-					matches = re.match(reg, user_act.text, re.I).groupdict()
-					for key in matches.keys():
-						if key.startswith("content") and matches.get(key):
-							search_term = matches.get(key)
-					
-					book_links = get_book_links(course_id=courseid, searchTerm=search_term, word_context_length=5)
+					matches = re.match(reg, user_act.text, re.I)
+					if matches:
+						matches = matches.groupdict()
+						for key in matches.keys():
+							if key.startswith("content") and matches.get(key):
+								search_term = matches.get(key)
+						
+						self.set_state(user_id, LAST_SEARCH, search_term)
+						book_links = get_book_links(course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+						if book_links:
+							book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
+							book_link_str = book_link_str + "<br /><br />"
+						else:
+							book_link_str = "None"
+						sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
+					else:
+						# Nicht erkannt -> nachfragen!
+						sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
+				
+				elif user_act.slot == 'SearchTerm':
+					# system asked for only the search term -> utterance is the search term
+					search_term = user_act.text
+					self.set_state(user_id, LAST_SEARCH, search_term)
+					book_links = get_book_links(course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
 					if book_links:
 						book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
 					else:
-						book_link_str = "None"
+						book_link_str = "End"
 					sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
+
 				
 				elif user_act.slot == 'No':
 					# TODO: does this need to be here or only as follow up to a question?
