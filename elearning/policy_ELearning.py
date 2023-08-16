@@ -90,7 +90,14 @@ class ELearningPolicy(Service):
 		self.domain_key = domain.get_primary_key()
 		self.logger = logger
 		self.max_turns = max_turns
-		success = False
+		self.session = None
+
+	def get_session(self):
+		if isinstance(self.session, type(None)):
+			self._init_db()
+		return self.session
+		
+	def _init_db(self):
 		while not success:
 			try:
 				engine, conn = connect_to_moodle_db()
@@ -104,6 +111,7 @@ class ELearningPolicy(Service):
 				print("===== ERROR CONNECTING TO DB (Potentially have to wait for moodle setup to finish), RETRY IN 10 SECONDS ===== ")
 				traceback.print_exc()
 				time.sleep(10) 
+	
 
 	def dialog_start(self, user_id: str):
 		"""
@@ -136,8 +144,8 @@ class ELearningPolicy(Service):
 
 		if event_name == """\\core\\event\\user_graded""":
 			# extract grade info
-			gradeItem: MGradeItem = self.session.query(MGradeItem).get(int(moodle_event['other']['itemid']))
-			# gradeItem: MGradeItem = grade.get_grade_item(self.session)
+			gradeItem: MGradeItem = self.get_session().query(MGradeItem).get(int(moodle_event['other']['itemid']))
+			# gradeItem: MGradeItem = grade.get_grade_item(self.get_session())
 			finalgrade = float(moodle_event['other']['finalgrade'])
 			if finalgrade == gradeItem.grademax:
 				# all questions correct
@@ -195,14 +203,14 @@ class ELearningPolicy(Service):
 					
 					if matches:
 						# find the right module for this time constraint
-						incomplete_modules_with_time_est = get_time_estimates(self.session, self.get_current_user(user_id), courseid=courseid)
+						incomplete_modules_with_time_est = get_time_estimates(self.get_session(), self.get_current_user(user_id), courseid=courseid)
 
 						module_names = [module for module, time in incomplete_modules_with_time_est if time and time <= int(matches[0])]
 						hasModule = len(module_names) > 0
 						link = ""
 						# create link
 						if hasModule:
-							link = module_names[0].get_content_link(self.session)
+							link = module_names[0].get_content_link(self.get_session())
 							sys_act = SysAct(act_type=SysActionType.Inform,
 										slot_values={"moduleName": link, "hasModule": "true" if hasModule else "false"})
 						else:
@@ -285,8 +293,8 @@ class ELearningPolicy(Service):
 				elif user_act.slot == 'GetNextModule':
 					# TODO: old complicated -> adapt?
 					[_, next_module_id] = self.get_user_next_module(user_id, courseid)
-					next_module = self.session.query(MCourseModule).filter(MCourseModule.id == next_module_id).one()
-					module_link = next_module.get_content_link(self.session)
+					next_module = self.get_session().query(MCourseModule).filter(MCourseModule.id == next_module_id).one()
+					module_link = next_module.get_content_link(self.get_session())
 					self.set_state(user_id, COURSE_MODULE_ID, next_module.id)
 					sys_act = SysAct(act_type=SysActionType.Inform,
 						  slot_values={"nextModule": "", "moduleName": module_link})
@@ -347,7 +355,7 @@ class ELearningPolicy(Service):
 	
 	def get_current_user(self, user_id) -> MUser:
 			""" Get Moodle user by id from Chat Interface (or start run_chat with --user_id=...) """
-			user = self.session.query(MUser).get(int(user_id))
+			user = self.get_session().query(MUser).get(int(user_id))
 			return user
 	
 	def get_user_next_module(self, user_id, courseid):
@@ -355,37 +363,37 @@ class ELearningPolicy(Service):
 		# Wie werden "Lücken" oder andere Reihenfolgen behandelt?
 
 		user = self.get_current_user(user_id)
-		last_completed: MCourseModule = user.get_last_completed_coursemodule(self.session, courseid)
+		last_completed: MCourseModule = user.get_last_completed_coursemodule(self.get_session(), courseid)
 		self.set_state(user_id, LAST_ACCESSED_COURSEMODULE, last_completed)
 
 		if not last_completed:
 			# new user - no completed modules so far
-			next_module = user.get_available_course_modules(self.session, courseid=courseid)[0]
+			next_module = user.get_available_course_modules(self.get_session(), courseid=courseid)[0]
 			self.set_state(user_id, NEXT_SUGGESTED_COURSEMODULE, next_module)
-			return next_module.get_name(self.session), next_module.id
+			return next_module.get_name(self.get_session()), next_module.id
 
 		# existing user, already completed some content
-		next_module: MCourseModule = last_completed.section.get_next_available_module(last_completed, self.get_current_user(user_id), self.session)
+		next_module: MCourseModule = last_completed.section.get_next_available_module(last_completed, self.get_current_user(user_id), self.get_session())
 
 		# muss hier oder in get_next_available_module getestet werden ob nächstes modul nicht schon abgeschlossen ist
 		# Was ist mit nicht "abschliessbaren" modules?
 
 		if next_module:
 			self.set_state(user_id, NEXT_SUGGESTED_COURSEMODULE, next_module)
-			return next_module.get_name(self.session), next_module.id
+			return next_module.get_name(self.get_session()), next_module.id
 
 		# next course module in section of last completed module is not available - choose available one from other section
-		# next_module = user.get_available_course_modules(self.session)[0]
-		# print("EXISTING USER -> SECTION COMPLETE -> ", next_module.get_name(self.session), next_module.get_type_name(self.session))
-		next_sections = user.get_incomplete_available_course_sections(self.session, courseid) # Problem: gibt schon abgeschlossenen wieder
+		# next_module = user.get_available_course_modules(self.get_session())[0]
+		# print("EXISTING USER -> SECTION COMPLETE -> ", next_module.get_name(self.get_session()), next_module.get_type_name(self.get_session()))
+		next_sections = user.get_incomplete_available_course_sections(self.get_session(), courseid) # Problem: gibt schon abgeschlossenen wieder
 		if next_sections:
 			next_section: MCourseSection = next_sections[0]
-			next_module: MCourseModule = next_section.get_next_available_module(currentModule=None, user=self.get_current_user(user_id), session=self.session)
+			next_module: MCourseModule = next_section.get_next_available_module(currentModule=None, user=self.get_current_user(user_id), session=self.get_session())
 
 			if not next_module:
 				return "Kein verfügbares Modul gefunden", -1
 		self.set_state(user_id, NEXT_SUGGESTED_COURSEMODULE, next_module)
-		return next_module.get_name(self.session), next_module.id
+		return next_module.get_name(self.get_session()), next_module.id
 
 	def get_repeatable_modul_sys_act(self, user_id, courseid):
 		"""
@@ -396,7 +404,7 @@ class ELearningPolicy(Service):
 		"""
 		two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=2)
 		finished_modules = self.get_modules(since_date=two_weeks_ago, is_finished=True, user_id=user_id, courseid=courseid)
-		grades = self.get_current_user(user_id).get_grades(self.session, course_id=courseid) # get user grades
+		grades = self.get_current_user(user_id).get_grades(self.get_session(), course_id=courseid) # get user grades
 		insufficient_modules = [grade for grade in grades if
 				grade.finalgrade and grade.finalgrade < (grade.rawgrademax * decimal.Decimal(0.6))] # threshold 60%
 
@@ -421,15 +429,15 @@ class ELearningPolicy(Service):
 			self.set_state(user_id, MODE, 'quiz')
 			moduleName = random.choice(finished_modules)
 		if repeatContent == "insufficient":
-			instanceId = random.choice(insufficient_modules).get_grade_item(self.session).iteminstance
-			quizModuleId = self.session.query(MModule).filter(MModule.name=='hvp').first().id
-			moduleName = self.session.query(MCourseModule).filter(MCourseModule.instance==instanceId, MCourseModule._type_id==quizModuleId).first()
+			instanceId = random.choice(insufficient_modules).get_grade_item(self.get_session()).iteminstance
+			quizModuleId = self.get_session().query(MModule).filter(MModule.name=='hvp').first().id
+			moduleName = self.get_session().query(MCourseModule).filter(MCourseModule.instance==instanceId, MCourseModule._type_id==quizModuleId).first()
 		if repeatContent == "open":
 			moduleName = random.choice(finished_modules)
 		
-		link = self.session.query(MCourseModule).filter(MCourseModule.id == moduleName.id).one().get_content_link(self.session)
+		link = self.get_session().query(MCourseModule).filter(MCourseModule.id == moduleName.id).one().get_content_link(self.get_session())
 		
-		contentType = moduleName.get_type_name(self.session)
+		contentType = moduleName.get_type_name(self.get_session())
 		return SysAct(act_type=SysActionType.Inform,
 					  slot_values={"moduleName": moduleName.section.name, "repeatContent": repeatContent, "link": link,
 								   "contentType": contentType if contentType in ["resource", "hvs", "quiz", "book"] else "else"})
@@ -441,15 +449,15 @@ class ELearningPolicy(Service):
 			"""
 			user = self.get_current_user(user_id)
 			if is_finished:
-				courses = user.get_completed_courses_before_date(since_date, self.session, courseid)
+				courses = user.get_completed_courses_before_date(since_date, self.get_session(), courseid)
 			else:
-				courses = user.get_not_finished_courses_before_date(since_date, self.session, courseid)
+				courses = user.get_not_finished_courses_before_date(since_date, self.get_session(), courseid)
 			return [course for course in courses]
 
 	def total_open_modules(self, user_id, courseid):
 		user = self.get_current_user(user_id)
-		return len(user.get_incomplete_available_course_modules(self.session, courseid=courseid))
+		return len(user.get_incomplete_available_course_modules(self.get_session(), courseid=courseid))
 
 	def total_completed_modules(self, user_id, courseid):
 		user = self.get_current_user(user_id)
-		return len(user.get_completed_courses(self.session, courseid=courseid))
+		return len(user.get_completed_courses(self.get_session(), courseid=courseid))
