@@ -1,4 +1,3 @@
-
 # coding: utf-8
 from os import name
 import json
@@ -17,7 +16,7 @@ from sqlalchemy.types import TypeDecorator
 from pathlib import Path
 from urllib.parse import quote_plus as urlquote
 
-from config import MOODLE_SERVER_ADDR, MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX
+from config import MOODLE_SERVER_ADDR, MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX, MOODLE_SERVER_DB_NAME, MOODLE_SERVER_DB_PWD, MOODLE_SERVER_DB_USER
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -56,7 +55,7 @@ class CompletionState(TypeDecorator):
 END Helper classes
 """
 
-def connect_to_moodle_db(host=MOODLE_SERVER_DB_ADDR, port=MOODLE_SERVER_DB_PORT, user='moodle', pwd='m@0dl3ing', dbname='moodle'):
+def connect_to_moodle_db(host=MOODLE_SERVER_DB_ADDR, port=MOODLE_SERVER_DB_PORT, user=MOODLE_SERVER_DB_USER, pwd=MOODLE_SERVER_DB_PWD, dbname=MOODLE_SERVER_DB_NAME):
 	# NOTE: isolation level is important because moodle doesn't seem to commit to DB -> session data will be stale
 	print("connecting...")
 	print(f"mysql+pymysql://{user}:{urlquote(pwd)}@{host}:{port}/{dbname}?charset=utf8mb4")
