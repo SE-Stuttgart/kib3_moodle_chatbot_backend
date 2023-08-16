@@ -309,7 +309,7 @@ class MCourseModulesCompletion(Base):
 	completed = Column(CompletionState, nullable=False, name='completionstate')
 	# Date of completion
 	timemodified = Column(UnixTimestamp, nullable=False)
-	viewed = Column(SMALLINT(), nullable=True, server_default=text("'0'"))
+	#viewed = Column(SMALLINT(), nullable=True, server_default=text("'0'"))
 
 	# internal database mapping info
 	_coursemoduleid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules.id"), nullable=False, index=True, name="coursemoduleid")
