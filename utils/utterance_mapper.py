@@ -17,10 +17,6 @@ class Utterance_Mapper():
         self.model = embedder_model
         self.embedder = SentenceTransformer(embedder_model, device=self.device)
         self.threshold = 0.945
-        file_path = os.path.join(os.getcwd(), 'corpus_embeddings.pkl')
-        print(file_path)
-        #with open(file_path, "rb") as fIn:
-        #    stored_data = pickle.load(fIn)
         data_dict = torch.load('embeddings.pt', map_location=self.device)
 
         # Retrieve the embeddings and labels from the dictionary

@@ -18,10 +18,10 @@ logger = DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_
 def load_elearning_domain():
     print("LOADING ELEARNING DOMAIN")
     from utils.domain.jsonlookupdomain import JSONLookupDomain
-    from elearning.policy_ELearningNew import ELearningPolicy
+    from elearning.policy_ELearning import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
     from services.nlg.nlg import ELearningNLG
-    from services.nlu.nluNew import ELearningNLU
+    from services.nlu.nlu import ELearningNLU
     domain = JSONLookupDomain('ELearning', display_name="ELearning")
     e_learning_nlu = ELearningNLU(domain=domain, logger=logger)
     e_learning_policy = ELearningPolicy(domain=domain, logger=logger)

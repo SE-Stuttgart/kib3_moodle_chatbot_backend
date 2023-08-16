@@ -245,8 +245,8 @@ def main():
         
         match choice:
             case '1':
-                corpus.remove_duplicates('./short_corpus2/')
-                corpus.make_csv('./short_corpus2/', 'short_corpus2')
+                corpus.remove_duplicates('./short_corpus/')
+                corpus.make_csv('./short_corpus/', 'short_corpus')
                 print("Done making csv")
                 continue
             case '2':
@@ -254,17 +254,17 @@ def main():
                 corpus_embeddings = None
                 make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, "short_corpus")
             case '3':
-                corpus_informs = corpus.load_corpus_per_inform('./short_corpus2/')
+                corpus_informs = corpus.load_corpus_per_inform('./short_corpus/')
                 cross_validation(corpus_informs)
             case '4':
-                corpus_informs = corpus.load_corpus_per_inform('./short_corpus2/')
-                corpus_train, _ = corpus.load_corpus('short_corpus2_train.csv')
-                corpus_test, _ = corpus.load_corpus('short_corpus2_test.csv')
+                corpus_informs = corpus.load_corpus_per_inform('./short_corpus/')
+                corpus_train, _ = corpus.load_corpus('short_corpus_train.csv')
+                corpus_test, _ = corpus.load_corpus('short_corpus_test.csv')
                 corpus_full = corpus_train + corpus_test
                 cross_validation_across_informs(corpus_informs, corpus_full)
             case '5':
-                corpus_train, train_labels = corpus.load_corpus('short_corpus2_train.csv')
-                corpus_test, test_labels = corpus.load_corpus('short_corpus2_test.csv')
+                corpus_train, train_labels = corpus.load_corpus('short_corpus_train.csv')
+                corpus_test, test_labels = corpus.load_corpus('short_corpus_test.csv')
                 corpus_embeddings = None
                 print("corpus_train: ", len(corpus_train))
                 print("corpus_test: ", len(corpus_test))
@@ -279,7 +279,7 @@ def main():
                     train_labels = stored_data['labels']
                 corpus_test, test_labels = corpus.load_corpus('big_corpus_test.csv')
             case '7':
-                transform_csv('./short_corpus2/', './short_2corpus_paranthesis/')
+                transform_csv('./short_corpus/', './short_corpus_paranthesis/')
             case '8':
                 exit()
             case _:
