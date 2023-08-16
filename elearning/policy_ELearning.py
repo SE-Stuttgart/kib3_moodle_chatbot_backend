@@ -89,11 +89,20 @@ class ELearningPolicy(Service):
 		self.domain_key = domain.get_primary_key()
 		self.logger = logger
 		self.max_turns = max_turns
-		engine, conn = connect_to_moodle_db()
-		self.Session = sessionmaker()
-		self.Session.configure(bind=engine)
-		self.session = self.Session()
-		Base.metadata.create_all(engine)
+		success = False
+		while not success:
+			try:
+				engine, conn = connect_to_moodle_db()
+				self.Session = sessionmaker()
+				self.Session.configure(bind=engine)
+				self.session = self.Session()
+				Base.metadata.create_all(engine)
+				success = True
+				print("====== SUCCESS ======")
+			except:
+				print("===== ERROR CONNECTING TO DB (Potentially have to wait for moodle setup to finish), RETRY IN 10 SECONDS ===== ")
+				traceback.print_exc()
+				time.sleep(10) 
 
 	def dialog_start(self, user_id: str):
 		"""
