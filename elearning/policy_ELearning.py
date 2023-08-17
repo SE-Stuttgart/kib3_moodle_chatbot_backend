@@ -98,6 +98,7 @@ class ELearningPolicy(Service):
 		return self.session
 		
 	def _init_db(self):
+		success = False
 		while not success:
 			try:
 				engine, conn = connect_to_moodle_db()
