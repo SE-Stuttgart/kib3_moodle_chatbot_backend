@@ -17,7 +17,7 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
     print("Adress: ", f"http://{config.MOODLE_SERVER_ADDR()}/webservice/rest/server.php")
     http_client = httplib2.Http(".cache")
     body={
-            "wstoken": token,
+            "wstoken": wstoken,
             "wsfunction": "block_slidefinder_get_searched_locations",
             "moodlewsrestformat": "json",
             "search_string": searchTerm,
