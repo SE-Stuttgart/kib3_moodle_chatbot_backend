@@ -233,7 +233,7 @@ class ELearningPolicy(Service):
 					# get the last search term and counter (from the nlu)
 					search_term = self.get_state(user_id, LAST_SEARCH)
 					counter = int(user_act.slot.split(":")[-1])
-					book_links = get_book_links(course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
+					book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
 					if book_links:
 						book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
 					else:
@@ -256,7 +256,7 @@ class ELearningPolicy(Service):
 								search_term = matches.get(key)
 						
 						self.set_state(user_id, LAST_SEARCH, search_term)
-						book_links = get_book_links(course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+						book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
 						if book_links:
 							book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
 							book_link_str = book_link_str + "<br /><br />"
@@ -271,7 +271,7 @@ class ELearningPolicy(Service):
 					# system asked for only the search term -> utterance is the search term
 					search_term = user_act.text
 					self.set_state(user_id, LAST_SEARCH, search_term)
-					book_links = get_book_links(course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+					book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
 					if book_links:
 						book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
 					else:

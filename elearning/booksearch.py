@@ -7,7 +7,7 @@ import config
 
 
 
-def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Dict:
+def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Dict:
     """
     Args:
         word_context_length: how many words before and after the search term should be included in search result
@@ -17,7 +17,7 @@ def get_book_links(course_id: int, searchTerm: str, word_context_length: int = 3
     print("Adress: ", f"http://{config.MOODLE_SERVER_ADDR()}/webservice/rest/server.php")
     http_client = httplib2.Http(".cache")
     body={
-            "wstoken": config.MOODLE_WSTOKEN,
+            "wstoken": token,
             "wsfunction": "block_slidefinder_get_searched_locations",
             "moodlewsrestformat": "json",
             "search_string": searchTerm,

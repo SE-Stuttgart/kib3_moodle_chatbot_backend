@@ -167,6 +167,8 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
             print(" - domain index", domain_index)
             if topic == 'start_dialog':
                 logger.dialog_turn(f"# USER {self.userid} # DIALOG-START")
+                # Set webservice token for the POLICY state
+                services_1[2].set_state(self.user_id, "SLIDEFINDERTOKEN", data['slidefindertoken'])
                 ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index].get_domain_name()}': True, f'courseid/{domains[domain_index].get_domain_name()}': courseid}, user_id=self.userid)
             elif topic == 'user_utterance':
                 gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])

@@ -11,8 +11,6 @@ MOODLE_SERVER_DB_NAME = os.environ["MOODLE_DOCKER_DBNAME"]
 MOODLE_SERVER_DB_USER = os.environ["MOODLE_DOCKER_DBUSER"]
 MOODLE_SERVER_DB_PWD = os.environ["MOODLE_DOCKER_DBPASS"]
 
-MOODLE_WSTOKEN = "13c3113a17b0d45a0016aec1216eaf34" # Token for Moodle web services
-
 DS_SERVER_IP_ADDR = "127.0.0.1"    # IP address of dialog system
 
 def MOODLE_SERVER_ADDR():
