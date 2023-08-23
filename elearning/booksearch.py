@@ -78,6 +78,6 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
 
 if __name__ == "__main__":
     # connect to database
-    for result in get_book_links(course_id=4, searchTerm="Koordinatensystem", word_context_length=3):
+    for result in get_book_links("testtoken", course_id=4, searchTerm="Koordinatensystem", word_context_length=3):
         print(result)
     

@@ -1,6 +1,6 @@
 import os
 
-MOODLE_SERVER_WEB_HOST = os.environ["MOODLE_DOCKER_WEB_HOST"] # IP Adress of moodle webserver 
+MOODLE_SERVER_WEB_HOST = "webserver" # IP Adress of moodle webserver 
 MOODLE_SERVER_WEB_PORT = os.environ['MOODLE_DOCKER_WEB_PORT']    # Port of moodle webserver (default: 8080, or set to None)
 MOODLE_SERVER_IP_ADDR = f"{MOODLE_SERVER_WEB_HOST}:{MOODLE_SERVER_WEB_PORT}" # base adress of moodle website
 
@@ -14,4 +14,4 @@ MOODLE_SERVER_DB_PWD = os.environ["MOODLE_DOCKER_DBPASS"]
 DS_SERVER_IP_ADDR = "127.0.0.1"    # IP address of dialog system
 
 def MOODLE_SERVER_ADDR():
-    return MOODLE_SERVER_IP_ADDR
+    return MOODLE_SERVER_WEB_HOST
