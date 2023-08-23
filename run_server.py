@@ -194,8 +194,8 @@ class MoodleEventHandler(tornado.web.RequestHandler):
         event_data = json.loads(self.request.body)
         print("GOT MOODLE EVENT", event_data)
         
-        # user_id = int(event_data['userid'])
-        # gui_service.moodle_event(user_id=user_id, event_data=event_data)
+        user_id = int(event_data['userid'])
+        gui_service.moodle_event(user_id=user_id, event_data=event_data)
 
 def make_app():
     return tornado.web.Application([
