@@ -199,14 +199,15 @@ class ELearningPolicy(Service):
 					# What can I learn in 5 minutes?...
 
 					# search for the number of minutes in the user act
-					regex = r"\d+"
-					matches = re.search(regex, user_act.text, re.MULTILINE | re.IGNORECASE)
 					
-					if matches:
+					matched_time = self.convert_time_to_minutes(user_act.text)
+						
+					if matched_time:
+						print("Matched time: ", matched_time)
 						# find the right module for this time constraint
 						incomplete_modules_with_time_est = get_time_estimates(self.get_session(), self.get_current_user(user_id), courseid=courseid)
-
-						module_names = [module for module, time in incomplete_modules_with_time_est if time and time <= int(matches[0])]
+						
+						module_names = [module for module, time in incomplete_modules_with_time_est if time and time <= matched_time]
 						hasModule = len(module_names) > 0
 						link = ""
 						# create link
@@ -235,7 +236,8 @@ class ELearningPolicy(Service):
 					counter = int(user_act.slot.split(":")[-1])
 					book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
 					if book_links:
-						book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
+						book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+						book_link_str = book_link_str + "<br /><br />"
 					else:
 						book_link_str = "End"
 					sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
@@ -258,11 +260,11 @@ class ELearningPolicy(Service):
 						self.set_state(user_id, LAST_SEARCH, search_term)
 						book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
 						if book_links:
-							book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
+							book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
 							book_link_str = book_link_str + "<br /><br />"
 						else:
 							book_link_str = "None"
-						sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
+						sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 					else:
 						# Nicht erkannt -> nachfragen!
 						sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
@@ -273,7 +275,8 @@ class ELearningPolicy(Service):
 					self.set_state(user_id, LAST_SEARCH, search_term)
 					book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
 					if book_links:
-						book_link_str = "<br />".join(f'<br /> - <a href="{link}">{book_links[link][0]}</a> {book_links[link][1]}' for link in book_links)
+						book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+						book_link_str = book_link_str + "<br /><br />"
 					else:
 						book_link_str = "End"
 					sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
@@ -462,3 +465,45 @@ class ELearningPolicy(Service):
 	def total_completed_modules(self, user_id, courseid):
 		user = self.get_current_user(user_id)
 		return len(user.get_completed_courses(self.get_session(), courseid=courseid))
+
+	def convert_time_to_minutes(self, sentence):
+		time_units = {"minute": 1, "minuten": 1, "stunde": 60, "stunden": 60,}
+		
+		spelled_numbers = {"eine": 1, "zwei": 2, "drei": 3, "vier": 4, "fünf": 5, 
+		     			"sechs": 6,"sieben": 7, "acht": 8, "neun": 9, "zehn": 10,}
+		
+		spelled_special = {"eine halbe": 30, "eine viertel": 15, "eine dreiviertel": 45,}
+		
+		pattern = r"\b(eine halbe|eine viertel|eine dreiviertel|\b(?:eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\b|\d+)\s*(minute|minuten|stunde|stunden)?\b"
+		matches = re.findall(pattern, sentence, re.IGNORECASE)
+
+		total_minutes = 0
+		
+		for match in matches:
+			number = match[0].lower()
+			unit_spelled = match[1].lower() if match[1] else None
+
+			found_special = False
+			for word in match:
+				word = word.lower()
+				if word in spelled_special:
+					total_minutes += spelled_special[word]
+					found_special = True
+					break
+			
+			if found_special:
+				continue
+			unit = 1		
+
+			if unit_spelled:
+				if unit_spelled in time_units:
+					unit = time_units[unit_spelled]
+			
+			if number in spelled_numbers:
+				quantity = spelled_numbers[number]
+			else:
+				quantity = int(number)
+			
+			total_minutes += quantity * unit		
+		
+		return total_minutes

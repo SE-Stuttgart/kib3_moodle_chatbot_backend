@@ -37,41 +37,44 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
         """
         links = {}
         files = {}
-        for search_result in data:
-            if search_result['filename'] in files:
-                files[search_result['filename']] += 1
-            else: 
-                files[search_result['filename']] = 0
+
+        # count the number of search results per filename
+        
+        # bundle the results per filename (filename and the context snippets)
+        
 
         for search_result in data:
             
+
             context = search_result['context_snippet']
             if "?universität" in context:
                 context = context.split("?universität")[0]
             if "universität stuttgart" in context:
                 context = context.split("universität stuttgart")[0]
-            if  0 < files[search_result['filename']] < 3:
-                links[search_result['book_chapter_url']] = [search_result['filename'] + ": ", context]
-            elif files[search_result['filename']] == -1:
-                None
-            else:
-                links[search_result['book_chapter_url']] = [search_result['filename'], ""]
-                files[search_result['filename']] = -1
-              
+
+            # if the filename is not yet in the dict, add it
+            if search_result["filename"] not in files:
+                files[search_result["filename"]] = ["", search_result["book_chapter_url"]]
+            
+            # add the context snippet to the list of context snippets for this filename
+            #files[search_result["filename"]].append(context)
+            files[search_result["filename"]][0] = files[search_result["filename"]][0] + context + " <br \>"
+            # if the filename is not yet in the dict, add it
+            
 
         # only give back the specified number of results, if start -1 give back all results
         # if start out of range, give back empty dict, if end out of range, give back all results
         
         if start!=-1:
-            if start < len(links) and end < len(links):
-                links = dict(list(links.items())[start:end])
-            elif start < len(links) and end >= len(links):
-                links = dict(list(links.items())[start:])
+            if start < len(files) and end < len(files):
+                files = dict(list(files.items())[start:end])
+            elif start < len(files) and end >= len(files):
+                files = dict(list(files.items())[start:])
             else:
                 return {}
-        print(links)
+        print(files)
         
-        return links
+        return files
     except:
         print(traceback.format_exc())
         return {f"http://{config.MOODLE_SERVER_ADDR()}": "Fehler bei Suche"}
