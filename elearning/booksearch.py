@@ -29,7 +29,16 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
             method="POST",
             headers={'Content-type': 'application/x-www-form-urlencoded'},
             body=urllib.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode
-        data = json.loads(response.decode('unicode_escape').strip('"').replace('\/', '/'))
+        print("response: ", response)
+        start_pos = response.find(b"[")
+        end_pos = response.rfind(b"]")
+
+        # Extract the JSON part
+        json_part = response[start_pos:end_pos + 1]
+
+        # Decode the JSON part and parse it
+
+        data = json.loads(json_part.decode('unicode_escape').strip('"').replace('\/', '/'))
         
         """
         Example entry in data (list):
