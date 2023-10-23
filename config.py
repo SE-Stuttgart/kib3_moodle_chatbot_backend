@@ -1,7 +1,7 @@
 import os
 
 MOODLE_SERVER_WEB_HOST = "webserver" # IP Adress of moodle webserver 
-MOODLE_SERVER_WEB_PORT = os.environ['MOODLE_DOCKER_WEB_PORT']    # Port of moodle webserver (default: 8080, or set to None)
+MOODLE_SERVER_WEB_PORT = os.environ['MOODLE_SERVER_PORT']    # Port of moodle webserver (default: 8080, or set to None)
 MOODLE_SERVER_IP_ADDR = f"{MOODLE_SERVER_WEB_HOST}:{MOODLE_SERVER_WEB_PORT}" # base adress of moodle website
 
 MOODLE_SERVER_DB_ADDR = "db"  # IP address of moodle database (e.g. same as web server IP if running on the same server)
