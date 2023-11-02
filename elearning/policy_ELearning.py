@@ -96,6 +96,16 @@ class ELearningPolicy(Service):
 		if isinstance(self.session, type(None)):
 			self._init_db()
 		return self.session
+
+	@PublishSubscribe(pub_topics=['control_event'])
+	def open_chatbot(self, user_id: int):
+		""" Triggers the UI chatwindow to open """
+		# TODO: check settings if this is allowed first
+		return {
+			"control_event": "UI_OPEN",
+			"user_id": user_id
+		}
+		
 		
 	def _init_db(self):
 		success = False
@@ -144,6 +154,7 @@ class ELearningPolicy(Service):
 		print("=================")
 
 		if event_name == """\\core\\event\\user_graded""":
+			self.open_chatbot(user_id)
 			# extract grade info
 			gradeItem: MGradeItem = self.get_session().query(MGradeItem).get(int(moodle_event['other']['itemid']))
 			# gradeItem: MGradeItem = grade.get_grade_item(self.get_session())
@@ -158,6 +169,12 @@ class ELearningPolicy(Service):
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions incorrect, finalgrade: {finalgrade}")
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'negativeFeedback': 'True', 'finishedQuiz': 'True'})}")
 				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})}
+
+	def choose_greeting(self, user_id: int) -> SysAct:
+		# TODO select correct greeting based on given conditions
+		return SysAct(act_type=SysActionType.Welcome,
+					  slot_values={})
+				
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_act", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
@@ -187,8 +204,7 @@ class ELearningPolicy(Service):
 		if self.get_state(user_id, FIRST_TURN):
 			# print first turn message
 			self.set_state(user_id, FIRST_TURN, False)
-			sys_act = SysAct(act_type=SysActionType.Inform,
-					  slot_values={"welcomeMsg": "repeat", "daysToSubmission": "empty"})
+			sys_act = self.choose_greeting(user_id)
 			sys_state["last_act"] = sys_act
 			self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
 			return {'sys_act': sys_act, "sys_state": sys_state}

@@ -1,5 +1,6 @@
 import datetime
 from datetime import timedelta, datetime
+from typing import List
 from passlib.context import CryptContext
 import jwt
 import tornado.ioloop
@@ -95,17 +96,9 @@ class GUIServer(Service):
         asyncio.set_event_loop(self.loopy_loop)
         return {f'moodle_event/{self.domains[domain_idx].get_domain_name()}': event_data}
 
-    @PublishSubscribe(sub_topics=['sys_utterance'])
-    def forward_message_to_websocket(self, user_id, sys_utterance: str = None):
+    @PublishSubscribe(sub_topics=['control_event'])
+    def forward_control_event_to_websocket(self, user_id, control_event: str = None):
         user_id = int(user_id)
-
-        hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
-        # manage recording of chat history
-        if self.max_history_length > 0:
-            if len(hist) > self.max_history_length:
-                del hist[0]
-            hist.append({"content": sys_utterance, "format": "text", "party": "system"})
-        self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
         if not user_id in self.websockets:
             # store messages during page transition where socket is closed
             # print("MISSED MSG", sys_utterance)
@@ -113,7 +106,29 @@ class GUIServer(Service):
         else:
             asyncio.set_event_loop(self.loopy_loop)
             # forward message to moodle frontend
-            self.websockets[user_id].write_message(json.dumps([{"content": sys_utterance, "format": "text", "party": "system"}]))
+            self.websockets[user_id].write_message(json.dumps([{"content": control_event, "format": "text", "party": "control"}]))
+
+    @PublishSubscribe(sub_topics=['sys_utterance'])
+    def forward_message_to_websocket(self, user_id, sys_utterance: List[str] = None):
+        user_id = int(user_id)
+
+        # manage recording of chat history
+        hist = self.get_state(user_id, GUIServer.TURN_HISTORY)
+
+        for message in sys_utterance:
+            if self.max_history_length > 0:
+                if len(hist) > self.max_history_length:
+                    del hist[0]
+                hist.append({"content": message, "format": "text", "party": "system"})
+            self.set_state(user_id, GUIServer.TURN_HISTORY, hist) 
+            if not user_id in self.websockets:
+                # store messages during page transition where socket is closed
+                # print("MISSED MSG", message)
+                pass
+            else:
+                asyncio.set_event_loop(self.loopy_loop)
+                # forward message to moodle frontend
+                self.websockets[user_id].write_message(json.dumps([{"content": message, "format": "text", "party": "system"}]))
     
     @PublishSubscribe(sub_topics=['html_content'])
     def forward_html_to_websocket(self, user_id, html_content: str = None):
@@ -159,7 +174,6 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         data = json.loads(message)
         # print("got message", data)
-        # print("user ids correct?", data['userid'] == self.userid)
         if self.userid:
             print("RECEIVED DATA:", data)
             topic = data['topic']

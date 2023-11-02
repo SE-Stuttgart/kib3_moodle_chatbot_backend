@@ -145,14 +145,20 @@ template inform(fitForTest, link)
     if fitForTest = "false"
         "Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist! {link}"
 
-template inform(welcomeMsg, daysToSubmission, moduleName)
-    if welcomeMsg = "due_date"
-        if daysToSubmission = "near":
-            "Willkommen zu deinem E-Learning-Bot! Du hast morgen eine Abgabe zu {moduleName}, fühlst du dich dafür vorbereitet?"
-        if daysToSubmission = "week":
-            "Willkommen zu deinem E-Learning-Bot! Du hast in den nächsten 5 Tagen eine Abgabe zu {moduleName}, fühlst du dich vorbereitet? Du könntest das Modul dann schon vorher abschließen!"
+
+# first time user: output help
+template welcomemsg()
+    "Hallo, ich bin der Moodle Assistent! Ich kann dir helfen bei <ul><li>Suche nach Inhalten</li><li>Fortschritt überprüfen</li><li>Navigation zu Lehrinhalten</li><li>usw.</li></ul> Du kannst auch meine Einstellungen ändern."
+# continue unfinished session
+template welcomemsg(last_activity)
+    "Schön dich wieder zu sehen! Letztes Mal hast du bei {last_activity} aufgehört, willst du es heute abschließen?"
+# continue with new session
+template welcomemsg(last_activity, followup_activity_list)
+    "Schön dich wieder zu sehen! Letztes Mal hast du {last_activity} abgeschlossen, willst du heute weitermachen mit {for(followup_activity_list, "return_value", ", ", " oder ", last_activity)}"
 
 
+function return_value(value, slot)
+	"{value}"
 
 
 template inform(welcomeMsg, daysToSubmission)
