@@ -170,9 +170,10 @@ class ELearningNLG(Service):
         return [f"""Schön dich wieder zu sehen!
         Letztes Mal hast du bei {last_activity} aufgehört, willst du es heute abschließen?"""]
 
+    # TODO figure out how to offer a summary of options
     def welcomemsg_continue_next(self, last_activity, followup_activity_list):
-        return [f"""Schön dich wieder zu sehen!
-        Letztes Mal hast du {last_activity} abgeschlossen, willst du heute weitermachen mit {self.join_values(followup_activity_list)}"""]
+        return [f"Schön dich wieder zu sehen!",
+        f"""Letztes Mal hast du {last_activity} abgeschlossen, willst du heute weitermachen mit {self.join_values(followup_activity_list)}"""]
 
     def welcomemsg_goal_badge(self, badge_name, missing_activities):
         return [f"""Hi! Du hast fast den Badge {badge_name} abgeschlossen! Wenn du heute {self.join_values(values=missing_activities, final_join='und')}
@@ -181,6 +182,26 @@ class ELearningNLG(Service):
     def welcomemsg_forgotten_module(self, module_name, activity_name, next_module_name):
         return [f"""Schön dich wieder zu sehen! Du hast Thema {module_name} schon angefangen aber noch nicht abgeschlossen, vergiss nicht ihn weiter zu machen"""]
 
+    # TODO figure out how to offer a summary of options
+    def welcomemsg_review_or_next(self, review: bool, followup_activity_list: List[str]):
+        """ Offer choice to either review previous quizes, or continue with one of the next activities"""
+        pass
+
+    def welcomemsg_unread_messages(self):
+        """ Notify about unread forum messages """
+        pass
+
+    def welcomemsg_deadline_reminder(self):
+        """ Remind about upcoming assignments using calendar """
+        pass
+
+    def welcomemsg_stats(self, weekly: bool, congratualations: bool):
+        """ 
+        Args:
+            weekly: If true, show activity of current and last week at end of current week.
+                    If false, show total course progress.
+            congratulations: If true, add congratulation message """
+        pass
 
 
 

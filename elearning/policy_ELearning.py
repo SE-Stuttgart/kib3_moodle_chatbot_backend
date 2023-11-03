@@ -101,6 +101,7 @@ class ELearningPolicy(Service):
 	def open_chatbot(self, user_id: int):
 		""" Triggers the UI chatwindow to open """
 		# TODO: check settings if this is allowed first
+		print("OPENING CHAT UI")
 		return {
 			"control_event": "UI_OPEN",
 			"user_id": user_id
@@ -151,9 +152,10 @@ class ELearningPolicy(Service):
 		print("EVENT")
 		print(event_name)
 		print(moodle_event)
+		print("COMPLETION UPDATED?", moodle_event == "\\core\\event\\course_module_completion_updated")
 		print("=================")
 
-		if event_name == """\\core\\event\\user_graded""":
+		if event_name in ["\\core\\event\\user_graded", "\\core\\event\\course_module_completion_updated"]:
 			self.open_chatbot(user_id)
 			# extract grade info
 			gradeItem: MGradeItem = self.get_session().query(MGradeItem).get(int(moodle_event['other']['itemid']))
