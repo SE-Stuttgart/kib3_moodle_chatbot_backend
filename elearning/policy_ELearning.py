@@ -137,6 +137,7 @@ class ELearningPolicy(Service):
 			self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
 			self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
 
+
 	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_act", "sys_state", "html_content"])
 	def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_act=SysAct, sys_state=SysAct, html_content=str):
 		""" Responsible for reacting to events from mooodle.
@@ -154,7 +155,7 @@ class ELearningPolicy(Service):
 		print(moodle_event)
 		print("COMPLETION UPDATED?", moodle_event == "\\core\\event\\course_module_completion_updated")
 		print("=================")
-
+		# \mod_h5pactivity\event\statement_received
 		if event_name in ["\\core\\event\\user_graded", "\\core\\event\\course_module_completion_updated"]:
 			self.open_chatbot(user_id)
 			# extract grade info
@@ -172,10 +173,25 @@ class ELearningPolicy(Service):
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'negativeFeedback': 'True', 'finishedQuiz': 'True'})}")
 				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})}
 
-	def choose_greeting(self, user_id: int) -> SysAct:
+	def choose_greeting(self, user_id: int, courseid: int) -> SysAct:
 		# TODO select correct greeting based on given conditions
+
+		user = self.get_current_user(user_id)
+		total_num_quizzes = self.get_session().query(MGradeItem).count()
+		done_quizes = user.count_grades(self.get_session(), courseid)
+		repeated_quizes = user.count_repeated_grades(self.get_session(), courseid)
+		
+		percentage_done_quizzes = done_quizes / total_num_quizzes
+		percentage_repeated_quizzes = repeated_quizes / total_num_quizzes
+
 		return SysAct(act_type=SysActionType.Welcome,
-					  slot_values={})
+					  slot_values=dict(
+						review=True,
+						followup_activity_list=[],
+						percentage_done_quizzes=percentage_done_quizzes,
+						percentage_repeated_quizzes=percentage_repeated_quizzes
+					  )
+				)
 				
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_act", "sys_state", "html_content"])
@@ -206,7 +222,7 @@ class ELearningPolicy(Service):
 		if self.get_state(user_id, FIRST_TURN):
 			# print first turn message
 			self.set_state(user_id, FIRST_TURN, False)
-			sys_act = self.choose_greeting(user_id)
+			sys_act = self.choose_greeting(user_id, courseid)
 			sys_state["last_act"] = sys_act
 			self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
 			return {'sys_act': sys_act, "sys_state": sys_state}

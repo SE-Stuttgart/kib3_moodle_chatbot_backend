@@ -200,8 +200,8 @@ class MGradeGradesHistory(Base):
 	finalgrade = Column(DECIMAL(10, 5)) 
 
 	# internal table mapping information
-	_gradeItemId = Column(BIGINT(10), ForeignKey("MGradeItem.id"), nullable=False, index=True, name="itemid")
-	_userid = Column(BIGINT(10), ForeignKey("MUser.id"), nullable=False, index=True, name="userid")
+	_gradeItemId = Column(BIGINT(10), name="itemid") #, ForeignKey("MGradeItem.id"), nullable=False, index=True, name="itemid")
+	_userid = Column(BIGINT(10), name="userid") # ForeignKey("MUser.id"), nullable=False, index=True, name="userid")
 
 	def get_grade_item(self, session: Session) -> Union[MGradeItem, None]:
 		""" Returns the MGradeItem associated with the current Grade object """
@@ -233,8 +233,8 @@ class MGradeGrade(Base):
 	finalgrade = Column(DECIMAL(10, 5))
 
 	# internal table mapping information
-	_userid = Column(BIGINT(10), ForeignKey("MUser.id"), nullable=False, index=True, name="userid")
-	_gradeItemId = Column(BIGINT(10), ForeignKey("MGradeItem.id"), nullable=False, index=True, name="itemid")
+	_userid = Column(BIGINT(10), primary_key=True, name="userid") # Column(BIGINT(10), ForeignKey("MUser.id"), nullable=False, index=True)
+	_gradeItemId = Column(BIGINT(10), primary_key=True, name="itemid") #Column(BIGINT(10), ForeignKey("MGradeItem.id"), nullable=False, index=True)
 	
 	def get_grade_item(self, session: Session) -> MGradeItem:
 		#session.expire_all()
@@ -687,6 +687,24 @@ class MUser(Base):
 		results = []
 		for grade_item in course_grade_items:
 			results += session.query(MGradeGrade).filter(MGradeGrade._gradeItemId==grade_item.id, MGradeGrade._userid==self.id, MGradeGrade.finalgrade != None).all()
+		return results
+	
+	def count_grades(self, session: Session, course_id: int) -> int:
+		""" Return the number of quizzes a user has completed (at least once) """
+		#session.expire_all()
+		course_grade_items = session.query(MGradeItem).filter(MGradeItem._courseid==course_id).all()
+		results = 0
+		for grade_item in course_grade_items:
+			results += session.query(MGradeGrade).filter(MGradeGrade._gradeItemId==grade_item.id, MGradeGrade._userid==self.id, MGradeGrade.finalgrade != None).count()
+		return results
+
+	def count_repeated_grades(self, session: Session, course_id: int) -> int:
+		""" Return the number of quizzes a user has repeated at least once """
+		#session.expire_all()
+		course_grade_items = session.query(MGradeItem).filter(MGradeItem._courseid==course_id).all()
+		results = 0
+		for grade_item in course_grade_items:
+			results += session.query(MGradeGradesHistory).filter(MGradeGradesHistory._gradeItemId==grade_item.id, MGradeGradesHistory._userid==self.id, MGradeGradesHistory.finalgrade != None).count() >= 2
 		return results
 
 	def get_grade_history(self, session: Session) -> List[MGradeGradesHistory]:

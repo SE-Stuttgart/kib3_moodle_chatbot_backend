@@ -183,9 +183,10 @@ class ELearningNLG(Service):
         return [f"""Schön dich wieder zu sehen! Du hast Thema {module_name} schon angefangen aber noch nicht abgeschlossen, vergiss nicht ihn weiter zu machen"""]
 
     # TODO figure out how to offer a summary of options
-    def welcomemsg_review_or_next(self, review: bool, followup_activity_list: List[str]):
+    def welcomemsg_review_or_next(self, review: bool, followup_activity_list: List[str], percentage_done_quizzes: float, percentage_repeated_quizzes: float):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
-        pass
+        return ["""Hi!""",
+                f"""$DONUT,{100*percentage_done_quizzes},{100*percentage_repeated_quizzes}"""]
 
     def welcomemsg_unread_messages(self):
         """ Notify about unread forum messages """
@@ -206,14 +207,16 @@ class ELearningNLG(Service):
 
 
     def generate_welcomemsg(self, sys_act: SysAct):
-        if "last_activity" in sys_act.slot_values:
-            return self.welcomemsg_continue_unfinished
-        elif "followup_activity_list" in sys_act.slot_values:
-            return self.welcomemsg_continue_next
-        elif "badge_name" in sys_act.slot_values and "missing_activities" in sys_act.slot_values:
+        if "badge_name" in sys_act.slot_values and "missing_activities" in sys_act.slot_values:
             return self.welcomemsg_goal_badge
         elif "module_name" in sys_act.slot_values and "activity_name" in sys_act.slot_values and "next_module_name" in sys_act.slot_values:
             return self.welcomemsg_forgotten_module
+        elif "review" in sys_act.slot_values and "followup_activity_list" in sys_act.slot_values and "percentage_done_quizzes" in sys_act.slot_values and "percentage_repeated_quizzes" in sys_act.slot_values:
+            return self.welcomemsg_review_or_next
+        elif "followup_activity_list" in sys_act.slot_values:
+            return self.welcomemsg_continue_next
+        elif "last_activity" in sys_act.slot_values:
+            return self.welcomemsg_continue_unfinished
         elif len(sys_act.slot_values) == 0:
             return self.welcomemsg_first
         raise Exception(f"Sysact Welcome called with invalid slot combination: {list(sys_act.slot_values.keys())}")
