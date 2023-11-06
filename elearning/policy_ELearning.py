@@ -187,7 +187,6 @@ class ELearningPolicy(Service):
 		return SysAct(act_type=SysActionType.Welcome,
 					  slot_values=dict(
 						review=True,
-						followup_activity_list=[],
 						percentage_done_quizzes=percentage_done_quizzes,
 						percentage_repeated_quizzes=percentage_repeated_quizzes
 					  )

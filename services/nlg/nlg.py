@@ -21,6 +21,7 @@
 
 import inspect
 import os
+import random
 
 from services.nlg.templates.templatefile import TemplateFile
 from services.service import PublishSubscribe
@@ -183,10 +184,14 @@ class ELearningNLG(Service):
         return [f"""Schön dich wieder zu sehen! Du hast Thema {module_name} schon angefangen aber noch nicht abgeschlossen, vergiss nicht ihn weiter zu machen"""]
 
     # TODO figure out how to offer a summary of options
-    def welcomemsg_review_or_next(self, review: bool, followup_activity_list: List[str], percentage_done_quizzes: float, percentage_repeated_quizzes: float):
+    def welcomemsg_review_or_next(self, review: bool, percentage_done_quizzes: float, percentage_repeated_quizzes: float):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
-        return ["""Hi!""",
-                f"""$DONUT,{100*percentage_done_quizzes},{100*percentage_repeated_quizzes}"""]
+        msgs = [("""Hi! In letzter Zeit hast du viel Neues gelernt:""", []),
+                (f"""$DONUT,{100*percentage_done_quizzes},{100*percentage_repeated_quizzes}""", [])]
+        if random.random() < 0.4:
+            msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
+        msgs.append(("Willst du welche wiederholen oder lieber was Neues lernen?", ["Alte Wiederholen", "Neues lernen"]))
+        return msgs 
 
     def welcomemsg_unread_messages(self):
         """ Notify about unread forum messages """
@@ -211,7 +216,7 @@ class ELearningNLG(Service):
             return self.welcomemsg_goal_badge
         elif "module_name" in sys_act.slot_values and "activity_name" in sys_act.slot_values and "next_module_name" in sys_act.slot_values:
             return self.welcomemsg_forgotten_module
-        elif "review" in sys_act.slot_values and "followup_activity_list" in sys_act.slot_values and "percentage_done_quizzes" in sys_act.slot_values and "percentage_repeated_quizzes" in sys_act.slot_values:
+        elif "review" in sys_act.slot_values and "percentage_done_quizzes" in sys_act.slot_values and "percentage_repeated_quizzes" in sys_act.slot_values:
             return self.welcomemsg_review_or_next
         elif "followup_activity_list" in sys_act.slot_values:
             return self.welcomemsg_continue_next
