@@ -1,3 +1,4 @@
+import time
 import datetime
 from datetime import timedelta, datetime
 from typing import List
@@ -183,8 +184,15 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
                 logger.dialog_turn(f"# USER {self.userid} # DIALOG-START")
                 # Set webservice token for the POLICY state
                 slidefindertoken = data['slidefindertoken']
+                moodle_timestamp = int(data['timestamp'])
+                time_diff_chatbot_moodle = moodle_timestamp - int(time.time()) # add this constant difference to chatbot time to get moodle server time
                 print(" - slidefindertoken", slidefindertoken)
+                print(" - moodle timestamp", moodle_timestamp)
+                print(" - time difference moodle-chatbot", time_diff_chatbot_moodle)
                 services_1[2].set_state(self.userid, "SLIDEFINDERTOKEN", slidefindertoken)
+                services_1[2].set_state(self.userid, "SERVERTIMESTAMP", moodle_timestamp)
+                services_1[2].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
+
                 ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index].get_domain_name()}': True, f'courseid/{domains[domain_index].get_domain_name()}': courseid}, user_id=self.userid)
             elif topic == 'user_utterance':
                 gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])

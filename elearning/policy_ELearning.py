@@ -96,6 +96,11 @@ class ELearningPolicy(Service):
 		if isinstance(self.session, type(None)):
 			self._init_db()
 		return self.session
+	
+	def get_moodle_server_time(self, userid: int) -> int:
+		""" Returns the current moodle server time as unix timestamp """
+		difference = self.get_state(userid, "SERVERTIMEDIFFERENCE")
+		return int(time.time()) + difference
 
 	@PublishSubscribe(pub_topics=['control_event'])
 	def open_chatbot(self, user_id: int):

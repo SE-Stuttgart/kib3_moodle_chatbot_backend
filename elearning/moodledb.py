@@ -617,6 +617,18 @@ class MAssignSubmission(Base):
 	latest = Column(TINYINT(2), nullable=False, server_default=text("'0'"))
 
 
+class MChatbotWeeklySummary(Base):
+	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_weekly_summary"
+
+	_userid = Column(BIGINT(10), primary_key=True, name="userid") # Column(BIGINT(10), ForeignKey("MUser.id"), nullable=False, index=True)
+	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+
+class MChatbotProgressSummary(Base):
+	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_progress_summary"
+
+	_userid = Column(BIGINT(10), primary_key=True, name="userid") # Column(BIGINT(10), ForeignKey("MUser.id"), nullable=False, index=True)
+	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+	progress = Column(Float, nullable=False)
 
 class MTag(Base):
 	""" Inside the tags, we store information like estimated duration of a course module """
@@ -889,11 +901,10 @@ def is_available(json_condition: str, session: Session, user: MUser) -> bool:
 					fullfilled.append(condition['e']==0)
 		elif condition['type'] == 'date':
 			unixTime = datetime.datetime.utcfromtimestamp(condition['t'])
-			now = datetime.datetime.now()
 			if condition['d'] == ">=":
-				fullfilled.append(now >= unixTime)
+				fullfilled.append(current_server_time >= unixTime)
 			elif condition['d'] == "<":
-				fullfilled.append(now <= unixTime)
+				fullfilled.append(current_server_time <= unixTime)
 			else:
 				assert False, "Unknown date comparison operator"
 	if len(fullfilled) == 0:
