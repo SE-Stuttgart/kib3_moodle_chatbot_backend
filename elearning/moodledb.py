@@ -1,19 +1,17 @@
 # coding: utf-8
-from os import name
 import json
 from typing import List, Tuple, Union
-from sqlalchemy import Column, DECIMAL, String, text, create_engine
+from sqlalchemy import Column, DECIMAL, String, text, create_engine, select, func
 from sqlalchemy.dialects.mysql import BIGINT, LONGTEXT, TINYINT
 from sqlalchemy.dialects.mysql.types import MEDIUMINT
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship
 import datetime
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy.sql.sqltypes import SMALLINT
-from sqlalchemy.types import TypeDecorator
-from pathlib import Path
+from sqlalchemy.types import TypeDecorator, Float
 from urllib.parse import quote_plus as urlquote
 
 from config import MOODLE_SERVER_ADDR, MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX, MOODLE_SERVER_DB_NAME, MOODLE_SERVER_DB_PWD, MOODLE_SERVER_DB_USER
