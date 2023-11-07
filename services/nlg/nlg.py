@@ -22,6 +22,7 @@
 import inspect
 import os
 import random
+import json
 
 from services.nlg.templates.templatefile import TemplateFile
 from services.service import PublishSubscribe
@@ -187,7 +188,7 @@ class ELearningNLG(Service):
     def welcomemsg_review_or_next(self, review: bool, percentage_done_quizzes: float, percentage_repeated_quizzes: float):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
         msgs = [("""Hi! In letzter Zeit hast du viel Neues gelernt:""", []),
-                (f"""$DONUT,{100*percentage_done_quizzes},{100*percentage_repeated_quizzes}""", [])]
+                (f"""$$DONUT;{100*percentage_done_quizzes};{100*percentage_repeated_quizzes}""", [])]
         if random.random() < 0.4:
             msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
         msgs.append(("Willst du welche wiederholen oder lieber was Neues lernen?", ["Alte Wiederholen", "Neues lernen"]))
@@ -201,13 +202,34 @@ class ELearningNLG(Service):
         """ Remind about upcoming assignments using calendar """
         pass
 
-    def welcomemsg_stats(self, weekly: bool, congratualations: bool):
+    # TODO offer to continue or start next topic
+    def welcomemsg_stats(self, weekly_completions: Dict[str , list], weekly_completions_prev: Dict[str, list]):
         """ 
         Args:
             weekly: If true, show activity of current and last week at end of current week.
                     If false, show total course progress.
             congratulations: If true, add congratulation message """
-        pass
+        total_completions_this_week = sum(weekly_completions["y"])
+        total_completions_prev_week = sum(weekly_completions_prev["y"])
+
+        msgs = [(f"""Schön dich wieder zu sehen! Letzte Woche Hast du {total_completions_this_week} Inhalte abgeschlossen 🎉""", []),
+                (f"""$$LINECHART;Diese Woche;{json.dumps(weekly_completions)};Letzte Woche;{json.dumps(weekly_completions_prev)}""", [])]
+
+        if total_completions_this_week > total_completions_prev_week:
+            msgs.append(("Damit war diese Woche besser als die Vorherige, weiter so 🔥", []))
+        else:
+            max_units = max(total_completions_this_week.values())
+            if max_units > 0:
+                best_days = [index for index in range(len(weekly_completions["x"])) if weekly_completions['y'][index] == max_units]
+                num_best_days = len(best_days)
+                if num_best_days >= 3:
+                    msgs.append((f"Du hast sehr konsistent gelernt, an {num_best_days} Tagen!", []))
+                else:
+                    if num_best_days == 1:
+                        msgs.append((f"Dein bester Tag war {best_days[0]}", []))
+                    elif num_best_days == 2:
+                        msgs.append((f"Deine besten Tage waren {best_days[0]} und {best_days[1]}", []))
+        return msgs
 
 
 
@@ -218,6 +240,8 @@ class ELearningNLG(Service):
             return self.welcomemsg_forgotten_module
         elif "review" in sys_act.slot_values and "percentage_done_quizzes" in sys_act.slot_values and "percentage_repeated_quizzes" in sys_act.slot_values:
             return self.welcomemsg_review_or_next
+        elif "weekly_completions" in sys_act.slot_values and "weekly_completions_prev" in sys_act.slot_values:
+            return self.welcomemsg_stats
         elif "followup_activity_list" in sys_act.slot_values:
             return self.welcomemsg_continue_next
         elif "last_activity" in sys_act.slot_values:

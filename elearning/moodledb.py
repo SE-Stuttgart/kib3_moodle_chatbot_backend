@@ -722,22 +722,37 @@ class MUser(Base):
 		#session.expire_all()
 		return session.query(MGradeGradesHistory).filter(MGradeGradesHistory._userid==self.id).all()
 
-	def get_completed_courses(self, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModulesCompletion]:
+	def get_all_course_modules(self, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModule]:
 		""" Return all course modules already completed by current user in the specified course """
 		#session.expire_all()
-		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
-		return [completion.coursemodule for completion in completions if completion.coursemodule.get_type_name(session) in include_types and completion.coursemodule._course_id==courseid]
+		coursemodules = session.query(MCourseModule).filter(MCourseModule._course_id==courseid)
+		return [coursemodule for coursemodule in coursemodules if coursemodule.get_type_name(session) in include_types]
+
+	def get_completed_course_modules(self, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz'], timerange: List[int] = None) -> List[MCourseModulesCompletion]:
+		""" Return all course modules already completed by current user in the specified course """
+		#session.expire_all()
+		
+		if not isinstance(timerange, type(None)):
+			start_time = timerange[0]
+			end_time = timerange[1]
+			completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True) \
+																		.filter(MCourseModulesCompletion.timemodified >= start_time) \
+																		.filter(MCourseModulesCompletion.timemodified <= end_time)
+			return [completion.coursemodule for completion in completions if completion.coursemodule.get_type_name(session) in include_types and completion.coursemodule._course_id==courseid]	
+		else:
+			completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
+			return [completion.coursemodule for completion in completions if completion.coursemodule.get_type_name(session) in include_types and completion.coursemodule._course_id==courseid]
 
 	def is_completed(self, session: Session, module_id: int ,courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> bool:
 		""" Return wheteher a module  is completed by this user or not """
 		#session.expire_all()
-		completions = self.get_completed_courses(session, courseid, include_types)
+		completions = self.get_completed_course_modules(session, courseid, include_types)
 		for completion in completions:
 			if module_id == completion.id:
 				return True
 		return False
 
-	def get_completed_courses_before_date(self, date, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModulesCompletion]:
+	def get_completed_course_modules_before_date(self, date, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> List[MCourseModulesCompletion]:
 		""" Return all course modules already completed by current user before a date """
 		#session.expire_all()
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
@@ -873,7 +888,7 @@ class MUser(Base):
 		# - Grades: {self.get_grades()}
 
 
-def is_available(json_condition: str, session: Session, user: MUser) -> bool:
+def is_available(json_condition: str, session: Session, user: MUser, current_server_time: int) -> bool:
 	#session.expire_all()
 	if not json_condition:
 		return True # no restrictions
@@ -918,6 +933,8 @@ def is_available_course_module(session: Session, user: MUser, course_module: MCo
 def is_available_course_sections(session: Session, user: MUser, section: MCourseSection):
 	#session.expire_all()
 	return bool(section.visible) and is_available(json_condition=section.availability, session=session, user=user)
+
+
 
 
 def get_time_estimate_module(session: Session, user: MUser, course_module: MCourseModule) -> Union[int, None]:

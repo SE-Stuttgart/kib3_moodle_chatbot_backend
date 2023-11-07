@@ -16,7 +16,7 @@
 # along with Adviser.  If not, see <https://www.gnu.org/licenses/>.
 #
 ###############################################################################
-import datetime
+from datetime import datetime, timedelta
 import decimal
 import random
 from operator import attrgetter
@@ -24,6 +24,7 @@ import re
 import traceback
 from typing import List, Tuple
 import time
+import locale
 
 import httplib2
 import urllib
@@ -42,9 +43,10 @@ from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
 from elearning.moodledb import MAssign, MAssignSubmission, MCourse, MCourseModulesCompletion, MCourseSection, MGradeGrade, MGradeItem, connect_to_moodle_db, Base, MUser, MCourseModule, \
-	get_time_estimate_module, get_time_estimates, MModule
+	get_time_estimate_module, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 
+# locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
 
 LAST_ACCESSED_COURSEMODULE = 'last_accessed_coursemodule'
 NEXT_SUGGESTED_COURSEMODULE = 'next_suggested_coursemodule'
@@ -57,6 +59,7 @@ CURRENT_SUGGESTIONS = 'current_suggestions'
 MODE = 'mode'
 S_INDEX = 's_index'
 LAST_SEARCH = 'last_search'
+
 
 class ELearningPolicy(Service):
 	""" Base class for handcrafted policies.
@@ -182,20 +185,79 @@ class ELearningPolicy(Service):
 		# TODO select correct greeting based on given conditions
 
 		user = self.get_current_user(user_id)
-		total_num_quizzes = self.get_session().query(MGradeItem).count()
-		done_quizes = user.count_grades(self.get_session(), courseid)
-		repeated_quizes = user.count_repeated_grades(self.get_session(), courseid)
+		# TODO check progress increment, only display if progress is enough
+		# total_num_quizzes = self.get_session().query(MGradeItem).count()
+		# done_quizes = user.count_grades(self.get_session(), courseid)
+		# repeated_quizes = user.count_repeated_grades(self.get_session(), courseid)
 		
-		percentage_done_quizzes = done_quizes / total_num_quizzes
-		percentage_repeated_quizzes = repeated_quizes / total_num_quizzes
+		# percentage_done_quizzes = done_quizes / total_num_quizzes
+		# percentage_repeated_quizzes = repeated_quizes / total_num_quizzes
+
+		# return SysAct(act_type=SysActionType.Welcome,
+		# 			  slot_values=dict(
+		# 				review=True,
+		# 				percentage_done_quizzes=percentage_done_quizzes,
+		# 				percentage_repeated_quizzes=percentage_repeated_quizzes
+		# 			  )
+		# 		)
+
+
+
+		learning_material_types = ["url", "book", "resource"]
+		assignment_material_types = ['h5pactivity', 'quiz']# query day-wise completions
+
+		# check that we haven't displayed the weekly stats in more than 7 days
+		last_weekly_summaries = self.get_session().query(MChatbotWeeklySummary).filter(MChatbotWeeklySummary._userid==user_id)
+		if last_weekly_summaries.count() == 0:
+			# create first entry
+			last_weekly_summary = MChatbotWeeklySummary(_userid=user_id, timecreated=self.get_moodle_server_time(user_id))
+			self.get_session().add(last_weekly_summary)
+			self.get_session().commit()
+		else:
+			# get only (first) entry
+			last_weekly_summary = last_weekly_summaries.first()
+		if self.get_moodle_server_time(user_id) >= last_weekly_summary.timecreated.timestamp() + timedelta(days=7).seconds:
+			# last time we showed stats is more than 7 days in the past - show again
+			# TODO 
+			pass
+
+
+		# calculate offet from beginning of day and current time
+		now_chatbot_time = datetime.now()
+		beginning_of_today_chatbot_time = datetime(now_chatbot_time.year, now_chatbot_time.month, now_chatbot_time.day, 0, 0, 0)
+		beginning_of_today = beginning_of_today_chatbot_time + timedelta(seconds=self.get_state(user_id, "SERVERTIMEDIFFERENCE"))
+		
+		last_week_data = []
+		last_week_days = []
+		prev_week_data = []
+		prev_week_days = []
+		for day in reversed(range(14)):
+			# get day interval for DB query
+			start_time = beginning_of_today - timedelta(days=day+1)
+			end_time = beginning_of_today - timedelta(days=day)
+			# get day name for chart display
+			day_name = (now_chatbot_time - timedelta(days=day+1)).strftime('%A')[:2] # shorten to first 2 letters
+
+			# add module completions and quiz completions together.
+			# module completions are divided by 3, because the autocomplete plugin always ensures 3 completions per module
+			completed = len(self.get_current_user(user_id).get_completed_course_modules(session=self.get_session(),
+															  courseid=courseid,
+															  include_types=learning_material_types,
+															  timerange=[start_time, end_time])) / 3 \
+								+ len(self.get_current_user(user_id).get_completed_course_modules(session=self.get_session(),
+															  courseid=courseid,
+															  include_types=assignment_material_types,
+															  timerange=[start_time, end_time]))
+			if day < 7:
+				last_week_data.append(completed)
+				last_week_days.append(day_name)
+			else:
+				prev_week_data.append(completed)
+				prev_week_days.append(day_name)
 
 		return SysAct(act_type=SysActionType.Welcome,
-					  slot_values=dict(
-						review=True,
-						percentage_done_quizzes=percentage_done_quizzes,
-						percentage_repeated_quizzes=percentage_repeated_quizzes
-					  )
-				)
+					slot_values=dict(weekly_completions={"y": last_week_data, "x": last_week_days}, weekly_completions_prev={"y": prev_week_data, "x": prev_week_days}))
+	
 				
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_act", "sys_state", "html_content"])
@@ -491,7 +553,7 @@ class ELearningPolicy(Service):
 			"""
 			user = self.get_current_user(user_id)
 			if is_finished:
-				courses = user.get_completed_courses_before_date(since_date, self.get_session(), courseid)
+				courses = user.get_completed_course_modules_before_date(since_date, self.get_session(), courseid)
 			else:
 				courses = user.get_not_finished_courses_before_date(since_date, self.get_session(), courseid)
 			return [course for course in courses]
@@ -502,7 +564,7 @@ class ELearningPolicy(Service):
 
 	def total_completed_modules(self, user_id, courseid):
 		user = self.get_current_user(user_id)
-		return len(user.get_completed_courses(self.get_session(), courseid=courseid))
+		return len(user.get_completed_course_modules(self.get_session(), courseid=courseid))
 
 	def convert_time_to_minutes(self, sentence):
 		time_units = {"minute": 1, "minuten": 1, "stunde": 60, "stunden": 60,}
