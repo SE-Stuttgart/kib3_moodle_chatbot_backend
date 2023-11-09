@@ -46,7 +46,7 @@ from elearning.moodledb import MAssign, MAssignSubmission, MCourse, MCourseModul
 	get_time_estimate_module, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 
-# locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
+locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
 
 LAST_ACCESSED_COURSEMODULE = 'last_accessed_coursemodule'
 NEXT_SUGGESTED_COURSEMODULE = 'next_suggested_coursemodule'
@@ -100,10 +100,10 @@ class ELearningPolicy(Service):
 			self._init_db()
 		return self.session
 	
-	def get_moodle_server_time(self, userid: int) -> int:
+	def get_moodle_server_time(self, userid: int) -> DateTime:
 		""" Returns the current moodle server time as unix timestamp """
 		difference = self.get_state(userid, "SERVERTIMEDIFFERENCE")
-		return int(time.time()) + difference
+		return datetime.fromtimestamp(int(time.time()) + difference)
 
 	@PublishSubscribe(pub_topics=['control_event'])
 	def open_chatbot(self, user_id: int):
@@ -202,7 +202,6 @@ class ELearningPolicy(Service):
 		# 		)
 
 
-
 		learning_material_types = ["url", "book", "resource"]
 		assignment_material_types = ['h5pactivity', 'quiz']# query day-wise completions
 
@@ -210,55 +209,67 @@ class ELearningPolicy(Service):
 		last_weekly_summaries = self.get_session().query(MChatbotWeeklySummary).filter(MChatbotWeeklySummary._userid==user_id)
 		if last_weekly_summaries.count() == 0:
 			# create first entry
-			last_weekly_summary = MChatbotWeeklySummary(_userid=user_id, timecreated=self.get_moodle_server_time(user_id))
+			last_weekly_summary = MChatbotWeeklySummary(_userid=user_id, timecreated=self.get_moodle_server_time(user_id), firstweek=True)
 			self.get_session().add(last_weekly_summary)
 			self.get_session().commit()
 		else:
 			# get only (first) entry
 			last_weekly_summary = last_weekly_summaries.first()
-		if self.get_moodle_server_time(user_id) >= last_weekly_summary.timecreated.timestamp() + timedelta(days=7).seconds:
+		if self.get_moodle_server_time(user_id) >= last_weekly_summary.timecreated + timedelta(days=7):
 			# last time we showed stats is more than 7 days in the past - show again
-			# TODO 
-			pass
-
-
-		# calculate offet from beginning of day and current time
-		now_chatbot_time = datetime.now()
-		beginning_of_today_chatbot_time = datetime(now_chatbot_time.year, now_chatbot_time.month, now_chatbot_time.day, 0, 0, 0)
-		beginning_of_today = beginning_of_today_chatbot_time + timedelta(seconds=self.get_state(user_id, "SERVERTIMEDIFFERENCE"))
 		
-		last_week_data = []
-		last_week_days = []
-		prev_week_data = []
-		prev_week_days = []
-		for day in reversed(range(14)):
-			# get day interval for DB query
-			start_time = beginning_of_today - timedelta(days=day+1)
-			end_time = beginning_of_today - timedelta(days=day)
-			# get day name for chart display
-			day_name = (now_chatbot_time - timedelta(days=day+1)).strftime('%A')[:2] # shorten to first 2 letters
+			# calculate offet from beginning of day and current time
+			now_chatbot_time = datetime.now()
+			beginning_of_today_chatbot_time = datetime(now_chatbot_time.year, now_chatbot_time.month, now_chatbot_time.day, 0, 0, 0)
+			beginning_of_today = beginning_of_today_chatbot_time + timedelta(seconds=self.get_state(user_id, "SERVERTIMEDIFFERENCE"))
+			
+			last_week_data = []
+			last_week_days = []
+			best_week_days = []
 
-			# add module completions and quiz completions together.
-			# module completions are divided by 3, because the autocomplete plugin always ensures 3 completions per module
-			completed = len(self.get_current_user(user_id).get_completed_course_modules(session=self.get_session(),
-															  courseid=courseid,
-															  include_types=learning_material_types,
-															  timerange=[start_time, end_time])) / 3 \
-								+ len(self.get_current_user(user_id).get_completed_course_modules(session=self.get_session(),
-															  courseid=courseid,
-															  include_types=assignment_material_types,
-															  timerange=[start_time, end_time]))
-			if day < 7:
-				last_week_data.append(completed)
-				last_week_days.append(day_name)
-			else:
-				prev_week_data.append(completed)
-				prev_week_days.append(day_name)
+			prev_week_data = []
+			prev_week_days = []
 
-		return SysAct(act_type=SysActionType.Welcome,
-					slot_values=dict(weekly_completions={"y": last_week_data, "x": last_week_days}, weekly_completions_prev={"y": prev_week_data, "x": prev_week_days}))
-	
-				
+			# iterate over the last 7 days if first week of user, else last 14
+			for day in reversed(range((2-int(last_weekly_summary.firstweek))*7)):
+				# get day interval for DB query
+				start_time = beginning_of_today - timedelta(days=day+1)
+				end_time = beginning_of_today - timedelta(days=day)
+				# get day name for chart display
+				day_name = (now_chatbot_time - timedelta(days=day+1))
+
+				# add module completions and quiz completions together.
+				# module completions are divided by 3, because the autocomplete plugin always ensures 3 completions per module
+				completed = len(self.get_current_user(user_id).get_viewed_course_modules(session=self.get_session(),
+																courseid=courseid,
+																include_types=learning_material_types,
+																timerange=[start_time, end_time])) / 3 \
+									+ len(self.get_current_user(user_id).get_viewed_course_modules(session=self.get_session(),
+																courseid=courseid,
+																include_types=assignment_material_types,
+																timerange=[start_time, end_time]))
+
+				if day < 7:
+					last_week_data.append(completed)
+					last_week_days.append(day_name)
+				else:
+					prev_week_data.append(completed)
+					prev_week_days.append(day_name)
+
+			best_weekly_days = [last_week_days[i].strftime('%A') for i in range(len(last_week_data)) if last_week_data[i] == max(last_week_data)] if max(last_week_data) > 0 else []
+			# shorten week days for stats to 2 letters: strftime('%A')[:2]
+			cumulative_weekly_completions = {"y": [sum(last_week_data[:(i+1)]) for i in range(len(last_week_data))], "x": [day.strftime('%A')[:2] for day in last_week_days]}
+			cumulative_weekly_completions_prev = None if last_weekly_summary.firstweek else {"y": [sum(prev_week_data[:(i+1)]) for i in range(len(prev_week_data))], "x": [day.strftime('%A')[:2] for day in prev_week_days]}
+
+			# update timestamp of last stat output
+			last_weekly_summary.timecreated = self.get_moodle_server_time(user_id)
+			last_weekly_summary.firstweek = False
+			self.get_session().commit()
+
+			return SysAct(act_type=SysActionType.Welcome,
+						slot_values=dict(best_weekly_days=best_weekly_days, weekly_completions=cumulative_weekly_completions, weekly_completions_prev=cumulative_weekly_completions_prev))
+		
+					
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_act", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
