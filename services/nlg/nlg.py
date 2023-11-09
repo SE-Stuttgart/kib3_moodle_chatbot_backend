@@ -154,28 +154,28 @@ class ELearningNLG(Service):
             return [f"""Es gibt im Moment keine Abgaben."""]
         return [f"""Am {submission} für {moduleName}"""]
 
-    def inform_all_finished(self):
+    def inform_all_finished(self, all_finished):
         return["""Du hast alle Module abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"""]
 
     def inform_first_module(self, moduleName):
         return[f"""Das erste ist {moduleName}"""]
 
-    def request_learning_time(self):
+    def request_learning_time(self, learningTime):
         return["""Wie viel Zeit hast du heute, um etwas zu lernen (bitte gib die Zeit in Minuten an)?"""]
 
-    def inform_content(self, link):
+    def inform_content(self, modulContent, link):
         if link == 'None':
             return["""Leider konnte ich keine Ergebnisse zu deiner Eingabe finden. Hast du noch eine andere Frage?"""]
         elif link == 'End':
             return["""Das war alles, was ich zu deiner Frage finden konnte. Hast du noch eine andere Frage?"""]
 
-    def request_content(self):
+    def request_content(self, modulContent):
         return["""Könntest du mir bitte nochmal nur den Suchbegriff nennen?"""]
 
-    def inform_not_implemented(self):
+    def inform_not_implemented(self, notImplementedYet):
         return["""Leider ist diese Funktionalität noch nicht implementiert, wir arbeiten dran!"""]
 
-    def inform_positive_feedback_finished(self, finishedOne, repeat):
+    def inform_positive_feedback_finished(self, positiveFeedback, finishedOne, repeat):
         if finishedOne ==False:
             if repeat == 'quiz':
                 return["""Sehr gut! Dann starte nochmal das Quiz, damit du dieses Modul abschließen kannst."""]
@@ -188,25 +188,25 @@ class ELearningNLG(Service):
     def inform_no_motivational(self, NoMotivational, taskLeft):
         return[f"""{taskLeft}, du hast leider {NoMotivational} geschafft 😩  Du könntest jetzt anfangen! Die Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"""]
 
-    def request_past_module(self):
+    def request_past_module(self, pastModule):
         return["""Erinnerst du dich an das vorherige Thema?"""]
 
-    def inform_past_module_repeat(self, repeatContent):
+    def inform_past_module_repeat(self, pastModule, repeatContent):
         return[f"""Dann wiederhole am besten das vorherige Thema, bevor du mit dem neuen startest: {repeatContent}"""]
 
-    def inform_positive_feedback_new_module(self, newModule):
+    def inform_positive_feedback_new_module(self, positiveFeedback, newModule):
         return[f"""Sehr gut! Du kannst jetzt mit dem neuen Thema anfangen :-D: {newModule}"""]
 
-    def inform_positive_feedback_completed_quiz(self):
+    def inform_positive_feedback_completed_quiz(self, positiveFeedback, completedQuiz):
         return["""Gut gemacht! Du hast das Quiz erfolgreich abgeschlossen! 😊 """]
 
-    def inform_positive_feedback_completed_module(self, completedModule):
+    def inform_positive_feedback_completed_module(self, positiveFeedback, completedModule):
         return[f"""Sehr gut! Du hast {completedModule} erfolgreich abgeschlossen und kannst mit den Quizzes starten!"""]
 
-    def inform_negative_feedback_finished(self):
+    def inform_negative_feedback_finished(self, negativeFeedback, finishedQuiz):
         return["""Schade, du hast nicht alle Fragen richtig beantwortet. Versuch es doch nochmal, beim nächsten Mal klappt es bestimmt besser!"""]
 
-    def inform_next_module(self, moduleName):
+    def inform_next_module(self, moduleName, nextModule):
         return[f"""Dein nächstes Thema ist {moduleName}. Möchtest du damit beginnen?"""]
 
     def inform_moduleName(self, moduleName, hasModule):
@@ -220,34 +220,34 @@ class ELearningNLG(Service):
             return[f"""Dann zeig mal! {link}"""]
         return[f"""Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist! {link}"""]
 
-    def inform_repeat_module_affirm(self, moduleLink):
+    def inform_repeat_module_affirm(self, repeat_module_affirm, moduleLink):
         # same as before? (without affirm) and changed module_link into moduleLink as scheme before
         return[f"""Alles klar, du findest die Inhalte zum vorherigen Thema hier: {moduleLink}"""]
 
-    def inform_repeat_module_deny(self):
+    def inform_repeat_module_deny(self, repeat_module_deny):
         return["""Alles klar, dann wenn du bereit bist, könntest du mit einem neuen Thema anfangen!"""]
 
-    def inform_new_module_deny(self):
+    def inform_new_module_deny(self, new_module_deny):
         return["""Alles klar, dann würde ich dir empfehlen, einige der bereits abgeschlossenen Inhalte zu wiederholen!"""]
 
-    def inform_offer_help(self):
+    def inform_offer_help(self, offerHelp):
         return["""Dann mach doch nochmal die Quizzes und sag mir, womit du Schwierigkeiten hast."""]
 
-    def inform_repeat_quiz(self, completedModule):
-        # translated german QuizWiederholen
+    def inform_repeat_quiz(self, QuizWiederholen, completedModule):
+        # german variable QuizWiederholen
         return[f"""Dann könntest du die Zeit nutzen, um die Quizzes zu {completedModule} zu wiederholen!"""]
 
-    def inform_complete_module_affirm(self):
+    def inform_complete_module_affirm(self, complete_Module_affirm):
         return["""Sehr gut! Dann schau kurz nach, welche Aufgaben bei dem Modul noch offen sind, und schließe sie ab ;-)"""]
 
-    def inform_complete_module_deny(self):
+    def inform_complete_module_deny(self, complete_Module_deny):
         return["""Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist!"""]
 
-    def request_fit_for_submission(self, newTask):
+    def request_fit_for_submission(self, fitForSubmission, newTask):
         # name doesnt fit to sentence
         return["""Super! Willst du dann heute neue Einheiten lernen oder abgeschlossene Inhalte wiederholen?"""]
 
-    def request_offer_help(self, time):
+    def request_offer_help(self, offerHelp, time):
         return[f"""Du bist bereits seit {time} Minuten an diesem Quiz dran, brauchst du Hilfe?"""]
 
     def reqmore(self, moduleContent):
@@ -257,14 +257,14 @@ class ELearningNLG(Service):
         # does this make sense (and what is reqmore)
         return["""Super, du kannst mir einfach nochmal schreiben, falls du meine Hilfe brauchst!"""]
 
-    def inform_positive_feedback_help(self):
+    def inform_positive_feedback_help(self, positiveFeedback, offerHelp):
         return["""Super, sag Bescheid, falls ich dir sonst noch helfen kann!"""]
 
-    def inform_content_task_required(self):
+    def inform_content_task_required(self, contentTaskRequired):
         # sentence and name doesnt fit
         return["""Ja, aber sie bauen sich aufeinander und es wird dir leicht fallen, ein Thema nach dem anderen zu bearbeiten ;-)"""]
 
-    def inform_offer_help_suggestion(self, suggestion):
+    def inform_offer_help_suggestion(self, suggestion, offerhelp):
         # should the name be without suggestion and simply overload the other function with diff. args
         if suggestion == 'quiz':
             return["""Du solltest die Quizzes gleich nach dem Lernen der Einheit machen, solange die Inhalte bei dir noch frisch sind!"""]
@@ -300,7 +300,7 @@ class ELearningNLG(Service):
         elif feedback == 'getBetterFeedback':
             return["""Wie kann ich dir morgen besser helfen?"""]
 
-    def inform_help(self):
+    def inform_help(self, help):
         return["""Du kommst nicht weiter? Kein Problem! Hier ist eine Liste von Themen, wonach du mich fragen kannst: <ul><li>Was du als nächstes lernen solltest <br> (z.B. \"Was kann ich als nächstes lernen?\")</li><li>Was du wiederholen kannst <br>(z.B. \"Bei welchem Modul bin ich nicht ausreichend?\")</li></ul>"""]
 
 
