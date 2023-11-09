@@ -11,7 +11,7 @@ import datetime
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy.sql.sqltypes import SMALLINT
-from sqlalchemy.types import TypeDecorator, Float
+from sqlalchemy.types import TypeDecorator, Float, BOOLEAN
 from urllib.parse import quote_plus as urlquote
 
 from config import MOODLE_SERVER_ADDR, MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX, MOODLE_SERVER_DB_NAME, MOODLE_SERVER_DB_PWD, MOODLE_SERVER_DB_USER
@@ -317,6 +317,27 @@ class MCourseModulesCompletion(Base):
 		return f"Completion: course_module_id {self._coursemoduleid}: {self.completed} for user {self._userid}"
 
 
+class MCourseModulesViewed(Base):
+	"""
+	Information about what MCourseModule was viewed when by what user.
+	Access to parent coursemodule: MCourseModulesViewed.coursemodule
+	"""
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules_viewed'
+
+	id = Column(BIGINT(10), primary_key=True)
+
+	# Date of viewing
+	timecreated = Column(UnixTimestamp, nullable=False)
+
+	# internal database mapping info
+	_coursemoduleid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules.id"), nullable=False, index=True, name="coursemoduleid")
+	_userid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}user.id"), nullable=False, name="userid") # TODO relation to user
+
+	def __repr__(self) -> str:
+		""" Pretty printing """
+		return f"Completion: course_module_id {self._coursemoduleid} for user {self._userid}"
+
+
 
 class MHVP(Base):
 	# TODO finish
@@ -347,6 +368,7 @@ class MCourseModule(Base):
 	availability = Column(LONGTEXT) # input for is_available method (json_condition)
 
 	completions = relationship("MCourseModulesCompletion", backref="coursemodule")
+	views = relationship("MCourseModulesViewed", backref="coursemodule")
 
 	# internal database mapping info
 	_section_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_sections.id'), nullable=False, server_default=text("'0'"), name='section')
@@ -620,6 +642,7 @@ class MChatbotWeeklySummary(Base):
 
 	_userid = Column(BIGINT(10), primary_key=True, name="userid") # Column(BIGINT(10), ForeignKey("MUser.id"), nullable=False, index=True)
 	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+	firstweek = Column(BOOLEAN, nullable=False)
 
 class MChatbotProgressSummary(Base):
 	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_progress_summary"
@@ -742,6 +765,22 @@ class MUser(Base):
 		else:
 			completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True)
 			return [completion.coursemodule for completion in completions if completion.coursemodule.get_type_name(session) in include_types and completion.coursemodule._course_id==courseid]
+
+	def get_viewed_course_modules(self, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz'], timerange: List[int] = None) -> List[MCourseModulesCompletion]:
+		""" Return all course modules already completed by current user in the specified course """
+		#session.expire_all()
+		
+		if not isinstance(timerange, type(None)):
+			start_time = timerange[0]
+			end_time = timerange[1]
+			views = session.query(MCourseModulesViewed).filter(MCourseModulesViewed._userid==self.id) \
+																		.filter(MCourseModulesViewed.timecreated >= start_time) \
+																		.filter(MCourseModulesViewed.timecreated <= end_time)
+			return [view.coursemodule for view in views if view.coursemodule.get_type_name(session) in include_types and view.coursemodule._course_id==courseid]	
+		else:
+			views = session.query(MCourseModulesViewed).filter(MCourseModulesViewed._userid==self.id)
+			return [view.coursemodule for view in views if view.coursemodule.get_type_name(session) in include_types and view.coursemodule._course_id==courseid]
+
 
 	def is_completed(self, session: Session, module_id: int ,courseid: int, include_types: List[str] = ['assign', 'book', 'hvp', 'page', 'quiz']) -> bool:
 		""" Return wheteher a module  is completed by this user or not """
