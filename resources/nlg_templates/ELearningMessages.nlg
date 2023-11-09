@@ -172,7 +172,7 @@ template inform(repeat_module_deny)
         "Alles klar, dann wenn du bereit bist, könntest du mit einem neuen Thema anfangen!"
 
 template inform(new_module_deny)
-        "Alles klar, dann würde ich dir empfeheln, einige der bereits abgeschlossenen Inhalte zu wiederholen!"
+        "Alles klar, dann würde ich dir empfehlen, einige der bereits abgeschlossenen Inhalte zu wiederholen!"
 
 
 template inform(offerHep)

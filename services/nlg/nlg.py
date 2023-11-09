@@ -124,7 +124,7 @@ class ELearningNLG(Service):
         if repeatContent == "finished":
             return self.inform_repeat_content_finished(moduleName, repeatContent, link, contentType)
         elif repeatContent == "module":
-            return [f"""u hast bei {moduleName} nicht alles richtig beantwortet 😬 .
+            return [f"""Du hast bei {moduleName} nicht alles richtig beantwortet 😬 .
                     Es wäre bestimmt gut, wenn du das wiederholst, diesmal klappt es bestimmt besser!
                     {link}"""]
         elif repeatContent == "oldcontent":
@@ -154,7 +154,154 @@ class ELearningNLG(Service):
             return [f"""Es gibt im Moment keine Abgaben."""]
         return [f"""Am {submission} für {moduleName}"""]
 
+    def inform_all_finished(self):
+        return["""Du hast alle Module abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"""]
 
+    def inform_first_module(self, moduleName):
+        return[f"""Das erste ist {moduleName}"""]
+
+    def request_learning_time(self):
+        return["""Wie viel Zeit hast du heute, um etwas zu lernen (bitte gib die Zeit in Minuten an)?"""]
+
+    def inform_content(self, link):
+        if link == 'None':
+            return["""Leider konnte ich keine Ergebnisse zu deiner Eingabe finden. Hast du noch eine andere Frage?"""]
+        elif link == 'End':
+            return["""Das war alles, was ich zu deiner Frage finden konnte. Hast du noch eine andere Frage?"""]
+
+    def request_content(self):
+        return["""Könntest du mir bitte nochmal nur den Suchbegriff nennen?"""]
+
+    def inform_not_implemented(self):
+        return["""Leider ist diese Funktionalität noch nicht implementiert, wir arbeiten dran!"""]
+
+    def inform_positive_feedback_finished(self, finishedOne, repeat):
+        if finishedOne ==False:
+            if repeat == 'quiz':
+                return["""Sehr gut! Dann starte nochmal das Quiz, damit du dieses Modul abschließen kannst."""]
+        else:
+            return["""Sehr gut! Dann starte nochmal das Quiz, damit du auch dieses Modul abschließen kannst!"""]
+
+    def inform_motivational(self, motivational, taskLeft):
+        return[f"""{taskLeft}, du hast schon {motivational} geschafft! Die restlichen Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"""]
+
+    def inform_no_motivational(self, NoMotivational, taskLeft):
+        return[f"""{taskLeft}, du hast leider {NoMotivational} geschafft 😩  Du könntest jetzt anfangen! Die Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"""]
+
+    def request_past_module(self):
+        return["""Erinnerst du dich an das vorherige Thema?"""]
+
+    def inform_past_module_repeat(self, repeatContent):
+        return[f"""Dann wiederhole am besten das vorherige Thema, bevor du mit dem neuen startest: {repeatContent}"""]
+
+    def inform_positive_feedback_new_module(self, newModule):
+        return[f"""Sehr gut! Du kannst jetzt mit dem neuen Thema anfangen :-D: {newModule}"""]
+
+    def inform_positive_feedback_completed_quiz(self):
+        return["""Gut gemacht! Du hast das Quiz erfolgreich abgeschlossen! 😊 """]
+
+    def inform_positive_feedback_completed_module(self, completedModule):
+        return[f"""Sehr gut! Du hast {completedModule} erfolgreich abgeschlossen und kannst mit den Quizzes starten!"""]
+
+    def inform_negative_feedback_finished(self):
+        return["""Schade, du hast nicht alle Fragen richtig beantwortet. Versuch es doch nochmal, beim nächsten Mal klappt es bestimmt besser!"""]
+
+    def inform_next_module(self, moduleName):
+        return[f"""Dein nächstes Thema ist {moduleName}. Möchtest du damit beginnen?"""]
+
+    def inform_moduleName(self, moduleName, hasModule):
+        # this is about time constraints (should be in name of function)
+        if hasModule:
+            return[f"""Dann kannst du das hier lernen: {moduleName}"""]
+        return["""Leider habe ich kein Lernmaterial mit dieser Dauer gefunden :-( Versuche es bitte erneut, wenn du ein bisschen mehr Zeit hast"""]
+
+    def inform_fit_for_test(self, fitForTest, link):
+        if fitForTest:
+            return[f"""Dann zeig mal! {link}"""]
+        return[f"""Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist! {link}"""]
+
+    def inform_repeat_module_affirm(self, moduleLink):
+        # same as before? (without affirm) and changed module_link into moduleLink as scheme before
+        return[f"""Alles klar, du findest die Inhalte zum vorherigen Thema hier: {moduleLink}"""]
+
+    def inform_repeat_module_deny(self):
+        return["""Alles klar, dann wenn du bereit bist, könntest du mit einem neuen Thema anfangen!"""]
+
+    def inform_new_module_deny(self):
+        return["""Alles klar, dann würde ich dir empfehlen, einige der bereits abgeschlossenen Inhalte zu wiederholen!"""]
+
+    def inform_offer_help(self):
+        return["""Dann mach doch nochmal die Quizzes und sag mir, womit du Schwierigkeiten hast."""]
+
+    def inform_repeat_quiz(self, completedModule):
+        # translated german QuizWiederholen
+        return[f"""Dann könntest du die Zeit nutzen, um die Quizzes zu {completedModule} zu wiederholen!"""]
+
+    def inform_complete_module_affirm(self):
+        return["""Sehr gut! Dann schau kurz nach, welche Aufgaben bei dem Modul noch offen sind, und schließe sie ab ;-)"""]
+
+    def inform_complete_module_deny(self):
+        return["""Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist!"""]
+
+    def request_fit_for_submission(self, newTask):
+        # name doesnt fit to sentence
+        return["""Super! Willst du dann heute neue Einheiten lernen oder abgeschlossene Inhalte wiederholen?"""]
+
+    def request_offer_help(self, time):
+        return[f"""Du bist bereits seit {time} Minuten an diesem Quiz dran, brauchst du Hilfe?"""]
+
+    def reqmore(self, moduleContent):
+        return["""Brauchst du mehr Informationen zu dem Modul?"""]
+    
+    def reqmore(self, end):
+        # does this make sense (and what is reqmore)
+        return["""Super, du kannst mir einfach nochmal schreiben, falls du meine Hilfe brauchst!"""]
+
+    def inform_positive_feedback_help(self):
+        return["""Super, sag Bescheid, falls ich dir sonst noch helfen kann!"""]
+
+    def inform_content_task_required(self):
+        # sentence and name doesnt fit
+        return["""Ja, aber sie bauen sich aufeinander und es wird dir leicht fallen, ein Thema nach dem anderen zu bearbeiten ;-)"""]
+
+    def inform_offer_help_suggestion(self, suggestion):
+        # should the name be without suggestion and simply overload the other function with diff. args
+        if suggestion == 'quiz':
+            return["""Du solltest die Quizzes gleich nach dem Lernen der Einheit machen, solange die Inhalte bei dir noch frisch sind!"""]
+        elif suggestion == 'learningTime':
+            return["""Du solltest dir die Zeit fürs Lernen einer Einheit besser einplanen, damit du dich richtig konzentrieren kannst. Dann wirst du dich an die Inhalte besser erinnern und die Fragen richtig beantworten!"""]
+        elif suggestion == 'offerHelp':
+            return[""""Wenn etwas beim Lernen nicht klar ist, solltest du mir gleich Fragen stellen, dann helfe ich dir gerne! Mach am besten noch nicht die Quizzes, wenn du mit den Inhalten noch nicht komplett vertraut bist!"""]
+
+    def inform_quiz_link(self, link):
+        return[f"""Hier ist ein Link zum Quiz: {link}"""]
+
+    def inform_motivate_quiz(self, link):
+        return[f""""Wenn du kurz Zeit hast, würde ich dir empfehlen, die Quizzes trotzdem zu wiederholen: das dauert nur wenige Minuten, und du erhöhst die Chance, eine gute Note zu bekommen :-)!<br>{link}"""]
+
+    def inform_next_step(self, nextStep):
+        if nextStep == 'newModule':
+            return["""Sehr gut! Du kannst jetzt mit dem neuen Thema anfangen :-D!"""]
+        elif nextStep == 'repeatConcepts':
+            return["""Sehr gut! Willst du noch einige Inhalte wiederholen, bevor du mit dem neuen Thema anfängst?"""]
+        elif nextStep == 'repeatContents':
+            return["""Sehr gut! Sollen wir ein paar Begriffe durchgehen und du sagst mir, welche du wiederholen möchtest?"""]
+
+    def request_feedback(self, feedback):
+        # german values, what follows on this questions?
+        if feedback == 'richtigkeit':
+            return["""Konnte ich die Frage richtig beantworten?"""]
+        elif feedback == 'Antwort':
+            return["""Ist meine  Antwort ausreichend?"""]
+        elif feedback == 'feedbackMoreInfo':
+            return["""Brauchst du eine ausführlichere Erklärung?"""]
+        elif feedback == 'feedbackSession':
+            return["""War diese Sitzung hilfreich?"""]
+        elif feedback == 'getBetterFeedback':
+            return["""Wie kann ich dir morgen besser helfen?"""]
+
+    def inform_help(self):
+        return["""Du kommst nicht weiter? Kein Problem! Hier ist eine Liste von Themen, wonach du mich fragen kannst: <ul><li>Was du als nächstes lernen solltest <br> (z.B. \"Was kann ich als nächstes lernen?\")</li><li>Was du wiederholen kannst <br>(z.B. \"Bei welchem Modul bin ich nicht ausreichend?\")</li></ul>"""]
 
 
     def welcomemsg_first(self):
@@ -255,6 +402,18 @@ class ELearningNLG(Service):
             return self.request_initial_goal
         elif "quiz_link" in sys_act.slot_values and "module" in sys_act.slot_values and "insufficient" in sys_act.slot_values:
             return self.request_repeat_quiz
+        elif "learningTime" in sys_act.slot_values:
+            return self.request_learning_time
+        elif "modulContent" in sys_act.slot_values:
+            return self.request_content
+        elif "pastModule" in sys_act.slot_values:
+            return self.request_past_module
+        elif "fitForSubmission" in sys_act.slot_values and "newTask" in sys_act.slot_values:
+            return self.request_fit_for_submission
+        elif "offerHelp" in sys_act.slot_values and "time" in sys_act.slot_values:
+            return self.request_offer_help
+        elif "feedback" in sys_act.slot_values:
+            return self.request_feedback
         raise Exception(f"Sysact Request called with invalid slot combination: {list(sys_act.slot_values.keys())}")
 
     def generate_inform(self, sys_act: SysAct):
@@ -270,6 +429,64 @@ class ELearningNLG(Service):
             return self.inform_finish_module
         elif "moduleName" in sys_act.slot_values and "submission" in sys_act.slot_values:
             return self.inform_remind_subission_deadline
+        elif "all_finished" in sys_act.slot_values:
+            return self.inform_all_finished
+        elif "moduleName" in sys_act.slot_values:
+            return self.inform_first_module
+        elif "modulContent" in sys_act.slot_values and "link" in sys_act.slot_values:
+            return self.inform_content
+        elif "notImplementedYet" in sys_act.slot_values:
+            return self.inform_not_implemented
+        elif "positiveFeedback" in sys_act.slot_values and "alreadyFinishedOne" in sys_act.slot_values and "repeat" in sys_act.slot_values:
+            return self.inform_positive_feedback_finished
+        elif "motivational" in sys_act.slot_values and "taskLeft" in sys_act.slot_values:
+            return self.inform_motivational
+        elif "NoMotivational" in sys_act.slot_values and "taskLeft" in sys_act.slot_values:
+            return self.inform_no_motivational
+        elif "pastModule" in sys_act.slot_values and "repeatContent" in sys_act.slot_values:
+            return self.inform_past_module_repeat
+        elif "positiveFeedback" in sys_act.slot_values and "newModule" in sys_act.slot_values:
+            return self.inform_positive_feedback_new_module
+        elif "positiveFeedback" in sys_act.slot_values and "completedQuiz" in sys_act.slot_values:
+            return self.inform_positive_feedback_completed_quiz
+        elif "positiveFeedback" in sys_act.slot_values and "completedModul" in sys_act.slot_values:
+            return self.inform_positive_feedback_completed_module
+        elif "negativeFeedback" in sys_act.slot_values and "finishedQuiz" in sys_act.slot_values:
+            return self.inform_negative_feedback_finished
+        elif "moduleName" in sys_act.slot_values and "nextModule" in sys_act.slot_values:
+            return self.inform_next_module
+        elif "moduleName" in sys_act.slot_values and "hasModule" in sys_act.slot_values:
+            return self.inform_moduleName
+        elif "fitForTest" in sys_act.slot_values and "link" in sys_act.slot_values:
+            return self.inform_fit_for_test
+        elif "repeat_module_affirm" in sys_act.slot_values and "module_link" in sys_act.slot_values:
+            return self.inform_repeat_module_affirm
+        elif "repeat_module_deny" in sys_act.slot_values:
+            return self.inform_repeat_module_deny
+        elif "new_module_deny" in sys_act.slot_values:
+            return self.inform_new_module_deny
+        elif "offerHep" in sys_act.slot_values: # typo
+            return self.inform_offer_help
+        elif "QuizWiederholen" in sys_act.slot_values and "completedModule" in sys_act.slot_values:
+            return self.inform_repeat_quiz
+        elif "complete_Module_affirm" in sys_act.slot_values:
+            return self.inform_complete_module_affirm
+        elif "complete_Module_deny" in sys_act.slot_values:
+            return self.inform_complete_module_deny
+        elif "postivieFeedback" in sys_act.slot_values and "offerHelp" in sys_act.slot_values:
+            return self.inform_positive_feedback_help
+        elif "contentTaskRequired" in sys_act.slot_values:
+            return self.inform_content_task_required
+        elif "suggestion" in sys_act.slot_values and "suggestion" in sys_act.slot_values:
+            return self.inform_offer_help_suggestion
+        elif "quiz_link" in sys_act.slot_values:
+            return self.inform_quiz_link
+        elif "motivateForQuiz" in sys_act.slot_values and "quiz_link" in sys_act.slot_values:
+            return self.inform_motivate_quiz
+        elif "nextStep" in sys_act.slot_values:
+            return self.inform_next_step
+        elif "help" in sys_act.slot_values:
+            return self.inform_help
         raise Exception(f"Sysact Inform called with invalid slot combination: {list(sys_act.slot_values.keys())}")
 
 
@@ -302,3 +519,4 @@ class ELearningNLG(Service):
         for message in messages:
             self.logger.dialog_turn(f"# USER {user_id} # NLG - {message}")
         return {'sys_utterance': messages}
+
