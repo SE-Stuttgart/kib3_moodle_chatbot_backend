@@ -14,7 +14,7 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
     """
     print("course_id", course_id)
     print("searchTerm", searchTerm)
-    print("Adress: ", f"http://{config.MOODLE_SERVER_ADDR()}/webservice/rest/server.php")
+    print("Adress: ", f"{config.MOODLE_SERVER_URL}/webservice/rest/server.php")
     http_client = httplib2.Http(".cache")
     body={
             "wstoken": wstoken,
@@ -25,7 +25,7 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
             "context_length": word_context_length
     }
     try:
-        response = http_client.request(f"http://{config.MOODLE_SERVER_ADDR()}/webservice/rest/server.php",
+        response = http_client.request(f"{config.MOODLE_SERVER_URL}/webservice/rest/server.php",
             method="POST",
             headers={'Content-type': 'application/x-www-form-urlencoded'},
             body=urllib.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode
@@ -86,7 +86,7 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
         return files
     except:
         print(traceback.format_exc())
-        return {f"http://{config.MOODLE_SERVER_ADDR()}": "Fehler bei Suche"}
+        return {f"{config.MOODLE_SERVER_URL}": "Fehler bei Suche"}
 
 if __name__ == "__main__":
     # connect to database

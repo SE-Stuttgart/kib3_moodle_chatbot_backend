@@ -74,7 +74,7 @@ class HandcraftedPolicy(Service):
         self.current_suggestions = []  # list of current suggestions
         self.s_index = 0  # the index in current suggestions for the current system reccomendation
 
-    @PublishSubscribe(sub_topics=["beliefstate"], pub_topics=["sys_act", "sys_state"])
+    @PublishSubscribe(sub_topics=["beliefstate"], pub_topics=["sys_acts", "sys_state"])
     def choose_sys_act(self, user_id: str, beliefstate: BeliefState) \
             -> dict(sys_act=SysAct):
 
@@ -89,7 +89,7 @@ class HandcraftedPolicy(Service):
                                            knowledge
 
             Returns:
-                (dict): a dictionary with the key "sys_act" and the value that of the systems next
+                (dict): a dictionary with the key "sys_acts" and the value that of the systems next
                         action
 
         """
@@ -153,7 +153,7 @@ class HandcraftedPolicy(Service):
             self.logger.dialog_turn("System Action: " + str(sys_act))
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
-        return {'sys_act': sys_act, "sys_state": sys_state}
+        return {'sys_acts': [sys_act], "sys_state": sys_state}
 
     def _remove_gen_actions(self, beliefstate: BeliefState):
         """

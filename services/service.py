@@ -149,6 +149,9 @@ class Service:
     def set_state(self, user_id: str, attribute_name: str, attribute_value: Any):
         self._memory.set_value(user_id=user_id, attribute_name=attribute_name, attribute_value=attribute_value)
 
+    def clear_memory(self, user_id: str):
+        self._memory.delete_values(user_id)
+
     def _init_pubsub(self): 
         # search for all functions decorated with PublishSubscribe decorator 
         for func_name in dir(self):
@@ -1048,7 +1051,5 @@ class _MemoryPool:
         while True:
             time.sleep(GC_INTERVAL)    # wait for next GC event
             # sweep & clean memory
-            now = datetime.now()
-            free_user_ids = []
             for service_type in _MemoryPool.__instances:
                 _MemoryPool.__instances[service_type].gc()

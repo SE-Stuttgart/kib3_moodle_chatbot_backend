@@ -23,6 +23,7 @@ import inspect
 import os
 import random
 import json
+from datetime import datetime
 
 from services.nlg.templates.templatefile import TemplateFile
 from services.service import PublishSubscribe
@@ -304,25 +305,54 @@ class ELearningNLG(Service):
         return["""Du kommst nicht weiter? Kein Problem! Hier ist eine Liste von Themen, wonach du mich fragen kannst: <ul><li>Was du als nächstes lernen solltest <br> (z.B. \"Was kann ich als nächstes lernen?\")</li><li>Was du wiederholen kannst <br>(z.B. \"Bei welchem Modul bin ich nicht ausreichend?\")</li></ul>"""]
 
 
-    def welcomemsg_first(self):
-        return  ["""Hallo, ich bin der Moodle Assistent!
+    def generate_welcomemsg(self, sys_act: SysAct):
+        if "first_turn" in sys_act.slot_values:
+            return self.welcomemsg_first_turn_ever
+        else:
+            return self.welcomemsg
+
+    def welcomemsg_first_turn_ever(self, first_turn: bool):
+        return  [("""Hallo, ich bin der Moodle Assistent!
         Ich kann dir helfen bei:
         <ul>
             <li>Suche nach Inhalten</li>
             <li>Fortschritt überprüfen</li>
             <li>Navigation zu Lehrinhalten</li>
             <li>usw.</li>
-        </ul>""",
-        "Du kannst auch auf das Zahnrad oben klicken, um meine Einstellungen ändern."]
+        </ul>""", []),
+        ("Du kannst auch auf das Zahnrad oben klicken, um meine Einstellungen ändern.", [
+            "Einstellungen",
+            "Loslegen!"
+        ])]
+    
+    def welcomemsg(self):
+        day_section = ""
+        now = datetime.now()
+        if now.hour >= 5 and now.hour < 12:
+            day_section = "Guten Morgen! Gut ausgeruht?"
+        elif now.hour >= 12 and now.hour < 15:
+            day_section = "Einen schönen Mittag! Hoffentlich hast du gut gegessen!"
+        elif now.hour >= 15 and now.hour < 17:
+            day_section = "Einen schönen Nachmittag 😊"
+        elif now.hour >= 17 and now.hour < 21:
+            day_section = "Guten Abend 😊"
+        else:
+            day_section = "Wow, du lernst ja noch spät, Respket 😱"
+
+        options = [
+            "Schön dich wieder zu sehen 😊",
+            "Hi!",
+            "Willkommen zurück 😊",
+            "Hallo!",
+            day_section
+        ]
+        return [(random.choice(options), [])]
+
+
 
     def welcomemsg_continue_unfinished(self, last_activity):
         return [f"""Schön dich wieder zu sehen!
         Letztes Mal hast du bei {last_activity} aufgehört, willst du es heute abschließen?"""]
-
-    # TODO figure out how to offer a summary of options
-    def welcomemsg_continue_next(self, last_activity, followup_activity_list):
-        return [f"Schön dich wieder zu sehen!",
-        f"""Letztes Mal hast du {last_activity} abgeschlossen, willst du heute weitermachen mit {self.join_values(followup_activity_list)}"""]
 
     def welcomemsg_goal_badge(self, badge_name, missing_activities):
         return [f"""Hi! Du hast fast den Badge {badge_name} abgeschlossen! Wenn du heute {self.join_values(values=missing_activities, final_join='und')}
@@ -330,16 +360,6 @@ class ELearningNLG(Service):
 
     def welcomemsg_forgotten_module(self, module_name, activity_name, next_module_name):
         return [f"""Schön dich wieder zu sehen! Du hast Thema {module_name} schon angefangen aber noch nicht abgeschlossen, vergiss nicht ihn weiter zu machen"""]
-
-    # TODO figure out how to offer a summary of options
-    def welcomemsg_review_or_next(self, review: bool, percentage_done_quizzes: float, percentage_repeated_quizzes: float):
-        """ Offer choice to either review previous quizes, or continue with one of the next activities"""
-        msgs = [("""Hi! In letzter Zeit hast du viel Neues gelernt:""", []),
-                (f"""$$DONUT;{100*percentage_done_quizzes};{100*percentage_repeated_quizzes}""", [])]
-        if random.random() < 0.4:
-            msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
-        msgs.append(("Willst du welche wiederholen oder lieber was Neues lernen?", ["Alte Wiederholen", "Neues lernen"]))
-        return msgs 
 
     def welcomemsg_unread_messages(self):
         """ Notify about unread forum messages """
@@ -349,8 +369,9 @@ class ELearningNLG(Service):
         """ Remind about upcoming assignments using calendar """
         pass
 
-    # TODO offer to continue or start next topic
-    def welcomemsg_stats(self, best_weekly_days: List[str], weekly_completions: Dict[str , list], weekly_completions_prev: Dict[str, list]):
+
+
+    def display_weekly_summary(self, best_weekly_days: List[str], weekly_completions: Dict[str , list], weekly_completions_prev: Dict[str, list]):
         """ 
         Args:
             weekly: If true, show activity of current and last week at end of current week.
@@ -359,7 +380,7 @@ class ELearningNLG(Service):
         total_completions_this_week = int(weekly_completions["y"][-1])
         total_completions_prev_week = None if isinstance(weekly_completions_prev, type(None)) else int(weekly_completions_prev["y"][-1])
 
-        msgs = [(f"""Schön dich wieder zu sehen! Diese Woche hast du {total_completions_this_week} Inhalt{"e" if total_completions_this_week != 1 else ""} abgeschlossen {"🎉" if total_completions_this_week > 0 else ""}.""", []),
+        msgs = [(f"""Diese Woche hast du {total_completions_this_week} Inhalt{"e" if total_completions_this_week != 1 else ""} abgeschlossen {"🎉" if total_completions_this_week > 0 else ""}.""", []),
                 (f"""$$LINECHART;Diese Woche;{json.dumps(weekly_completions)};Letzte Woche;{json.dumps(weekly_completions_prev)}""", [])]
 
         if (not isinstance(weekly_completions_prev, type(None))) and total_completions_this_week > total_completions_prev_week:
@@ -376,25 +397,29 @@ class ELearningNLG(Service):
                         msgs.append((f"Deine besten Tage diese Woche waren {best_weekly_days[0]} und {best_weekly_days[1]}", []))
         return msgs
 
+    def display_progress(self, percentage_done: float, percentage_repeated_quizzes: float):
+        """ Offer choice to either review previous quizes, or continue with one of the next activities"""
+        msgs = [("""In letzter Zeit hast du viel Neues gelernt:""", []),
+                (f"""$$DONUT;{100*percentage_done};{100*percentage_repeated_quizzes}""", [])]
+        if random.random() < 0.4:
+            msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
+        return msgs 
 
 
-    def generate_welcomemsg(self, sys_act: SysAct):
-        if "badge_name" in sys_act.slot_values and "missing_activities" in sys_act.slot_values:
-            return self.welcomemsg_goal_badge
-        elif "module_name" in sys_act.slot_values and "activity_name" in sys_act.slot_values and "next_module_name" in sys_act.slot_values:
-            return self.welcomemsg_forgotten_module
-        elif "review" in sys_act.slot_values and "percentage_done_quizzes" in sys_act.slot_values and "percentage_repeated_quizzes" in sys_act.slot_values:
-            return self.welcomemsg_review_or_next
-        elif "best_weekly_days" in sys_act.slot_values and "weekly_completions" in sys_act.slot_values and "weekly_completions_prev" in sys_act.slot_values:
-            return self.welcomemsg_stats
-        elif "followup_activity_list" in sys_act.slot_values:
-            return self.welcomemsg_continue_next
-        elif "last_activity" in sys_act.slot_values:
-            return self.welcomemsg_continue_unfinished
-        elif len(sys_act.slot_values) == 0:
-            return self.welcomemsg_first
-        raise Exception(f"Sysact Welcome called with invalid slot combination: {list(sys_act.slot_values.keys())}")
 
+    def request_continue_or_next(self, last_viewed_course_module, next_available_modules):
+        return [(f"Letztes Mal hast du {last_viewed_course_module} abgeschlossen.", []),
+                (f"""Folgende Abschntitte hast du angefangen, aber noch nicht abgeschlossen:
+                <ul>
+                    {" ".join(['<li>' + module + '</li>' for module in next_available_modules])}
+                </ul>
+                
+                Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
+                    "Was Anderes lernen"
+                ])]
+
+
+   
     def generate_request(self, sys_act: SysAct):
         if "goal" in sys_act.slot_values:
             return self.request_initial_goal
@@ -487,23 +512,39 @@ class ELearningNLG(Service):
             return self.inform_help
         raise Exception(f"Sysact Inform called with invalid slot combination: {list(sys_act.slot_values.keys())}")
 
+    def inform_next_options(self, next_available_sections):
+        return [(f"""Welchen der folgenden Abschnitte willst du als nächstes machen:
+            <ul>
+                {" ".join(['<li>' + section + '</li>' for section in next_available_sections])}
+            </ul>
+            """,[]), ("Klicke eine der Optionen, oder willst du lieber etwas Wiederholen?", [
+                "Wiederholen"
+            ])]
 
 
     def get_message_fn(self, sys_act: SysAct):
         # delegate system act to specific message generator
         if sys_act.type == SysActionType.Welcome:
             return self.generate_welcomemsg(sys_act)
-        elif sys_act.type == SysActionType.Request:
-            return self.generate_request(sys_act)
-        elif sys_act.type == SysActionType.Inform:
-            return self.generate_inform(sys_act)
+        # elif sys_act.type == SysActionType.Request:
+        #     return self.generate_request(sys_act)
+        elif sys_act.type == SysActionType.RequestContinueOrNext:
+            return self.request_continue_or_next
+        # elif sys_act.type == SysActionType.Inform:
+        #     return self.generate_inform(sys_act)
+        elif sys_act.type == SysActionType.InformNextOptions:
+            return self.inform_next_options
+        elif sys_act.type == SysActionType.DisplayWeeklySummary:
+            return self.display_weekly_summary
+        elif sys_act.type == SysActionType.DisplayProgress:
+            return self.display_progress
         raise NotImplementedError
 
 
 
 
-    @PublishSubscribe(sub_topics=["sys_act"], pub_topics=["sys_utterance"])
-    def publish_system_utterance(self, user_id: str, sys_act: SysAct = None) -> dict(sys_utterance=List[str]):
+    @PublishSubscribe(sub_topics=["sys_acts"], pub_topics=["sys_utterance"])
+    def publish_system_utterance(self, user_id: str, sys_acts: List[SysAct] = None) -> dict(sys_utterance=List[str]):
         """Generates the system utterance and publishes it.
 
         Args:
@@ -512,8 +553,10 @@ class ELearningNLG(Service):
         Returns:
             dict: a dict containing the system utterance
         """
-        message_fn = self.get_message_fn(sys_act)
-        messages = message_fn(**sys_act.slot_values)
+        messages = []
+        for sys_act in sys_acts:
+            message_fn = self.get_message_fn(sys_act)
+            messages += message_fn(**sys_act.slot_values)
         for message in messages:
             self.logger.dialog_turn(f"# USER {user_id} # NLG - {message}")
         return {'sys_utterance': messages}

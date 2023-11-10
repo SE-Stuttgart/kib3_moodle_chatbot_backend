@@ -27,18 +27,24 @@ from utils.transmittable import Transmittable
 class SysActionType(Enum):
     """The type for a system action as used in :class:`SysAct`."""
 
-    Welcome = 'welcomemsg'
-    InformByName = 'inform_byname'
-    InformByAlternatives = 'inform_alternatives'
-    Inform = "inform"
-    SuggestAlternative = "suggest_alternatives"
-    Request = 'request'
-    Confirm = 'confirm'
-    Select = 'select'
-    RequestMore = 'reqmore'
+    Welcome = 'Welcomemsg'
+    
+    DisplayProgress = 'DisplayProgress'
+    DisplayWeeklySummary = "DisplayWeeklySummary"
+    DisplayBadgeProgress = "DisplayBadgeProgress"
+    DisplayQuiz = "DisplayQuiz"
+    
+    RequestReviewOrNext = "RequestReviewOrNext"
+    RequestContinueOrNext = "RequestContinueOrNext"
+    
+    InformDeadlines = "InformDeadlines"
+    InformForumPost = "InformForumPost"
+    InformNextOptions = "InformNextOptions"
+    InformSummary = "InformSummary"
+    InformSearchResults = "InformSearchResults"
+    
     Bad = 'bad'
     Bye = 'closingmsg'
-    ConfirmRequest = 'confreq'
 
 
 class SysAct(Transmittable):

@@ -19,31 +19,23 @@
 from datetime import datetime, timedelta
 import decimal
 import random
-from operator import attrgetter
 import re
 import traceback
-from typing import List, Tuple
+from typing import List
 import time
 import locale
 
-import httplib2
-import urllib
-
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql.functions import next_value
 from sqlalchemy.sql.sqltypes import DateTime
-from config import MOODLE_SERVER_ADDR
 
 from elearning.booksearch import get_book_links
 from services.service import PublishSubscribe
 from services.service import Service
 from utils import SysAct, SysActionType
-from utils.beliefstate import BeliefState
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import MAssign, MAssignSubmission, MCourse, MCourseModulesCompletion, MCourseSection, MGradeGrade, MGradeItem, connect_to_moodle_db, Base, MUser, MCourseModule, \
-	get_time_estimate_module, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
+from elearning.moodledb import MChatbotSettings, MCourseSection, MGradeItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 
 locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
@@ -55,10 +47,17 @@ ASSIGN_ID = 'assign_id'
 TURNS = 'turns'
 LAST_USER_ACT = 'last_act'
 FIRST_TURN = 'first_turn'
-CURRENT_SUGGESTIONS = 'current_suggestions'
 MODE = 'mode'
 S_INDEX = 's_index'
 LAST_SEARCH = 'last_search'
+
+# JUST_LOGGED_IN = "just_logged_in"
+
+learning_material_types = ["url", "book", "resource"]
+assignment_material_types = ['h5pactivity', 'quiz']# query day-wise completions
+
+
+COURSE_PROGRESS_DISPLAY_PERCENTAGE_INCREMENT = 0.1
 
 
 class ELearningPolicy(Service):
@@ -108,12 +107,13 @@ class ELearningPolicy(Service):
 	@PublishSubscribe(pub_topics=['control_event'])
 	def open_chatbot(self, user_id: int):
 		""" Triggers the UI chatwindow to open """
-		# TODO: check settings if this is allowed first
 		print("OPENING CHAT UI")
-		return {
-			"control_event": "UI_OPEN",
-			"user_id": user_id
-		}
+		user = self.get_current_user(user_id)
+		if (not user.settings) or user.settings.allow_auto_open:
+			return {
+				"control_event": "UI_OPEN",
+				"user_id": user_id
+			}
 		
 		
 	def _init_db(self):
@@ -142,12 +142,11 @@ class ELearningPolicy(Service):
 			self.set_state(user_id, TURNS, 0)
 			self.set_state(user_id, FIRST_TURN, True)
 			self.set_state(user_id, LAST_SEARCH, {})
-			self.set_state(user_id, CURRENT_SUGGESTIONS, []) # list of current suggestions
 			self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
 
 
-	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_act", "sys_state", "html_content"])
-	def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_act=SysAct, sys_state=SysAct, html_content=str):
+	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state", "html_content"])
+	def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct, html_content=str):
 		""" Responsible for reacting to events from mooodle.
 			Triggered by interaction with moodle (NOT the chatbot), e.g. when someone completes a coursemodule.
 
@@ -164,6 +163,10 @@ class ELearningPolicy(Service):
 		print("COMPLETION UPDATED?", moodle_event == "\\core\\event\\course_module_completion_updated")
 		print("=================")
 		# \mod_h5pactivity\event\statement_received
+		# if event_name == "\\core\\event\\user_loggedin":
+		# 	self.set_state(user_id, JUST_LOGGED_IN, True)
+		if event_name == "\\core\\event\\user_loggedout":
+			self.clear_memory(user_id)
 		if event_name in ["\\core\\event\\user_graded", "\\core\\event\\course_module_completion_updated"]:
 			self.open_chatbot(user_id)
 			# extract grade info
@@ -174,104 +177,167 @@ class ELearningPolicy(Service):
 				# all questions correct
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - all questions correct, finalgrade: {finalgrade}")
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - all questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'positiveFeedback': 'True', 'completedQuiz': 'True'})}")
-				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedQuiz": "True"})}
+				return {"sys_acts": [SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedQuiz": "True"})]}
 			else:
 				# not all questions correct
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions incorrect, finalgrade: {finalgrade}")
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'negativeFeedback': 'True', 'finishedQuiz': 'True'})}")
-				return {"sys_act": SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})}
+				return {"sys_acts": [SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})]}
 
-	def choose_greeting(self, user_id: int, courseid: int) -> SysAct:
-		# TODO select correct greeting based on given conditions
-
-		user = self.get_current_user(user_id)
-		# TODO check progress increment, only display if progress is enough
-		# total_num_quizzes = self.get_session().query(MGradeItem).count()
-		# done_quizes = user.count_grades(self.get_session(), courseid)
-		# repeated_quizes = user.count_repeated_grades(self.get_session(), courseid)
+	def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: MChatbotWeeklySummary):
+		# calculate offet from beginning of day and current time
+		now_chatbot_time = datetime.now()
+		beginning_of_today_chatbot_time = datetime(now_chatbot_time.year, now_chatbot_time.month, now_chatbot_time.day, 0, 0, 0)
+		beginning_of_today = beginning_of_today_chatbot_time + timedelta(seconds=self.get_state(user_id, "SERVERTIMEDIFFERENCE"))
 		
-		# percentage_done_quizzes = done_quizes / total_num_quizzes
-		# percentage_repeated_quizzes = repeated_quizes / total_num_quizzes
+		last_week_data = []
+		last_week_days = []
+		best_week_days = []
 
-		# return SysAct(act_type=SysActionType.Welcome,
-		# 			  slot_values=dict(
-		# 				review=True,
-		# 				percentage_done_quizzes=percentage_done_quizzes,
-		# 				percentage_repeated_quizzes=percentage_repeated_quizzes
-		# 			  )
-		# 		)
+		prev_week_data = []
+		prev_week_days = []
 
+		# iterate over the last 7 days if first week of user, else last 14
+		for day in reversed(range((2-int(last_weekly_summary.firstweek))*7)):
+			# get day interval for DB query
+			start_time = beginning_of_today - timedelta(days=day+1)
+			end_time = beginning_of_today - timedelta(days=day)
+			# get day name for chart display
+			day_name = (now_chatbot_time - timedelta(days=day+1))
 
-		learning_material_types = ["url", "book", "resource"]
-		assignment_material_types = ['h5pactivity', 'quiz']# query day-wise completions
+			# add module completions and quiz completions together.
+			# module completions are divided by 3, because the autocomplete plugin always ensures 3 completions per module
+			completed = len(self.get_current_user(user_id).get_viewed_course_modules(session=self.get_session(),
+															courseid=courseid,
+															include_types=learning_material_types,
+															timerange=[start_time, end_time])) / 3 \
+								+ len(self.get_current_user(user_id).get_viewed_course_modules(session=self.get_session(),
+															courseid=courseid,
+															include_types=assignment_material_types,
+															timerange=[start_time, end_time]))
+
+			if day < 7:
+				last_week_data.append(completed)
+				last_week_days.append(day_name)
+			else:
+				prev_week_data.append(completed)
+				prev_week_days.append(day_name)
+
+		best_weekly_days = [last_week_days[i].strftime('%A') for i in range(len(last_week_data)) if last_week_data[i] == max(last_week_data)] if max(last_week_data) > 0 else []
+		# shorten week days for stats to 2 letters: strftime('%A')[:2]
+		cumulative_weekly_completions = {"y": [sum(last_week_data[:(i+1)]) for i in range(len(last_week_data))], "x": [day.strftime('%A')[:2] for day in last_week_days]}
+		cumulative_weekly_completions_prev = None if last_weekly_summary.firstweek else {"y": [sum(prev_week_data[:(i+1)]) for i in range(len(prev_week_data))], "x": [day.strftime('%A')[:2] for day in prev_week_days]}
+
+		# update timestamp of last stat output
+		last_weekly_summary.timecreated = self.get_moodle_server_time(user_id)
+		last_weekly_summary.firstweek = False
+		self.get_session().commit()
+
+		return dict(best_weekly_days=cumulative_weekly_completions,
+			  	cumulative_weekly_completions=cumulative_weekly_completions,
+				cumulative_weekly_completions_prev=cumulative_weekly_completions_prev)
+	
+	def get_stat_summary(self, user: MUser, courseid: int):
+		# we should show total course progress every 10% of completion
+
+		# calculate current progress percentage
+		total_num_quizzes = self.get_session().query(MGradeItem).filter(MGradeItem._courseid==courseid).count()
+		done_quizes = user.count_grades(self.get_session(), courseid)
+		repeated_quizes = user.count_repeated_grades(self.get_session(), courseid)
+		percentage_repeated_quizzes = repeated_quizes / total_num_quizzes
+
+		total_num_modules = len(user.get_all_course_modules(session=self.get_session(), courseid=courseid,
+													include_types=learning_material_types))
+		done_modules = len(user.get_viewed_course_modules(session=self.get_session(), courseid=courseid,
+													include_types=learning_material_types))
+		percentage_done = (done_quizes + done_modules) / (total_num_quizzes + total_num_modules)
+
+		return dict(percentage_done=percentage_done,
+					percentage_repeated_quizzes=percentage_repeated_quizzes)
+
+	def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
+		# TODO select correct greeting based on given conditions
+		self.open_chatbot(user_id)
+		user = self.get_current_user(user_id)
+		acts = []
+
+		last_weekly_summaries = self.get_session().query(MChatbotWeeklySummary).filter(MChatbotWeeklySummary._userid==user_id)
+		first_turn_ever = last_weekly_summaries.count()
+
+		if first_turn_ever == 0:
+			# user is seeing chatbot for the first time - show some introduction
+
+			# create first entry for chatbot settings 
+			settings = MChatbotSettings(allow_auto_open=True, _userid=user_id)
+			# create first entry for weekly summaries
+			last_weekly_summary = MChatbotWeeklySummary(_userid=user_id, timecreated=self.get_moodle_server_time(user_id), firstweek=True)
+			# create first entry for progress summaries
+			progress_summary = MChatbotProgressSummary(_userid=user_id, progress=0.0, timecreated=self.get_moodle_server_time(user_id))
+			self.get_session().add_all([last_weekly_summary, progress_summary, settings])
+			self.get_session().commit()
+
+			return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True})]
+		
+		# Add greeting
+		acts.append(SysAct(act_type=SysActionType.Welcome, slot_values={}))
 
 		# check that we haven't displayed the weekly stats in more than 7 days
 		last_weekly_summaries = self.get_session().query(MChatbotWeeklySummary).filter(MChatbotWeeklySummary._userid==user_id)
-		if last_weekly_summaries.count() == 0:
-			# create first entry
-			last_weekly_summary = MChatbotWeeklySummary(_userid=user_id, timecreated=self.get_moodle_server_time(user_id), firstweek=True)
-			self.get_session().add(last_weekly_summary)
-			self.get_session().commit()
-		else:
-			# get only (first) entry
-			last_weekly_summary = last_weekly_summaries.first()
+		last_weekly_summary = last_weekly_summaries.first()
+
 		if self.get_moodle_server_time(user_id) >= last_weekly_summary.timecreated + timedelta(days=7):
-			# last time we showed stats is more than 7 days in the past - show again
+			# last time we showed the weekly stats is more than 7 days ago - show again
+			slot_values = self.get_weekly_progress(user_id=user_id, courseid=courseid, last_weekly_summary=last_weekly_summary)
+			acts.append(SysAct(act_type=SysActionType.DisplayWeeklySummary, slot_values=slot_values))
+		else:
+			# we should show total course progress every 10% of completion
+			last_progress_percentage = user.progress.progress
+			slot_values = self.get_stat_summary(user=user, courseid=courseid)
+
+			if slot_values["percentage_done"] >= last_progress_percentage + COURSE_PROGRESS_DISPLAY_PERCENTAGE_INCREMENT:
+				# update stat summary to current value
+				progress = user.progress
+				progress.progress = slot_values["percentage_done"] 
+				progress.timecreated = self.get_moodle_server_time(user_id)
+				self.get_session().commit()
+				acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
+
+		# choose how to proceed
+		last_viewed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid)
+		if len(last_viewed_course_modules) > 0:
+			# last viewed module
+			last_viewed_course_module = last_viewed_course_modules[0] # sorted ascending by date
+
+			# get next module list based on recently completed modules
+			modules_and_sections = [(module, module.section) for module in last_viewed_course_modules]
+			next_available_modules = [(section.name, section.get_next_available_module(currentModule=module, user=user, session=self.get_session(),
+																		include_types=learning_material_types+assignment_material_types,
+																		allow_only_unseen=True))
+										for module, section in modules_and_sections]
+			next_available_module_links = [module.get_content_link(session=self.get_session(), alternative_display_text=section_name)
+								  			for section_name, module in next_available_modules
+											if module is not None]
+
+			# user has started, but not completed one or more sections
+			acts.append(
+					SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
+							last_viewed_course_module=last_viewed_course_module.get_content_link(session=self.get_session(), alternative_display_text=last_viewed_course_module.section.name),
+							next_available_modules=next_available_module_links
+					)))
+		# TODO: Forum post info
+		# TODO: Deadline reminder
+		else:
+			# user has completed all started sections, should get choice of next new and available sections
+			available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
+			acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
+							next_available_sections=[section.get_link() for section in available_new_course_sections]
+					)))
 		
-			# calculate offet from beginning of day and current time
-			now_chatbot_time = datetime.now()
-			beginning_of_today_chatbot_time = datetime(now_chatbot_time.year, now_chatbot_time.month, now_chatbot_time.day, 0, 0, 0)
-			beginning_of_today = beginning_of_today_chatbot_time + timedelta(seconds=self.get_state(user_id, "SERVERTIMEDIFFERENCE"))
-			
-			last_week_data = []
-			last_week_days = []
-			best_week_days = []
+		return acts
 
-			prev_week_data = []
-			prev_week_days = []
-
-			# iterate over the last 7 days if first week of user, else last 14
-			for day in reversed(range((2-int(last_weekly_summary.firstweek))*7)):
-				# get day interval for DB query
-				start_time = beginning_of_today - timedelta(days=day+1)
-				end_time = beginning_of_today - timedelta(days=day)
-				# get day name for chart display
-				day_name = (now_chatbot_time - timedelta(days=day+1))
-
-				# add module completions and quiz completions together.
-				# module completions are divided by 3, because the autocomplete plugin always ensures 3 completions per module
-				completed = len(self.get_current_user(user_id).get_viewed_course_modules(session=self.get_session(),
-																courseid=courseid,
-																include_types=learning_material_types,
-																timerange=[start_time, end_time])) / 3 \
-									+ len(self.get_current_user(user_id).get_viewed_course_modules(session=self.get_session(),
-																courseid=courseid,
-																include_types=assignment_material_types,
-																timerange=[start_time, end_time]))
-
-				if day < 7:
-					last_week_data.append(completed)
-					last_week_days.append(day_name)
-				else:
-					prev_week_data.append(completed)
-					prev_week_days.append(day_name)
-
-			best_weekly_days = [last_week_days[i].strftime('%A') for i in range(len(last_week_data)) if last_week_data[i] == max(last_week_data)] if max(last_week_data) > 0 else []
-			# shorten week days for stats to 2 letters: strftime('%A')[:2]
-			cumulative_weekly_completions = {"y": [sum(last_week_data[:(i+1)]) for i in range(len(last_week_data))], "x": [day.strftime('%A')[:2] for day in last_week_days]}
-			cumulative_weekly_completions_prev = None if last_weekly_summary.firstweek else {"y": [sum(prev_week_data[:(i+1)]) for i in range(len(prev_week_data))], "x": [day.strftime('%A')[:2] for day in prev_week_days]}
-
-			# update timestamp of last stat output
-			last_weekly_summary.timecreated = self.get_moodle_server_time(user_id)
-			last_weekly_summary.firstweek = False
-			self.get_session().commit()
-
-			return SysAct(act_type=SysActionType.Welcome,
-						slot_values=dict(best_weekly_days=best_weekly_days, weekly_completions=cumulative_weekly_completions, weekly_completions_prev=cumulative_weekly_completions_prev))
-		
 					
 
-	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_act", "sys_state", "html_content"])
+	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
 		"""
 			Responsible for walking the policy through a single turn. Uses the current user
@@ -284,7 +350,7 @@ class ELearningPolicy(Service):
 										   knowledge
 
 			Returns:
-				(dict): a dictionary with the key "sys_act" and the value that of the systems next
+				(dict): a dictionary with the key "sys_acts" and the value that of the systems next
 						action
 
 		"""
@@ -299,10 +365,11 @@ class ELearningPolicy(Service):
 		if self.get_state(user_id, FIRST_TURN):
 			# print first turn message
 			self.set_state(user_id, FIRST_TURN, False)
-			sys_act = self.choose_greeting(user_id, courseid)
-			sys_state["last_act"] = sys_act
-			self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
-			return {'sys_act': sys_act, "sys_state": sys_state}
+			sys_acts = self.choose_greeting(user_id, courseid)
+			sys_state["last_act"] = sys_acts
+			for sys_act in sys_acts:
+				self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
+			return {'sys_acts': sys_acts, "sys_state": sys_state}
 		# after first turn
 		for user_act in user_acts:
 			if user_act is not None:
@@ -466,7 +533,7 @@ class ELearningPolicy(Service):
 			
 		sys_state["last_act"] = sys_act
 		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
-		return {'sys_act': sys_act, "sys_state": sys_state}
+		return {'sys_acts': [sys_act], "sys_state": sys_state}
 	
 	def get_current_user(self, user_id) -> MUser:
 			""" Get Moodle user by id from Chat Interface (or start run_chat with --user_id=...) """
@@ -478,12 +545,12 @@ class ELearningPolicy(Service):
 		# Wie werden "Lücken" oder andere Reihenfolgen behandelt?
 
 		user = self.get_current_user(user_id)
-		last_completed: MCourseModule = user.get_last_completed_coursemodule(self.get_session(), courseid)
+		last_completed: MCourseModule = user.get_last_completed_coursemodule(self.get_session(), courseid, self.get_moodle_server_time(user_id))
 		self.set_state(user_id, LAST_ACCESSED_COURSEMODULE, last_completed)
 
 		if not last_completed:
 			# new user - no completed modules so far
-			next_module = user.get_available_course_modules(self.get_session(), courseid=courseid)[0]
+			next_module = user.get_available_course_modules(self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))[0]
 			self.set_state(user_id, NEXT_SUGGESTED_COURSEMODULE, next_module)
 			return next_module.get_name(self.get_session()), next_module.id
 
@@ -500,7 +567,7 @@ class ELearningPolicy(Service):
 		# next course module in section of last completed module is not available - choose available one from other section
 		# next_module = user.get_available_course_modules(self.get_session())[0]
 		# print("EXISTING USER -> SECTION COMPLETE -> ", next_module.get_name(self.get_session()), next_module.get_type_name(self.get_session()))
-		next_sections = user.get_incomplete_available_course_sections(self.get_session(), courseid) # Problem: gibt schon abgeschlossenen wieder
+		next_sections = user.get_incomplete_available_course_sections(self.get_session(), courseid, self.get_moodle_server_time(user_id)) # Problem: gibt schon abgeschlossenen wieder
 		if next_sections:
 			next_section: MCourseSection = next_sections[0]
 			next_module: MCourseModule = next_section.get_next_available_module(currentModule=None, user=self.get_current_user(user_id), session=self.get_session())
@@ -571,7 +638,7 @@ class ELearningPolicy(Service):
 
 	def total_open_modules(self, user_id, courseid):
 		user = self.get_current_user(user_id)
-		return len(user.get_incomplete_available_course_modules(self.get_session(), courseid=courseid))
+		return len(user.get_incomplete_available_course_modules(self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id)))
 
 	def total_completed_modules(self, user_id, courseid):
 		user = self.get_current_user(user_id)
