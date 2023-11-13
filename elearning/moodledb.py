@@ -16,7 +16,12 @@ from urllib.parse import quote_plus as urlquote
 
 from config import MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX, MOODLE_SERVER_DB_NAME, MOODLE_SERVER_DB_PWD, MOODLE_SERVER_DB_USER, MOODLE_SERVER_URL
 
-Base = declarative_base()
+class Base:
+    __allow_unmapped__ = True
+
+
+Base = declarative_base(cls=Base)
+# Base = declarative_base()
 metadata = Base.metadata
 
 """
@@ -351,6 +356,21 @@ class MHVP(Base):
 	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 
+
+
+class MH5PActivity(Base):
+	# TODO finish
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}h5pactivity'
+
+	# TODO link relationships
+	id = Column(BIGINT(10), primary_key=True)
+	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
+	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
+	intro = Column(LONGTEXT)
+	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
+	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+
 class MCourseModule(Base):
 	"""
 	Definition of a course module.
@@ -440,6 +460,8 @@ class MCourseModule(Base):
 			return "Glossar"
 		elif type_info == "hvp":
 			return session.query(MHVP).get(self.instance).name
+		elif type_info == "h5pactivity":
+			return session.query(MH5PActivity).get(self.instance).name
 		elif type_info == "page":
 			# Section hat ein Attribut name, dass modul selbst nicht
 			return self.section.name
@@ -517,7 +539,7 @@ class MCourseSection(Base):
 		return session.query(MCourseSection).filter(MCourseSection.name==content_section_name,
 													  MCourseSection._course_id==self._course_id).first()
 
-	def get_next_available_module(self, currentModule: MCourseModule, user: "MUser", session: Session, include_types: List[str] = ['assign', 'book', 'hvp',  'quiz'], allow_only_unseen: bool = False) -> Union[MCourseModule, None]:
+	def get_next_available_module(self, currentModule: MCourseModule, user: "MUser", session: Session, include_types: List[str] = ['assign', 'book', 'hvp',  'quiz'], allow_only_unfinished: bool = False) -> Union[MCourseModule, None]:
 		"""
 		Given a current course module (e.g. the most recently finished one) in this course section,
 		find the course module the student should do next.
@@ -526,7 +548,7 @@ class MCourseSection(Base):
 			currentModule: if None, will return first available module in section
 			included_types: obtain e.g. via MCourseModule.get_type_name()
 							PDF = resource
-			allow_only_unseen: if True, will filter for only course modules that were not viewed by the user
+			allow_only_unfinished: if True, will filter for only course modules that were not completed by the user
 
 		Returns: 
 			MCourseModule (in order) that can be taken  after `currentModule`.
@@ -546,8 +568,30 @@ class MCourseSection(Base):
 				if len(self.sequence) > index + 1:
 					nextModuleId = int(self.sequence[index+1])
 					module = session.query(MCourseModule).get(nextModuleId)
-					if is_available_course_module(session, user, module) and module.get_type_name(session) in include_types and ((allow_only_unseen and not module.is_viewed()) or allow_only_unseen == False):
+					if is_available_course_module(session, user, module) and module.get_type_name(session) in include_types and ((allow_only_unfinished and not module.is_completed()) or allow_only_unfinished == False):
 						return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
+		return None
+	
+	def get_first_available_module(self, user: "MUser", session: Session, include_types: List[str] = ['assign', 'book', 'hvp',  'quiz'], allow_only_unfinished: bool = False) -> Union[MCourseModule, None]:
+		"""
+		Find the first course module in this section that is available.
+
+		Args:
+			included_types: obtain e.g. via MCourseModule.get_type_name()
+							PDF = resource
+			allow_only_unfinished: if True, will filter for only course modules that were not completed by the user
+
+		Returns: 
+			MCourseModule (in order) that can be taken  after `currentModule`.
+			Will return `None`, if no next module is defined for this section after `currentModule`.
+		"""
+		#session.expire_all()
+		# print("SEQUENCE", self.sequence, 'name', self.name, 'id', self.id)
+
+		for nextModuleId in self.sequence:
+			module = session.query(MCourseModule).get(nextModuleId)
+			if is_available_course_module(session, user, module) and module.get_type_name(session) in include_types and ((allow_only_unfinished and not module.is_completed(user=user, session=session)) or allow_only_unfinished == False):
+				return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
 		return None
 	
 	def get_link(self):
@@ -994,13 +1038,16 @@ class MUser(Base):
 				available.append(section)
 		return available
 	
-	def last_viewed_course_modules(self, session: Session, courseid: int) -> List[MCourseModule]:
+	def last_viewed_course_modules(self, session: Session, courseid: int, completed: bool = True) -> List[MCourseModule]:
 		"""
-		Returns the last viewed course module by the current user,
-		or None, if the user has not yet accessed any course module
+		Returns the last viewed course module by the current user (that is completed, if completed = True),
+		or None, if the user has not yet accessed any course module (or not completed any)
 		"""
-		return [item.coursemodule for item in session.query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._course_id==courseid, MRecentlyAcessedItem._userid==self.id) \
+
+		
+		return [item.coursemodule for item in session.query(MRecentlyAcessedItem).join(MCourseModulesCompletion, MCourseModulesCompletion._userid==MRecentlyAcessedItem._userid).filter(MRecentlyAcessedItem._course_id==courseid, MCourseModulesCompletion._coursemoduleid==MRecentlyAcessedItem._coursemodule_id, MCourseModulesCompletion.completed==completed) \
 				.order_by(desc(MRecentlyAcessedItem.timeaccess)).all()]
+	
 
 	def recent_incomplete_sections(self, session: Session, courseid: int) -> List[MCourseSection]:
 		incomplete_sections = []

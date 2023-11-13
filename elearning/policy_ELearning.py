@@ -23,6 +23,7 @@ import re
 import traceback
 from typing import List
 import time
+from copy import deepcopy
 import locale
 
 from sqlalchemy.orm import sessionmaker
@@ -35,7 +36,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import MChatbotSettings, MCourseSection, MGradeItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
+from elearning.moodledb import MChatbotSettings, MCourseModulesViewed, MCourseSection, MGradeItem, MRecentlyAcessedItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 
 locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
@@ -144,6 +145,25 @@ class ELearningPolicy(Service):
 			self.set_state(user_id, LAST_SEARCH, {})
 			self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
 
+	def clean_completed_sections_from_recentlyaccessed_items(self, user_id: int, course_id: int):
+		# check which module sections are completed.
+		# if so, remove all of its modules from the recently accessed items list.
+		user = self.get_current_user(user_id)
+		recently_accessed_modules = self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).all()
+		section_ids = set()
+		for recent_item in recently_accessed_modules:
+			section = recent_item.coursemodule.section
+			if section.id in section_ids:
+				continue # already checked this section
+			section_ids.add(section.id)
+			if section.is_completed(user=user, session=self.get_session(), include_types=learning_material_types + assignment_material_types):
+				# all completed -> delete
+				self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._coursemodule_id.in_(section.sequence), MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).delete()
+				self.get_session().commit()
+
+				
+			
+
 
 	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct, html_content=str):
@@ -167,7 +187,10 @@ class ELearningPolicy(Service):
 		# 	self.set_state(user_id, JUST_LOGGED_IN, True)
 		if event_name == "\\core\\event\\user_loggedout":
 			self.clear_memory(user_id)
-		if event_name in ["\\core\\event\\user_graded", "\\core\\event\\course_module_completion_updated"]:
+		elif event_name == "\\core\\event\\course_module_completion_updated":
+			# TODO comment on improvement, if quiz?
+			pass
+		elif event_name == "\\core\\event\\user_graded":
 			self.open_chatbot(user_id)
 			# extract grade info
 			gradeItem: MGradeItem = self.get_session().query(MGradeItem).get(int(moodle_event['other']['itemid']))
@@ -183,6 +206,8 @@ class ELearningPolicy(Service):
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions incorrect, finalgrade: {finalgrade}")
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'negativeFeedback': 'True', 'finishedQuiz': 'True'})}")
 				return {"sys_acts": [SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})]}
+		elif event_name.endswith("event\\course_module_viewed"):
+			pass
 
 	def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: MChatbotWeeklySummary):
 		# calculate offet from beginning of day and current time
@@ -278,6 +303,8 @@ class ELearningPolicy(Service):
 
 			return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True})]
 		
+		self.clean_completed_sections_from_recentlyaccessed_items(user_id=user_id, course_id=courseid)
+
 		# Add greeting
 		acts.append(SysAct(act_type=SysActionType.Welcome, slot_values={}))
 
@@ -303,35 +330,49 @@ class ELearningPolicy(Service):
 				acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
 
 		# choose how to proceed
-		last_viewed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid)
-		if len(last_viewed_course_modules) > 0:
+		has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
+									.filter(MCourseModulesViewed._userid==user_id, MCourseModule._course_id==courseid).count() > 0
+		if has_seen_any_course_modules:
 			# last viewed module
-			last_viewed_course_module = last_viewed_course_modules[0] # sorted ascending by date
+			last_completed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=True)
+			if len(last_completed_course_modules) > 0:
+				last_completed_course_module = last_completed_course_modules[0] # sorted ascending by date
 
-			# get next module list based on recently completed modules
-			modules_and_sections = [(module, module.section) for module in last_viewed_course_modules]
-			next_available_modules = [(section.name, section.get_next_available_module(currentModule=module, user=user, session=self.get_session(),
-																		include_types=learning_material_types+assignment_material_types,
-																		allow_only_unseen=True))
-										for module, section in modules_and_sections]
-			next_available_module_links = [module.get_content_link(session=self.get_session(), alternative_display_text=section_name)
-								  			for section_name, module in next_available_modules
-											if module is not None]
+				# get open modules across sections, 1 per section
+				next_modules = {}
+				# prioritize already viewed modules
+				last_started_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=False)
+				for unfinished_module in last_started_course_modules:
+					if not unfinished_module._section_id in next_modules:
+						next_modules[unfinished_module._section_id] = unfinished_module
+				# fill with other started sections
+				for completed_module in last_completed_course_modules:
+					if not completed_module._section_id in next_modules:
+						# get first open module from this section
+						next_module = completed_module.section.get_first_available_module(user=user, session=self.get_session(),
+																			include_types=learning_material_types + assignment_material_types,
+																			allow_only_unfinished=True)
+						if next_module:
+							next_modules[completed_module._section_id] = next_module
+				next_available_module_links = [module.get_content_link(session=self.get_session(), alternative_display_text=module.section.name) for module in next_modules.values()]
 
-			# user has started, but not completed one or more sections
-			acts.append(
-					SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
-							last_viewed_course_module=last_viewed_course_module.get_content_link(session=self.get_session(), alternative_display_text=last_viewed_course_module.section.name),
-							next_available_modules=next_available_module_links
-					)))
-		# TODO: Forum post info
-		# TODO: Deadline reminder
+				# user has started, but not completed one or more sections
+				acts.append(
+						SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
+								last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session(), alternative_display_text=last_completed_course_module.get_name(self.get_session())),
+								next_available_modules=next_available_module_links
+						)))
+			# TODO: Forum post info
+			# TODO: Deadline reminder
+			else:
+				# user has completed all started sections, should get choice of next new and available sections
+				available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
+				acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
+								next_available_sections=[section.get_link() for section in available_new_course_sections]
+						)))
 		else:
-			# user has completed all started sections, should get choice of next new and available sections
-			available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
-			acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-							next_available_sections=[section.get_link() for section in available_new_course_sections]
-					)))
+			# TODO return ice cream game
+			pass
 		
 		return acts
 

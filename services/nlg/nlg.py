@@ -417,6 +417,17 @@ class ELearningNLG(Service):
                 Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
                     "Was Anderes lernen"
                 ])]
+    
+    def inform_next_options(self, next_available_sections):
+        return [("Super, du hast alle angefangenen Abschnitte fertig bekommen!", [])
+                (f"""Heute könntest du mit einem dieser neuen Abschnitte beginnen:
+                <ul>
+                    {" ".join(['<li>' + section + '</li>' for section in next_available_sections])}
+                </ul>
+                
+                Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
+                    "Was Anderes lernen"
+                ])]
 
 
    
@@ -512,14 +523,6 @@ class ELearningNLG(Service):
             return self.inform_help
         raise Exception(f"Sysact Inform called with invalid slot combination: {list(sys_act.slot_values.keys())}")
 
-    def inform_next_options(self, next_available_sections):
-        return [(f"""Welchen der folgenden Abschnitte willst du als nächstes machen:
-            <ul>
-                {" ".join(['<li>' + section + '</li>' for section in next_available_sections])}
-            </ul>
-            """,[]), ("Klicke eine der Optionen, oder willst du lieber etwas Wiederholen?", [
-                "Wiederholen"
-            ])]
 
 
     def get_message_fn(self, sys_act: SysAct):
