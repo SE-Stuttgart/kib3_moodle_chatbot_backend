@@ -591,7 +591,7 @@ class MCourseSection(Base):
 		for nextModuleId in self.sequence:
 			module = session.query(MCourseModule).get(nextModuleId)
 			if is_available_course_module(session, user, module) and module.get_type_name(session) in include_types and ((allow_only_unfinished and not module.is_completed(user=user, session=session)) or allow_only_unfinished == False):
-				return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
+				return module
 		return None
 	
 	def get_link(self):
