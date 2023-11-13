@@ -1015,7 +1015,9 @@ class MUser(Base):
 		available = []
 		for section in session.query(MCourseSection).filter(MCourseSection._course_id==courseid):
 			if is_available_course_sections(session, self, section, current_server_time) and not section.is_completed(self, session):
-				available.append(section)
+				some_modules_not_available = any([not is_available_course_module(session, self, module) for module in section.modules])
+				if not some_modules_not_available:
+					available.append(section)
 		return available
 
 	def get_incomplete_available_course_modules(self, session: Session, courseid: int, current_server_time: datetime.datetime, include_types: List[str] = ['assign', 'book', 'hvp',  'quiz']) -> List[MCourseModule]:
@@ -1121,6 +1123,9 @@ def is_available_course_module(session: Session, user: MUser, course_module: MCo
 
 def is_available_course_sections(session: Session, user: MUser, section: MCourseSection, current_server_time: datetime.datetime):
 	#session.expire_all()
+	if section.is_quiz_section():
+		# check if materials were already viewed, otherwise don't suggest quizzes
+		return section.get_content_section(session).is_completed(user=user, session=session)
 	return bool(section.visible) and is_available(json_condition=section.availability, session=session, user_id=user.id, current_server_time=current_server_time)
 
 

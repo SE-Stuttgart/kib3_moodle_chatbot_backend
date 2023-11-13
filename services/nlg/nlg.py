@@ -419,7 +419,7 @@ class ELearningNLG(Service):
                 ])]
     
     def inform_next_options(self, next_available_sections):
-        return [("Super, du hast alle angefangenen Abschnitte fertig bekommen!", [])
+        return [("Super, du hast alle angefangenen Abschnitte fertig bekommen!", []),
                 (f"""Heute könntest du mit einem dieser neuen Abschnitte beginnen:
                 <ul>
                     {" ".join(['<li>' + section + '</li>' for section in next_available_sections])}
