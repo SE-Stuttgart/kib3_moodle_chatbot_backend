@@ -37,6 +37,8 @@ class UserActionType(Enum):
     RequestSectionSummary = "RequestSectionSummary"
     RequestReview = "RequestReview"
 
+    LoadMoreSearchResults = "LoadMoreSearchResults"
+
     Hello = 'hello'
     Bye = 'bye'
     Thanks = 'thanks'

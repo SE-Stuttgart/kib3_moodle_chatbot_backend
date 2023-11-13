@@ -84,5 +84,11 @@ from utils.useract import UserActionType
         "Super, vielen Dank",
         "Dankeschön",
         "Das hat geholfen"
+    ],
+    UserActionType.LoadMoreSearchResults: [
+        "Mehr Ergebnisse",
+        "Weitere anzeigen",
+        "Mehr laden",
+        "Mehr zeigen"
     ]
 }
