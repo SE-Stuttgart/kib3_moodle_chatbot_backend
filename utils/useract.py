@@ -27,6 +27,8 @@ class UserActionType(Enum):
     ContinueOpenModules = "ContinueOpenModules"
     Search = "Search"
 
+    RequestHelp = "RequestHelp"
+    RequestSettings = "RequestSettings"
     RequestNextSection = "RequestNextSection"
     RequestForumPosts = "RequestForumPosts"
     RequestDeadlines = "RequestDeadlines"
@@ -35,6 +37,10 @@ class UserActionType(Enum):
     RequestSectionSummary = "RequestSectionSummary"
     RequestReview = "RequestReview"
 
+    Hello = 'hello'
+    Bye = 'bye'
+    Thanks = 'thanks'
+    Bad = 'bad'
 
 
 class UserAct(Transmittable):

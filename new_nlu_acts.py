@@ -16,6 +16,18 @@ from utils.useract import UserActionType
         "Wo steht was zu ...?",
         "Zeig mir Inhalte zu ..."
     ],
+    UserActionType.RequestHelp: [
+        "Hilfe",
+        "Was kann ich sagen?",
+        "Wie benutze ich dich?",
+        "Anleitung"
+    ],
+    UserActionType.RequestSettings: [
+        "Einstellungen",
+        "Einstellungen verwalten"
+        "Einstellungen anzeigen"
+        "Einstellungen ändern"
+    ],
     UserActionType.RequestNextSection: [
         "Was Neues lernen",
         "Woanders weitermachen",
@@ -60,6 +72,17 @@ from utils.useract import UserActionType
         "Worum geht es in ...?",
         "Inhalt von ...?",
         "Fasse den Inhalt von ... zusammen"
+    ],
+    UserActionType.Hello: [
+        "Hallo",
+        "Hi",
+        "Servus",
+        "Guten Tag!"
+    ],
+    UserActionType.Thanks: [
+        "Danke!",
+        "Super, vielen Dank",
+        "Dankeschön",
+        "Das hat geholfen"
     ]
 }
-
