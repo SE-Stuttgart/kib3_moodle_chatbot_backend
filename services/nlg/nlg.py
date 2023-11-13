@@ -544,7 +544,10 @@ class ELearningNLG(Service):
         raise NotImplementedError
 
 
-
+    @PublishSubscribe(sub_topics=["moodle_event"])
+    def moodle_event(self, user_id: int, moodle_event: dict):
+        if moodle_event['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
+            self.clear_memory(user_id)
 
     @PublishSubscribe(sub_topics=["sys_acts"], pub_topics=["sys_utterance"])
     def publish_system_utterance(self, user_id: str, sys_acts: List[SysAct] = None) -> dict(sys_utterance=List[str]):

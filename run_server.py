@@ -91,7 +91,7 @@ class GUIServer(Service):
             import sys
             traceback.print_exc(file=sys.stdout)
             return {}
-
+    
     @PublishSubscribe(pub_topics=['moodle_event'])
     def moodle_event(self, user_id, domain_idx=0, event_data: dict = None):
         asyncio.set_event_loop(self.loopy_loop)

@@ -35,6 +35,11 @@ class HandcraftedBST(Service):
         self.logger = logger
         self.bs = BeliefState(domain)
 
+    @PublishSubscribe(sub_topics=["moodle_event"])
+    def moodle_event(self, user_id: int, moodle_event: dict):
+        if moodle_event['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
+            self.clear_memory(user_id)
+
     @PublishSubscribe(sub_topics=["user_acts"], pub_topics=["beliefstate"])
     def update_bst(self, user_id: str, user_acts: List[UserAct] = None) \
             -> dict(beliefstate=BeliefState):

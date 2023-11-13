@@ -85,6 +85,7 @@ class ELearningNLU(Service):
         self.USER_REQUESTABLE = self.uttance_mapper.get_requestable_slots()
 
         self.language = language
+        
 
     def dialog_start(self, user_id: str):
         started = self.get_state(user_id, self.DIALOG_STARTED) # check if user started new dialog or continues existing one
@@ -96,6 +97,12 @@ class ELearningNLU(Service):
             self.set_state(user_id, self.LAST_REQUESTED_SLOT, None)
             self.set_state(user_id, self.SLOTS_REQUESTED, set())
             self.set_state(user_id, self.SLOTS_INFORMED, set())
+
+
+    @PublishSubscribe(sub_topics=["moodle_event"])
+    def moodle_event(self, user_id: int, moodle_event: dict):
+        if moodle_event['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
+            self.clear_memory(user_id)
 
     @PublishSubscribe(sub_topics=["user_utterance"], pub_topics=["user_acts"])
     def extract_user_acts(self, user_id: str, user_utterance: str = None) -> dict(user_acts=List[UserAct]):
