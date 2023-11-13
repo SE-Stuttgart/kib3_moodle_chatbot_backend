@@ -95,6 +95,9 @@ class GUIServer(Service):
     @PublishSubscribe(pub_topics=['moodle_event'])
     def moodle_event(self, user_id, domain_idx=0, event_data: dict = None):
         asyncio.set_event_loop(self.loopy_loop)
+        if event_data['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
+            # clear chat history when user logs back in
+            self.clear_memory(user_id)
         return {f'moodle_event/{self.domains[domain_idx].get_domain_name()}': event_data}
 
     @PublishSubscribe(sub_topics=['control_event'])

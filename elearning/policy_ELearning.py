@@ -185,7 +185,7 @@ class ELearningPolicy(Service):
 		# \mod_h5pactivity\event\statement_received
 		# if event_name == "\\core\\event\\user_loggedin":
 		# 	self.set_state(user_id, JUST_LOGGED_IN, True)
-		if event_name == "\\core\\event\\user_loggedout":
+		if event_name == "\\core\\event\\user_loggedin":
 			self.clear_memory(user_id)
 		elif event_name == "\\core\\event\\course_module_completion_updated":
 			# TODO comment on improvement, if quiz?
