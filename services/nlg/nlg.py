@@ -415,7 +415,7 @@ class ELearningNLG(Service):
                 </ul>
                 
                 Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
-                    "Was Anderes lernen"
+                    "Weitermachen", "Was Anderes lernen" 
                 ])]
     
     def inform_next_options(self, next_available_sections):

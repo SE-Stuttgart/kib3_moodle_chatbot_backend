@@ -24,23 +24,17 @@ from utils.transmittable import Transmittable
 
 class UserActionType(Enum):
     """The type for a user action as used in :class:`UserAct`."""
+    ContinueOpenModules = "ContinueOpenModules"
+    Search = "Search"
 
-    Inform = 'inform'
-    NegativeInform = 'negativeinform'
-    Request = 'request'
-    RequestMore = 'reqmore'
-    Hello = 'hello'
-    Bye = 'bye'
-    Thanks = 'thanks'
-    Affirm = 'affirm'
-    Deny = 'deny'
-    RequestAlternatives = 'reqalts'
-    Ack = 'ack'
-    Bad = 'bad'
-    Confirm = 'confirm'
-    SelectDomain = 'selectdomain'
-    Ready = 'ready'
-    Repeat = 'repeat'
+    RequestNextSection = "RequestNextSection"
+    RequestForumPosts = "RequestForumPosts"
+    RequestDeadlines = "RequestDeadlines"
+    RequestProgress = "RequestProgress"
+    RequestBadgeProgress = "RequestBadgeProgress"
+    RequestSectionSummary = "RequestSectionSummary"
+    RequestReview = "RequestReview"
+
 
 
 class UserAct(Transmittable):
