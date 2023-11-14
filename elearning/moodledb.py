@@ -1,5 +1,7 @@
 # coding: utf-8
 import json
+from enum import Enum
+import random
 from typing import List, Tuple, Union
 from sqlalchemy import Column, DECIMAL, String, text, create_engine, desc
 from sqlalchemy.dialects.mysql import BIGINT, LONGTEXT, TINYINT
@@ -54,6 +56,39 @@ class CompletionState(TypeDecorator):
 
 	def process_result_value(self, value, dialect):
 		return value > 0
+	
+
+class BadgeMethodEnum(Enum):
+	AGGREGATION_ALL = 1
+	AGGREGATION_ANY = 2
+
+class BadgeMethod(TypeDecorator):
+	impl = TINYINT
+
+	def process_bind_param(self, value, dialect):
+		return value.value
+
+	def process_result_value(self, value, dialect):
+		return BadgeMethodEnum(value)
+
+
+class BadgeStatusEnum(Enum):
+	INACTIVE = 0
+	ACTIVE = 1
+	INACTIVE_LOCKED = 2
+	ACTIVE_LOCKED = 3
+	ARCHIVED = 4
+
+class BadgeStatus(TypeDecorator):
+	impl = TINYINT
+
+	def process_bind_param(self, value, dialect):
+		return value.value
+
+	def process_result_value(self, value, dialect):
+		return BadgeStatusEnum(value)
+
+
 """
 END Helper classes
 """
@@ -176,8 +211,6 @@ class MGradeItem(Base):
 	# internal databasae table mapping information
 	_courseid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), index=True, name='courseid')
 
-	def get_parent_course(self):
-		return self.course
 
 	def __repr__(self) -> str:
 		return f"""Grade Item: {self.itemname}"""
@@ -206,19 +239,7 @@ class MGradeGradesHistory(Base):
 	_gradeItemId = Column(BIGINT(10), name="itemid") #, ForeignKey("MGradeItem.id"), nullable=False, index=True, name="itemid")
 	_userid = Column(BIGINT(10), name="userid") # ForeignKey("MUser.id"), nullable=False, index=True, name="userid")
 
-	def get_grade_item(self, session: Session) -> Union[MGradeItem, None]:
-		""" Returns the MGradeItem associated with the current Grade object """
-		try:
-			# NOTE: Diese Tabelle enthält wahrscheinlich nicht was du suchst - in MGradeGrade stehen die aktuellen Noten,
-			# das sollte deinem Einsatz entsprechen.
-			# Ältere items in MGradeGrades History werden hier oft NONE zurück geben, weil der Link nicht mehr aktuell ist.
-			return session.query(MGradeItem).get(self.oldid)
-		except NoResultFound:
-			return None
 
-	def get_user(self, session: Session) -> "MUser":
-		""" Returns the MUser object associated with the current Grade objet """
-		return session.query(MUser).get(self._userid)
 
 class MGradeGrade(Base):
 	""" Current grade for a user in a course """
@@ -239,12 +260,6 @@ class MGradeGrade(Base):
 	_userid = Column(BIGINT(10), primary_key=True, name="userid") # Column(BIGINT(10), ForeignKey("MUser.id"), nullable=False, index=True)
 	_gradeItemId = Column(BIGINT(10), primary_key=True, name="itemid") #Column(BIGINT(10), ForeignKey("MGradeItem.id"), nullable=False, index=True)
 	
-	def get_grade_item(self, session: Session) -> MGradeItem:
-		#session.expire_all()
-		return session.query(MGradeItem).get(self._gradeItemId)
-
-	def get_user(self, session: Session) -> "MUser":
-		return session.query(MUser).get(self._userid)
 
 
 class MUserLastacces(Base):
@@ -371,6 +386,7 @@ class MH5PActivity(Base):
 	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 
+
 class MCourseModule(Base):
 	"""
 	Definition of a course module.
@@ -435,7 +451,7 @@ class MCourseModule(Base):
 			"""
 		return None # Not h5p content
 
-	def is_completed(self, user: "MUser", session: Session) -> bool:
+	def is_completed(self, user_id: int, session: Session) -> bool:
 		""" Query if user has completed this course module.
 
 		Args:
@@ -445,23 +461,23 @@ class MCourseModule(Base):
 			completion state (bool): True, if user completed this course module, else False
 		"""
 		#session.expire_all()
-		return session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id, MCourseModulesCompletion._coursemoduleid==self.id, MCourseModulesCompletion.completed==True).count() > 0
+		return session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user_id, MCourseModulesCompletion._coursemoduleid==self.id, MCourseModulesCompletion.completed==True).count() > 0
 
 	def get_name(self, session: Session):
 		#session.expire_all()
 		type_info = self.get_type_name(session)
 		if type_info == "book":
-			return session.query(MBook).get(self.instance).name
+			session.get(MBook, self.instance).name
 		elif type_info == "assign":
-			return session.query(MAssign).get(self.instance).name
+			return session.get(MAssign, self.instance).name
 		elif type_info == 'resource':
-			return session.query(MResource).get(self.instance).name
+			return session.get(MResource, self.instance).name
 		elif type_info == "glossary":
 			return "Glossar"
 		elif type_info == "hvp":
-			return session.query(MHVP).get(self.instance).name
+			return session.get(MHVP, self.instance).name
 		elif type_info == "h5pactivity":
-			return session.query(MH5PActivity).get(self.instance).name
+			return session.get(MH5PActivity, self.instance).name
 		elif type_info == "page":
 			# Section hat ein Attribut name, dass modul selbst nicht
 			return self.section.name
@@ -471,6 +487,27 @@ class MCourseModule(Base):
 	def get_type_name(self, session: Session):
 		#session.expire_all()
 		return session.query(MModule).get(self._type_id).name
+
+	# def get_availability_conditions(self, session: Session) -> bool:
+		# TODO 
+
+	def get_user_grade(self, user_id: int, session: Session) -> Union[MGradeGrade, None]:
+		"""
+		Returns:
+			The associated grade item for the given user, or None if not applicable
+			(Currently only works for h5pactivities)
+		"""
+		# check that the module is an h5pactivity
+		if self.get_type_name(session) != 'h5pactivity':
+			return None
+		
+		# get grade item id for this module (should only have 1 possible result)
+		grade_item_id = session.query(MGradeItem).filter(MGradeItem.itemmodule=="hp5activity", MGradeItem._courseid==self._course_id,
+														MGradeItem.itemtype=="mod", MGradeItem.iteminstance==self.instance) \
+											   .first().id
+		# get user grade for this grade item (should only have 1 possible result)
+		return session.query(MGradeGrade).filter(MGradeGrade._gradeItemId==grade_item_id, MGradeGrade._userid==user_id).first()
+
 
 	def __repr__(self) -> str:
 		""" Pretty printing """
@@ -560,15 +597,15 @@ class MCourseSection(Base):
 		for index, moduleId in enumerate(self.sequence):
 			if not currentModule:
 				nextModuleId = int(self.sequence[index])
-				module = session.query(MCourseModule).get(nextModuleId)
-				if is_available_course_module(session, user, module) and module.get_type_name(session) in include_types:
+				module = session.get(MCourseModule, nextModuleId)
+				if is_available_course_module(session, user.id, module) and module.get_type_name(session) in include_types:
 					return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
 			elif int(moduleId) == currentModule.id:
 				# found position (index) of current module in order list - return following candidate
 				if len(self.sequence) > index + 1:
 					nextModuleId = int(self.sequence[index+1])
-					module = session.query(MCourseModule).get(nextModuleId)
-					if is_available_course_module(session, user, module) and module.get_type_name(session) in include_types and ((allow_only_unfinished and not module.is_completed()) or allow_only_unfinished == False):
+					module = session.get(MCourseModule, nextModuleId)
+					if is_available_course_module(session, user.id, module) and module.get_type_name(session) in include_types and ((allow_only_unfinished and not module.is_completed(user.id, session)) or allow_only_unfinished == False):
 						return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
 		return None
 	
@@ -589,8 +626,8 @@ class MCourseSection(Base):
 		# print("SEQUENCE", self.sequence, 'name', self.name, 'id', self.id)
 
 		for nextModuleId in self.sequence:
-			module = session.query(MCourseModule).get(nextModuleId)
-			if is_available_course_module(session, user, module) and module.get_type_name(session) in include_types and ((allow_only_unfinished and not module.is_completed(user=user, session=session)) or allow_only_unfinished == False):
+			module = session.get(MCourseModule, nextModuleId)
+			if is_available_course_module(session, user.id, module) and module.get_type_name(session) in include_types and ((allow_only_unfinished and not module.is_completed(user_id=user.id, session=session)) or allow_only_unfinished == False):
 				return module
 		return None
 	
@@ -598,7 +635,7 @@ class MCourseSection(Base):
 		""" Get link to course section """
 		return f'<a href="{MOODLE_SERVER_URL}/course/view.php?id={self._course_id}&section={self._section_id}">{self.name}</a>'
 
-	def is_completed(self, user: "MUser", session: Session, include_types=["url", "book", "resource", "quiz", "h5pactivity"]) -> bool:
+	def is_completed(self, user_id: int, session: Session, include_types=["url", "book", "resource", "quiz", "h5pactivity"]) -> bool:
 		""" Query if user has completed this course section (= all course modules inside this course section).
 			Users have to mark all activities inside this section as done manually.
 
@@ -612,7 +649,7 @@ class MCourseSection(Base):
 
 		all_section_module_ids = set([module.id for module in self.modules if module.get_type_name(session) in include_types])
 
-		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id).all()
+		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user_id).all()
 		completed_section_module_ids = [completion._coursemoduleid for completion in completions if completion._coursemoduleid in all_section_module_ids]
 		return len(all_section_module_ids.difference(completed_section_module_ids)) == 0
 
@@ -791,6 +828,174 @@ class MRecentlyAcessedItem(Base):
 	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), nullable=False, index=True, server_default=text("'0'"), name='userid')
 	_course_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), name='courseid')
 	_coursemodule_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules.id'), index=True, name='cmid')
+
+
+class MLabel(Base):
+	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}label"
+
+	id = Column(BIGINT(10), primary_key=True)
+	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
+	intro =  Column(LONGTEXT)
+
+	_courseid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), name='courseid')
+
+
+
+class MBadgeStatusEnum(Enum):
+	INCOMPLETE = 0
+	COMPLETED = 1
+	CLAIMED = 2	
+
+
+class MBadge(Base):
+	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}badge"
+
+	id = Column(BIGINT(10), primary_key=True)
+	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
+	description = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
+	status = Column(BadgeStatus, nullable=False)
+
+	criteria = relationship("MBadgeCriteria", back_populates="badge")
+
+	_courseid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), name='courseid')
+
+
+	# badge conditions:
+	# 1. badge nicht gemacht (vorraussetzungen fehlen) -> suche fehlende module
+	# 2. badge nicht claimed, aber alle vorraussetzungen gemacht (außer manuell auf abgeschlossen zu Klicken) -> check ob label.is_available() -> link ausgeben
+	# 3. badge ist claimed -> in tabelle badge_issued -> warte auf Event und sag herzlichen glückwunsch
+
+	def is_completed(self, session: Session, user_id: int, crit: "MBadgeCriteria") -> MBadgeStatusEnum:
+		if session.query(MBadgeIssued).filter(MBadgeIssued._userid==user_id, MBadgeIssued._badgeid==self.id).count() > 0:
+			# badge	is already claimed, no need to check further
+			return MBadgeStatusEnum.CLAIMED
+		# badge is not claimed yet, check if all requirements are completed
+		if len(crit.criteria_params) == 1 and crit.criteria_params[0].module.get_type_name(session) == "label":
+			# badge is a label - and all the requirements for this label are fulfilled
+			if is_available_course_module(session=session, user_id=user_id, course_module=crit.criteria_params[0].module):
+				return MBadgeStatusEnum.COMPLETED
+		# badge is neither claimed, nor are its requirements met fully
+		return MBadgeStatusEnum.INCOMPLETE
+
+
+	def _completed_bronze_silver_or_gold(self, session: Session, user_id: int) -> bool:
+		bronze_badge = session.query(MBadge).filter(MBadge.name.startswith("Bronzemedaille Regression"), MBadge._courseid==self._courseid).first()
+		silver_badge = session.query(MBadge).filter(MBadge.name.startswith("Silbermedaille Regression"), MBadge._courseid==self._courseid).first()
+		gold_badge = session.query(MBadge).filter(MBadge.name.startswith("Bronzemedaille Regression"), MBadge._courseid==self._courseid).first()
+		return any([bronze_badge.is_completed(session=session, user_id=user_id, crit=bronze_badge.get_activity_criterion(session)),
+			  		silver_badge.is_completed(session=session, user_id=user_id, crit=silver_badge.get_activity_criterion(session)),
+					gold_badge.is_completed(session=session, user_id=user_id, crit=gold_badge.get_activity_criterion(session))])
+		
+
+	def get_activity_criterion(self, session: Session) -> Tuple[None, "MBadgeCriteria"]:
+		"""
+		Returns: The badge criterion for activity completion (not manual completion).
+				 There should be at most 1 possibility.
+		"""
+		return session.query(MBadgeCriteria).filter(MBadgeCriteria.criteriatype==1,
+													MBadgeCriteria._badgeid==self.id).first()
+
+
+	def criteria_completion_percentage(self, session: Session, user_id: int) -> Tuple[float, MBadgeStatusEnum, List["MCourseModule"]]:
+		"""
+		Returns:
+			The completion towards this badge in percent.
+			Also returns a list of missing course modules in order to achieve the badge.
+
+		"""
+
+		# there should only be ONE possible criterium (either method=all or method=any) for this badge
+		crit = self.get_activity_criterion(session=session)
+		if not crit:
+			return (0.0, MBadgeStatusEnum.INCOMPLETE, [])
+		
+		# if badge is already completed, return 100% and no todo modules
+		completed = self.is_completed(session=session, user_id=user_id, crit=crit)
+		if completed in [MBadgeStatusEnum.CLAIMED, MBadgeStatusEnum.COMPLETED]:
+			return (1.0, completed, []) 
+		
+		# special case for regression (has 3 associated badges: bronze, silver and gold)
+		# -> should be enough to get one
+		if "medaille Regression" in self.name:
+			if self._completed_bronze_silver_or_gold(session=session, user_id=user_id):
+				return (1.0, MBadgeStatusEnum.COMPLETED, [])
+			else:
+				# get regression quiz section
+				section_regression = session.query(MCourseSection).filter(MCourseSection._course_id==self._courseid,
+															  			MCourseSection.name=="Quizzes zum Thema A1-1: Regression").first()
+				if not section_regression:
+					# teacher altered section - give up by pretending badge was earned
+					return (1.0, MBadgeStatusEnum.CLAIMED, [])
+				# get completion of each quiz in regression quiz section
+				todo_modules = []
+				param_eval = []
+				for module in section_regression.modules:
+					if module.get_type_name(session) == "h5pactivity":
+						if module.is_completed(user_id=user_id, session=session):
+							param_eval.append(True)
+						else:
+							param_eval.append(False)
+							todo_modules.append(module)
+				percentage_done = 1 - len(todo_modules) / len(param_eval)
+				return (percentage_done, MBadgeStatusEnum.INCOMPLETE, todo_modules)
+
+
+		# collect progress towards completion criteria
+		todo_modules = []
+		param_eval = []
+		for param in crit.criteria_params:
+			# skip labels
+			if param.module.get_type_name(session) != "label":
+				if param.module.is_completed(user_id=user_id, session=session):
+					param_eval.append(True)
+				else:
+					param_eval.append(False)
+					todo_modules.append(param.module)
+		
+		# evaluate progress
+		if crit.method == BadgeMethodEnum.AGGREGATION_ANY:
+			# no entry in param_eval can be True, otherwise the bade would already have been issued
+			# -> this also means: progress is 0!
+			# return a random choice from the possible completion options (because there can be multiple, but completing 1 is enough)
+			return (0.0, MBadgeStatusEnum.INCOMPLETE, [random.choice(todo_modules)])
+		else:
+			percentage_done = 1 - len(todo_modules) / len(param_eval)
+			return (percentage_done, MBadgeStatusEnum.INCOMPLETE, todo_modules)
+
+
+class MBadgeCriteria(Base):
+	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}badge_criteria"	
+
+	id = Column(BIGINT(10), primary_key=True)
+	# CRITERIA TYPE = 1 (0 = Manual, 1 = Activity completion) -> we are only interested in 1
+	criteriatype = Column(TINYINT(2), nullable=False)
+	method = Column(BadgeMethod, nullable=False)
+
+	badge = relationship("MBadge", back_populates="criteria", uselist=False)
+	criteria_params = relationship("MBadgeCriteriaParam", back_populates="criterium")
+
+	_badgeid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}badge.id'), name='badgeid')
+
+
+class MBadgeCriteriaParam(Base):
+	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}badge_criteria_param"	
+
+	id = Column(BIGINT(10), primary_key=True)
+
+	module = relationship("MCourseModule", uselist=False)
+	criterium = relationship("MBadgeCriteria", back_populates="criteria_params", uselist=False)
+	
+	_moduleid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules.id'), name='value')
+	_critid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}badge_criteria.id'), name='critid')	
+
+class MBadgeIssued(Base):
+	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}badge_issued"	
+
+	id = Column(BIGINT(10), primary_key=True)
+	dateissued = Column(UnixTimestamp)
+
+	_badgeid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}badge.id'), name='badgeid')
+	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), name="userid")	
 
 
 class MUser(Base):
@@ -1001,9 +1206,9 @@ class MUser(Base):
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).filter(MCourseSection._course_id==courseid):
-			if is_available_course_sections(session, self, section, current_server_time):
+			if is_available_course_sections(session, self.id, section, current_server_time):
 				for course_moudule in section.modules:
-					if is_available_course_module(session, self, course_moudule) and course_moudule.get_type_name(session) in include_types:
+					if is_available_course_module(session, self.id, course_moudule) and course_moudule.get_type_name(session) in include_types:
 						available.append(course_moudule)
 		return available
 
@@ -1014,8 +1219,8 @@ class MUser(Base):
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).filter(MCourseSection._course_id==courseid):
-			if is_available_course_sections(session, self, section, current_server_time) and not section.is_completed(self, session):
-				some_modules_not_available = any([not is_available_course_module(session, self, module) for module in section.modules])
+			if is_available_course_sections(session, self.id, section, current_server_time) and not section.is_completed(self.id, session):
+				some_modules_not_available = any([not is_available_course_module(session, self.id, module) for module in section.modules])
 				if not some_modules_not_available:
 					available.append(section)
 		return available
@@ -1024,9 +1229,9 @@ class MUser(Base):
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).filter(MCourseSection._course_id==courseid):
-			if is_available_course_sections(session, self, section, current_server_time):
+			if is_available_course_sections(session, self.id, section, current_server_time):
 				for course_moudule in section.modules:
-					if not course_moudule.is_completed(self, session) and is_available_course_module(session, self, course_moudule) and course_moudule.get_type_name(session) in include_types:
+					if not course_moudule.is_completed(self.id, session) and is_available_course_module(session, self.id, course_moudule) and course_moudule.get_type_name(session) in include_types:
 						available.append(course_moudule)
 		return available		
 	
@@ -1034,7 +1239,7 @@ class MUser(Base):
 		#session.expire_all()
 		available = []
 		for section in session.query(MCourseSection).filter(MCourseSection._course_id==courseid):
-			if (not section.is_completed(self, session) and is_available_course_sections(session, self, section, current_server_time) 
+			if (not section.is_completed(self.id, session) and is_available_course_sections(session, self.id, section, current_server_time) 
 				and section.name and not section.name.lower().startswith("ki und maschinelles lernen") 
 				and not section.name.lower().startswith("nicht-finale version")  and not section.name.lower().startswith("spiel zum einstieg")):
 				available.append(section)
@@ -1056,7 +1261,7 @@ class MUser(Base):
 		recently_accessed = session.query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._course_id==courseid, MRecentlyAcessedItem._userid==self.id).all()
 		for recent_access in recently_accessed:
 			section = recent_access.coursemodule.section
-			if not section.is_completed(self, session):
+			if not section.is_completed(self.id, session):
 				incomplete_sections.append(section)
 		return incomplete_sections
 
@@ -1082,6 +1287,13 @@ def _recursive_availability(session: Session, json_tree: dict, user_id: int, cur
 																		   MCourseModulesCompletion._userid==user_id,
 																		   MCourseModulesCompletion.completed==1).count() > 0
 				condition_values.append(condition['e']==completed)
+			elif condition['type'] == "grade":
+				grade = session.query(MGradeGrade).filter(MGradeGrade._userid==user_id,MGradeGrade._gradeItemId==condition['id']).first()
+				if grade:
+					if "min" in condition:
+						condition_values.append(grade.finalgrade >= condition["min"])
+					elif "max" in condition:
+						condition_values.append(grade.finalgrade <= condition["max"])
 			elif condition['type'] == "date":
 				assert NotImplementedError
 				# date = datetime.datetime.fromtimestamp(condition['t'])
@@ -1116,17 +1328,17 @@ def is_available(json_condition: str, session: Session, user_id: int, current_se
 	return _recursive_availability(session=session, json_tree=data, user_id=user_id, current_server_time=current_server_time)
 
 
-def is_available_course_module(session: Session, user: MUser, course_module: MCourseModule):
+def is_available_course_module(session: Session, user_id: int, course_module: MCourseModule):
 	#session.expire_all()
-	return bool(course_module.visible) and is_available(json_condition=course_module.availability, session=session, user_id=user.id, current_server_time=None)
+	return bool(course_module.visible) and is_available(json_condition=course_module.availability, session=session, user_id=user_id, current_server_time=None)
 
 
-def is_available_course_sections(session: Session, user: MUser, section: MCourseSection, current_server_time: datetime.datetime):
+def is_available_course_sections(session: Session, user_id: int, section: MCourseSection, current_server_time: datetime.datetime):
 	#session.expire_all()
 	if section.is_quiz_section():
 		# check if materials were already viewed, otherwise don't suggest quizzes
-		return section.get_content_section(session).is_completed(user=user, session=session)
-	return bool(section.visible) and is_available(json_condition=section.availability, session=session, user_id=user.id, current_server_time=current_server_time)
+		return section.get_content_section(session).is_completed(user_id=user_id, session=session)
+	return bool(section.visible) and is_available(json_condition=section.availability, session=session, user_id=user_id, current_server_time=current_server_time)
 
 
 
@@ -1134,7 +1346,7 @@ def is_available_course_sections(session: Session, user: MUser, section: MCourse
 def get_time_estimate_module(session: Session, user: MUser, course_module: MCourseModule) -> Union[int, None]:
 	#session.expire_all()
 	already_completed = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user.id)
-	if is_available_course_module(session, user, course_module) and already_completed.filter(MCourseModulesCompletion._coursemoduleid==course_module.id).count() == 0:
+	if is_available_course_module(session, user.id, course_module) and already_completed.filter(MCourseModulesCompletion._coursemoduleid==course_module.id).count() == 0:
 		# course module is available and has not already been completed
 		# -> find time tag if available
 		module_tag_instances = session.query(MTagInstance).filter(MTagInstance.itemtype=='course_modules', MTagInstance.itemid==course_module.id).all()
@@ -1178,7 +1390,7 @@ def get_time_estimate_section(session: Session, user: MUser, section: MCourseSec
 
 
 
-# connect to database
+# # connect to database
 # from sqlalchemy.orm import sessionmaker
 # import traceback
 # engine, conn = connect_to_moodle_db()
@@ -1188,25 +1400,13 @@ def get_time_estimate_section(session: Session, user: MUser, section: MCourseSec
 
 
 # with Session() as session:
-#     course = session.query(MCourse).filter(MCourse.id==2).first()
-#     sections = course.sections
-#     count_error = 0
-#     count_total = 0
-#     for section in sections:
-	
-#         count_total += 1
-#         is_quiz = section.is_quiz_section()
-#         try:
-#             other_section = None
-#             if is_quiz:
-#                 other_section = section.get_content_section(session)
-#             else:
-#                 other_section = section.get_quiz_section(session)
-#             test = other_section.name
-#         except:
-#             print("------")
-#             print(section.name)
-#             print("ERROR")
-#             count_error +=1
+# 	for badge in session.query(MBadge).filter(MBadge._courseid==2).all():
+# 		print("-----------")
+# 		print(badge.name)
+# 		progress, status, todo_modules = badge.criteria_completion_percentage(session=session, user_id=2)
+# 		print("Progress: ", progress * 100)
+# 		if progress < 1:
+# 			print("TODO:")
+# 			for todo_module in todo_modules:
+# 				print(" - ", todo_module.get_name(session))
 # conn.close()
-# print(count_error, "/", count_total)
