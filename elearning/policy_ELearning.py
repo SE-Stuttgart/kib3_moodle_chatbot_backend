@@ -55,7 +55,7 @@ LAST_SEARCH = 'last_search'
 # JUST_LOGGED_IN = "just_logged_in"
 
 learning_material_types = ["url", "book", "resource"]
-assignment_material_types = ['h5pactivity', 'quiz']# query day-wise completions
+assignment_material_types = ['h5pactivity']# query day-wise completions
 
 
 COURSE_PROGRESS_DISPLAY_PERCENTAGE_INCREMENT = 0.1
@@ -156,7 +156,7 @@ class ELearningPolicy(Service):
 			if section.id in section_ids:
 				continue # already checked this section
 			section_ids.add(section.id)
-			if section.is_completed(user=user, session=self.get_session(), include_types=learning_material_types + assignment_material_types):
+			if section.is_completed(user_id=user_id, session=self.get_session(), include_types=learning_material_types + assignment_material_types):
 				# all completed -> delete
 				self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._coursemodule_id.in_(section.sequence), MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).delete()
 				self.get_session().commit()
@@ -193,7 +193,7 @@ class ELearningPolicy(Service):
 		elif event_name == "\\core\\event\\user_graded":
 			self.open_chatbot(user_id)
 			# extract grade info
-			gradeItem: MGradeItem = self.get_session().query(MGradeItem).get(int(moodle_event['other']['itemid']))
+			gradeItem: MGradeItem = self.get_session().get(MGradeItem, int(moodle_event['other']['itemid']))
 			# gradeItem: MGradeItem = grade.get_grade_item(self.get_session())
 			finalgrade = float(moodle_event['other']['finalgrade'])
 			if finalgrade == gradeItem.grademax:
@@ -414,163 +414,53 @@ class ELearningPolicy(Service):
 		# after first turn
 		for user_act in user_acts:
 			if user_act is not None:
-				if user_act.slot == 'InformTimeConstraint':
-					# What can I learn in 5 minutes?...
-
-					# search for the number of minutes in the user act
-					
-					matched_time = self.convert_time_to_minutes(user_act.text)
-						
-					if matched_time:
-						print("Matched time: ", matched_time)
-						# find the right module for this time constraint
-						incomplete_modules_with_time_est = get_time_estimates(self.get_session(), self.get_current_user(user_id), courseid=courseid)
-						
-						module_names = [module for module, time in incomplete_modules_with_time_est if time and time <= matched_time]
-						hasModule = len(module_names) > 0
-						link = ""
-						# create link
-						if hasModule:
-							link = module_names[0].get_content_link(self.get_session())
-							sys_act = SysAct(act_type=SysActionType.Inform,
-										slot_values={"moduleName": link, "hasModule": "true" if hasModule else "false"})
-						else:
-							sys_act = SysAct(act_type=SysActionType.Inform,
-										slot_values={"moduleName": None, "hasModule": "true" if hasModule else "false"})
-
-					# if no time is found, return an ask for the time specifically
-					# not in nlg yet
-					# set last act
-					else:
-						self.set_state(user_id, LAST_USER_ACT, user_act)
-						
-						sys_act = SysAct(act_type=SysActionType.Request,
-						slot_values={"learningTime": "empty"})
-						#sys_act = SysAct(act_type=SysActionType.Bad)
 				
-				elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
-					# load more search results
-					# get the last search term and counter (from the nlu)
-					search_term = self.get_state(user_id, LAST_SEARCH)
-					counter = int(user_act.slot.split(":")[-1])
-					book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
-					if book_links:
-						book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-						book_link_str = book_link_str + "<br /><br />"
-					else:
-						book_link_str = "End"
-					sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-
-
-				elif user_act.slot == 'Greet':
-					# repeat welcome message
-					sys_act = SysAct(act_type=SysActionType.Inform,
-					  slot_values={"welcomeMsg": "repeat", "daysToSubmission": "empty"})
-					
-				elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
-					reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
-					matches = re.match(reg, user_act.text, re.I)
-					if matches:
-						matches = matches.groupdict()
-						for key in matches.keys():
-							if key.startswith("content") and matches.get(key):
-								search_term = matches.get(key)
-						
-						self.set_state(user_id, LAST_SEARCH, search_term)
-						book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
-						if book_links:
-							book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-							book_link_str = book_link_str + "<br /><br />"
-						else:
-							book_link_str = "None"
-						sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-					else:
-						# Nicht erkannt -> nachfragen!
-						sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
-				
-				elif user_act.slot == 'SearchTerm':
-					# system asked for only the search term -> utterance is the search term
-					search_term = user_act.text
-					self.set_state(user_id, LAST_SEARCH, search_term)
-					book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
-					if book_links:
-						book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-						book_link_str = book_link_str + "<br /><br />"
-					else:
-						book_link_str = "End"
-					sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-
-				
-				elif user_act.slot == 'No':
-					# TODO: does this need to be here or only as follow up to a question?
-					sys_act =  SysAct(act_type=SysActionType.Bad)
-				
-				elif user_act.slot == 'Yes':
-					# Same as above
-					sys_act =  SysAct(act_type=SysActionType.Bad)
-
-				elif user_act.slot == 'InformCompletionGoal':
-					# TODO: implement
-					sys_act =  SysAct(act_type=SysActionType.Bad)
-				
-				elif user_act.slot == 'GetNextModule':
-					# TODO: old complicated -> adapt?
-					[_, next_module_id] = self.get_user_next_module(user_id, courseid)
-					next_module = self.get_session().query(MCourseModule).filter(MCourseModule.id == next_module_id).one()
-					module_link = next_module.get_content_link(self.get_session())
-					self.set_state(user_id, COURSE_MODULE_ID, next_module.id)
-					sys_act = SysAct(act_type=SysActionType.Inform,
-						  slot_values={"nextModule": "", "moduleName": module_link})
-					
-				elif user_act.slot == 'GetProgress':
-					open_modules = self.total_open_modules(user_id, courseid)
-					completed_modules = self.total_completed_modules(user_id, courseid)
-					if completed_modules > 0:
-						sys_act = SysAct(act_type=SysActionType.Inform,
-									slot_values={"motivational": f"{completed_modules} von {open_modules + completed_modules}", "taskLeft": str(open_modules)})
-					else:
-						sys_act = SysAct(act_type=SysActionType.Inform,
-									slot_values={"NoMotivational": f"{completed_modules} von {open_modules + completed_modules}", "taskLeft": str(open_modules)})
-		
-				elif user_act.slot == 'RequestTest':	
-					# TODO can this be simplified? why positive feedback?
-					nextStep = random.choice(["test", "repeatQuiz"])
-					if nextStep == "test":
-						sys_act = SysAct(act_type=SysActionType.Inform,
-									slot_values={"positiveFeedback": "cool", "test": "true"})
-					elif nextStep == "repeatQuiz":
-						sys_act = SysAct(act_type=SysActionType.Inform,
-									slot_values={"positiveFeedback": "cool", "repeatQuiz": "true"})
-
-				elif user_act.slot == 'SuggestImprovement': 
-					sys_act = SysAct(act_type=SysActionType.Inform,
-						  slot_values={"suggestion": random.choice(["quiz", "learningTime", "offerHelp"]),
-									   "offerhelp": "content"})
+				# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
+				# 	# load more search results
+				# 	# get the last search term and counter (from the nlu)
+				# 	search_term = self.get_state(user_id, LAST_SEARCH)
+				# 	counter = int(user_act.slot.split(":")[-1])
+				# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
+				# 	if book_links:
+				# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+				# 		book_link_str = book_link_str + "<br /><br />"
+				# 	else:
+				# 		book_link_str = "End"
+				# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 	
-				elif user_act.slot == 'SuggestRepetition':
-					# TODO: complicated -> adapt
-					sys_act = self.get_repeatable_modul_sys_act(user_id, courseid)
+				# elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
+				# 	reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
+				# 	matches = re.match(reg, user_act.text, re.I)
+				# 	if matches:
+				# 		matches = matches.groupdict()
+				# 		for key in matches.keys():
+				# 			if key.startswith("content") and matches.get(key):
+				# 				search_term = matches.get(key)
+						
+				# 		self.set_state(user_id, LAST_SEARCH, search_term)
+				# 		book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+				# 		if book_links:
+				# 			book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+				# 			book_link_str = book_link_str + "<br /><br />"
+				# 		else:
+				# 			book_link_str = "None"
+				# 		sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
+				# 	else:
+				# 		# Nicht erkannt -> nachfragen!
+				# 		sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
 				
-				elif user_act.type == UserActionType.Thanks:
-					sys_act = SysAct(act_type=SysActionType.RequestMore,
-						  slot_values={"moduleContent": "x"})
-				
-				elif user_act.slot == 'ChangeConfig':
-					# TODO: implement
-					sys_act = SysAct(act_type=SysActionType.Bad)
-				
-				elif user_act.type == UserActionType.Bye:
-					sys_act = SysAct(act_type=SysActionType.Bye)
-				
-				elif user_act.slot == 'Help':
-					sys_act = SysAct(act_type=SysActionType.Inform,
-						  slot_values={"help":"x"})
-				
-				else:
-					print("Unknown user act: ", user_act)
-					sys_act = SysAct(act_type=SysActionType.Bad)
-			else:
-				sys_act = SysAct(act_type=SysActionType.Bad)
+				# elif user_act.slot == 'SearchTerm':
+				# 	# system asked for only the search term -> utterance is the search term
+				# 	search_term = user_act.text
+				# 	self.set_state(user_id, LAST_SEARCH, search_term)
+				# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+				# 	if book_links:
+				# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+				# 		book_link_str = book_link_str + "<br /><br />"
+				# 	else:
+				# 		book_link_str = "End"
+				# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
+				pass
 			
 		sys_state["last_act"] = sys_act
 		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
@@ -578,7 +468,7 @@ class ELearningPolicy(Service):
 	
 	def get_current_user(self, user_id) -> MUser:
 			""" Get Moodle user by id from Chat Interface (or start run_chat with --user_id=...) """
-			user = self.get_session().query(MUser).get(int(user_id))
+			user = self.get_session().get(MUser, int(user_id))
 			return user
 	
 	def get_user_next_module(self, user_id, courseid):
