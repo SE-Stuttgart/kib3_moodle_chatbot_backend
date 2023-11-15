@@ -32,7 +32,7 @@ from utils.common import Language
 from utils.domain.domain import Domain
 from utils.logger import DiasysLogger
 from utils.sysact import SysAct, SysActionType
-from typing import Dict, List
+from typing import Dict, List, Union
 
 
 class ELearningNLG(Service):
@@ -350,22 +350,11 @@ class ELearningNLG(Service):
 
 
 
-    def welcomemsg_continue_unfinished(self, last_activity):
-        return [f"""Schön dich wieder zu sehen!
-        Letztes Mal hast du bei {last_activity} aufgehört, willst du es heute abschließen?"""]
-
-    def welcomemsg_goal_badge(self, badge_name, missing_activities):
-        return [f"""Hi! Du hast fast den Badge {badge_name} abgeschlossen! Wenn du heute {self.join_values(values=missing_activities, final_join='und')}
-        fertig machst, kriegst du ihn 😊"""]
-
-    def welcomemsg_forgotten_module(self, module_name, activity_name, next_module_name):
-        return [f"""Schön dich wieder zu sehen! Du hast Thema {module_name} schon angefangen aber noch nicht abgeschlossen, vergiss nicht ihn weiter zu machen"""]
-
-    def welcomemsg_unread_messages(self):
+    def inform_unread_messages(self):
         """ Notify about unread forum messages """
         pass
 
-    def welcomemsg_deadline_reminder(self):
+    def inform_deadline_reminder(self):
         """ Remind about upcoming assignments using calendar """
         pass
 
@@ -397,22 +386,37 @@ class ELearningNLG(Service):
                         msgs.append((f"Deine besten Tage diese Woche waren {best_weekly_days[0]} und {best_weekly_days[1]}", []))
         return msgs
 
+    def _donut_chart(self, titleOuter: str, percentageOuter: float, titleInner: Union[str, None] = None, percentageInner: Union[float, None] = None):
+        inner = f""";{titleInner};{100*percentageInner}""" if not isinstance(titleInner, type(None)) else ""
+        return f"""$$DONUT;{titleOuter};{100*percentageOuter}{inner}"""
+
+    def _enumeration(self, items: List[str]) -> str:
+        return f""" <ul>
+                    {" ".join(['<li>' + item + '</li>' for item in items])}
+                </ul>"""
+
     def display_progress(self, percentage_done: float, percentage_repeated_quizzes: float):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
         msgs = [("""In letzter Zeit hast du viel Neues gelernt:""", []),
-                (f"""$$DONUT;{100*percentage_done};{100*percentage_repeated_quizzes}""", [])]
+                (self._donut_chart("Kurs", percentage_done, "Wiederholte Quizze", percentage_repeated_quizzes), [])]
         if random.random() < 0.4:
             msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
-        return msgs 
+        return msgs
+    
 
+    def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[str]):
+        return [(f"""Hi! Du hast fast den Badge {badge_name} abgeschlossen!""", []),        
+                (self._donut_chart("Badge Fortschritt", percentage_done), []),
+                (f"""Wenn du noch
+                {self._enumeration(items=missing_activities)}
+
+                fertig machst, kriegst du ihn 😊""", [])]
 
 
     def request_continue_or_next(self, last_viewed_course_module, next_available_modules):
         return [(f"Letztes Mal hast du {last_viewed_course_module} abgeschlossen.", []),
                 (f"""Folgende Abschntitte hast du angefangen, aber noch nicht abgeschlossen:
-                <ul>
-                    {" ".join(['<li>' + module + '</li>' for module in next_available_modules])}
-                </ul>
+                {self._enumeration(next_available_modules)}
                 
                 Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
                     "Weitermachen", "Was Anderes lernen" 
@@ -421,9 +425,7 @@ class ELearningNLG(Service):
     def inform_next_options(self, next_available_sections):
         return [("Super, du hast alle angefangenen Abschnitte fertig bekommen!", []),
                 (f"""Heute könntest du mit einem dieser neuen Abschnitte beginnen:
-                <ul>
-                    {" ".join(['<li>' + section + '</li>' for section in next_available_sections])}
-                </ul>
+                {self._enumeration(items=next_available_sections)}
                 
                 Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
                     "Was Anderes lernen"
@@ -541,6 +543,8 @@ class ELearningNLG(Service):
             return self.display_weekly_summary
         elif sys_act.type == SysActionType.DisplayProgress:
             return self.display_progress
+        elif sys_act.type == SysActionType.DisplayBadgeProgress:
+            return self.display_badge_progress
         raise NotImplementedError
 
 

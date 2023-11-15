@@ -159,7 +159,7 @@ class ELearningPolicy(Service):
 			if section.is_completed(user_id=user_id, session=self.get_session(), include_types=learning_material_types + assignment_material_types):
 				# all completed -> delete
 				self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._coursemodule_id.in_(section.sequence), MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).delete()
-				self.get_session().commit()
+		self.get_session().commit()
 
 				
 			
@@ -312,6 +312,7 @@ class ELearningPolicy(Service):
 		last_weekly_summaries = self.get_session().query(MChatbotWeeklySummary).filter(MChatbotWeeklySummary._userid==user_id)
 		last_weekly_summary = last_weekly_summaries.first()
 
+		append_suggestions = True
 		if self.get_moodle_server_time(user_id) >= last_weekly_summary.timecreated + timedelta(days=7):
 			# last time we showed the weekly stats is more than 7 days ago - show again
 			slot_values = self.get_weekly_progress(user_id=user_id, courseid=courseid, last_weekly_summary=last_weekly_summary)
@@ -328,52 +329,66 @@ class ELearningPolicy(Service):
 				progress.timecreated = self.get_moodle_server_time(user_id)
 				self.get_session().commit()
 				acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
-
-		# choose how to proceed
-		has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
-									.filter(MCourseModulesViewed._userid==user_id, MCourseModule._course_id==courseid).count() > 0
-		if has_seen_any_course_modules:
-			# last viewed module
-			last_completed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=True)
-			if len(last_completed_course_modules) > 0:
-				last_completed_course_module = last_completed_course_modules[0] # sorted ascending by date
-
-				# get open modules across sections, 1 per section
-				next_modules = {}
-				# prioritize already viewed modules
-				last_started_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=False)
-				for unfinished_module in last_started_course_modules:
-					if not unfinished_module._section_id in next_modules:
-						next_modules[unfinished_module._section_id] = unfinished_module
-				# fill with other started sections
-				for completed_module in last_completed_course_modules:
-					if not completed_module._section_id in next_modules:
-						# get first open module from this section
-						next_module = completed_module.section.get_first_available_module(user=user, session=self.get_session(),
-																			include_types=learning_material_types + assignment_material_types,
-																			allow_only_unfinished=True)
-						if next_module:
-							next_modules[completed_module._section_id] = next_module
-				next_available_module_links = [module.get_content_link(session=self.get_session(), alternative_display_text=module.section.name) for module in next_modules.values()]
-
-				# user has started, but not completed one or more sections
-				acts.append(
-						SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
-								last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session(), alternative_display_text=last_completed_course_module.get_name(self.get_session())),
-								next_available_modules=next_available_module_links
-						)))
-			# TODO: Forum post info
-			# TODO: Deadline reminder
 			else:
-				# user has completed all started sections, should get choice of next new and available sections
-				available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
-				acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-								next_available_sections=[section.get_link() for section in available_new_course_sections]
+				# check what user's next closest badge would be
+				closest_badge_info = user.get_closest_badge(session=self.get_session(), courseid=courseid)
+				if not isinstance(closest_badge_info, type(None)):
+					badge, badge_progress, open_modules = closest_badge_info
+					if badge_progress >= 0.5:
+						# only display progress towards next closest batch if user is sufficiently close
+						acts.append(SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
+							badge_name=badge.name, percentage_done=badge_progress,
+							missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
+												for module in open_modules]
 						)))
-		else:
-			# TODO return ice cream game
-			pass
-		
+						append_suggestions=False
+
+		if append_suggestions:
+			# choose how to proceed
+			has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
+										.filter(MCourseModulesViewed._userid==user_id, MCourseModule._course_id==courseid).count() > 0
+			if has_seen_any_course_modules:
+				# last viewed module
+				last_completed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=True)
+				if len(last_completed_course_modules) > 0:
+					last_completed_course_module = last_completed_course_modules[0] # sorted ascending by date
+
+					# get open modules across sections, 1 per section
+					next_modules = {}
+					# prioritize already viewed modules
+					last_started_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=False)
+					for unfinished_module in last_started_course_modules:
+						if not unfinished_module._section_id in next_modules:
+							next_modules[unfinished_module._section_id] = unfinished_module
+					# fill with other started sections
+					for completed_module in last_completed_course_modules:
+						if not completed_module._section_id in next_modules:
+							# get first open module from this section
+							next_module = completed_module.section.get_first_available_module(user=user, session=self.get_session(),
+																				include_types=learning_material_types + assignment_material_types,
+																				allow_only_unfinished=True)
+							if next_module:
+								next_modules[completed_module._section_id] = next_module
+					next_available_module_links = [module.get_content_link(session=self.get_session(), alternative_display_text=module.section.name) for module in next_modules.values()]
+
+					# user has started, but not completed one or more sections
+					acts.append(
+							SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
+									last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session(), alternative_display_text=last_completed_course_module.get_name(self.get_session())),
+									next_available_modules=next_available_module_links
+							)))
+				# TODO: Forum post info
+				# TODO: Deadline reminder
+				else:
+					# user has completed all started sections, should get choice of next new and available sections
+					available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
+					acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
+									next_available_sections=[section.get_link() for section in available_new_course_sections]
+							)))
+			else:
+				# TODO return ice cream game
+				pass
+			
 		return acts
 
 					

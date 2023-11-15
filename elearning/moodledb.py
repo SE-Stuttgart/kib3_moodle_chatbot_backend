@@ -879,12 +879,14 @@ class MBadge(Base):
 
 
 	def _completed_bronze_silver_or_gold(self, session: Session, user_id: int) -> bool:
-		bronze_badge = session.query(MBadge).filter(MBadge.name.startswith("Bronzemedaille Regression"), MBadge._courseid==self._courseid).first()
-		silver_badge = session.query(MBadge).filter(MBadge.name.startswith("Silbermedaille Regression"), MBadge._courseid==self._courseid).first()
-		gold_badge = session.query(MBadge).filter(MBadge.name.startswith("Bronzemedaille Regression"), MBadge._courseid==self._courseid).first()
-		return any([bronze_badge.is_completed(session=session, user_id=user_id, crit=bronze_badge.get_activity_criterion(session)),
-			  		silver_badge.is_completed(session=session, user_id=user_id, crit=silver_badge.get_activity_criterion(session)),
-					gold_badge.is_completed(session=session, user_id=user_id, crit=gold_badge.get_activity_criterion(session))])
+		# these badges are a single outlier in their configuration and not worth checking all the grading
+		return True
+		# bronze_badge = session.query(MBadge).filter(MBadge.name.startswith("Bronzemedaille Regression"), MBadge._courseid==self._courseid).first()
+		# silver_badge = session.query(MBadge).filter(MBadge.name.startswith("Silbermedaille Regression"), MBadge._courseid==self._courseid).first()
+		# gold_badge = session.query(MBadge).filter(MBadge.name.startswith("Bronzemedaille Regression"), MBadge._courseid==self._courseid).first()
+		# return any([bronze_badge.is_completed(session=session, user_id=user_id, crit=bronze_badge.get_activity_criterion(session)),
+		# 	  		silver_badge.is_completed(session=session, user_id=user_id, crit=silver_badge.get_activity_criterion(session)),
+		# 			gold_badge.is_completed(session=session, user_id=user_id, crit=gold_badge.get_activity_criterion(session))])
 		
 
 	def get_activity_criterion(self, session: Session) -> Tuple[None, "MBadgeCriteria"]:
@@ -1034,6 +1036,22 @@ class MUser(Base):
 	settings = relationship("MChatbotSettings", back_populates="user", uselist=False)
 	progress = relationship("MChatbotProgressSummary", back_populates="user", uselist=False)
 	recently_accessed_items = relationship("MRecentlyAcessedItem", back_populates="user", uselist=True)
+
+	def get_closest_badge(self, session: Session, courseid: int) -> Union[Tuple[MBadge, float, List[MCourseModule]], None]:
+		# get ids of regression badges to exclude from suggestions
+		bronze_badge = session.query(MBadge).filter(MBadge.name.startswith("Bronzemedaille Regression"), MBadge._courseid==courseid).first()
+		silver_badge = session.query(MBadge).filter(MBadge.name.startswith("Silbermedaille Regression"), MBadge._courseid==courseid).first()
+		gold_badge = session.query(MBadge).filter(MBadge.name.startswith("Goldmedaille Regression"), MBadge._courseid==courseid).first()
+
+		# get badges that are not issued
+		closed_badge_ids = [badge._badgeid for badge in session.query(MBadgeIssued).filter(MBadgeIssued._userid==self.id).all()] + \
+							[bronze_badge.id, silver_badge.id, gold_badge.id]
+		open_badges = session.query(MBadge).filter(MBadge.id.not_in(closed_badge_ids), MBadge._courseid==courseid).all()
+		badge_completion_progress = sorted([(badge, *badge.criteria_completion_percentage(session=session, user_id=self.id)) for badge in open_badges], key=lambda p: p[1], reverse=True)
+		if len(badge_completion_progress) > 0:
+			return badge_completion_progress[0][0], badge_completion_progress[0][1], badge_completion_progress[0][3]
+		return None
+
 
 	def get_grades(self, session: Session, course_id: int) -> List[MGradeGrade]:
 		""" Return all current grades of the current user (for the specified course) """
@@ -1250,8 +1268,6 @@ class MUser(Base):
 		Returns the last viewed course module by the current user (that is completed, if completed = True),
 		or None, if the user has not yet accessed any course module (or not completed any)
 		"""
-
-		
 		return [item.coursemodule for item in session.query(MRecentlyAcessedItem).join(MCourseModulesCompletion, MCourseModulesCompletion._userid==MRecentlyAcessedItem._userid).filter(MRecentlyAcessedItem._course_id==courseid, MCourseModulesCompletion._coursemoduleid==MRecentlyAcessedItem._coursemodule_id, MCourseModulesCompletion.completed==completed) \
 				.order_by(desc(MRecentlyAcessedItem.timeaccess)).all()]
 	
