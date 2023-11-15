@@ -405,6 +405,8 @@ class ELearningNLG(Service):
     
 
     def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[str]):
+        if badge_name == None:
+            return [("Du hast bereits alle Badges erhalten 🎉 Gut gemacht!", [])]
         return [(f"""Hi! Du hast fast den Badge {badge_name} abgeschlossen!""", []),        
                 (self._donut_chart("Badge Fortschritt", percentage_done), []),
                 (f"""Wenn du noch

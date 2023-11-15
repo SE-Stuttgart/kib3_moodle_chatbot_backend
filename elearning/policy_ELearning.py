@@ -280,8 +280,9 @@ class ELearningPolicy(Service):
 		return dict(percentage_done=percentage_done,
 					percentage_repeated_quizzes=percentage_repeated_quizzes)
 
+	
+		
 	def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
-		# TODO select correct greeting based on given conditions
 		self.open_chatbot(user_id)
 		user = self.get_current_user(user_id)
 		acts = []
@@ -391,7 +392,24 @@ class ELearningPolicy(Service):
 			
 		return acts
 
-					
+	def _handle_request_badge_progress(self, user_id: int) -> SysAct:
+		# check what user's next closest badge would be
+		closest_badge_info = self.get_current_user(user_id).get_closest_badge(session=self.get_session(), courseid=courseid)
+		if not isinstance(closest_badge_info, type(None)):
+			badge, badge_progress, open_modules = closest_badge_info
+			# only display progress towards next closest batch if user is sufficiently close
+			return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
+				badge_name=badge.name, percentage_done=badge_progress,
+				missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
+									for module in open_modules]
+			))
+		else: 
+			# all badges are already completed
+			return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
+				badge_name=None, percentage_done=None, missing_activities=None
+			))
+
+
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
@@ -427,55 +445,60 @@ class ELearningPolicy(Service):
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
 			return {'sys_acts': sys_acts, "sys_state": sys_state}
 		# after first turn
+		sys_acts = []
 		for user_act in user_acts:
-			if user_act is not None:
-				
-				# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
-				# 	# load more search results
-				# 	# get the last search term and counter (from the nlu)
-				# 	search_term = self.get_state(user_id, LAST_SEARCH)
-				# 	counter = int(user_act.slot.split(":")[-1])
-				# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
-				# 	if book_links:
-				# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-				# 		book_link_str = book_link_str + "<br /><br />"
-				# 	else:
-				# 		book_link_str = "End"
-				# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-	
-				# elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
-				# 	reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
-				# 	matches = re.match(reg, user_act.text, re.I)
-				# 	if matches:
-				# 		matches = matches.groupdict()
-				# 		for key in matches.keys():
-				# 			if key.startswith("content") and matches.get(key):
-				# 				search_term = matches.get(key)
-						
-				# 		self.set_state(user_id, LAST_SEARCH, search_term)
-				# 		book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
-				# 		if book_links:
-				# 			book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-				# 			book_link_str = book_link_str + "<br /><br />"
-				# 		else:
-				# 			book_link_str = "None"
-				# 		sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-				# 	else:
-				# 		# Nicht erkannt -> nachfragen!
-				# 		sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
-				
-				# elif user_act.slot == 'SearchTerm':
-				# 	# system asked for only the search term -> utterance is the search term
-				# 	search_term = user_act.text
-				# 	self.set_state(user_id, LAST_SEARCH, search_term)
-				# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
-				# 	if book_links:
-				# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-				# 		book_link_str = book_link_str + "<br /><br />"
-				# 	else:
-				# 		book_link_str = "End"
-				# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-				pass
+			if user_act.type == UserActionType.RequestProgress:
+				slot_values = self.get_stat_summary(user=self.get_current_user(user_id), courseid=courseid)
+				sys_acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
+			elif user_act.type == UserActionType.RequestBadgeProgress:
+				sys_acts.append(self._handle_request_badge_progress(user_id=user_id))
+
+			
+			# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
+			# 	# load more search results
+			# 	# get the last search term and counter (from the nlu)
+			# 	search_term = self.get_state(user_id, LAST_SEARCH)
+			# 	counter = int(user_act.slot.split(":")[-1])
+			# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
+			# 	if book_links:
+			# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+			# 		book_link_str = book_link_str + "<br /><br />"
+			# 	else:
+			# 		book_link_str = "End"
+			# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
+
+			# elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
+			# 	reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
+			# 	matches = re.match(reg, user_act.text, re.I)
+			# 	if matches:
+			# 		matches = matches.groupdict()
+			# 		for key in matches.keys():
+			# 			if key.startswith("content") and matches.get(key):
+			# 				search_term = matches.get(key)
+					
+			# 		self.set_state(user_id, LAST_SEARCH, search_term)
+			# 		book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+			# 		if book_links:
+			# 			book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+			# 			book_link_str = book_link_str + "<br /><br />"
+			# 		else:
+			# 			book_link_str = "None"
+			# 		sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
+			# 	else:
+			# 		# Nicht erkannt -> nachfragen!
+			# 		sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
+			
+			# elif user_act.slot == 'SearchTerm':
+			# 	# system asked for only the search term -> utterance is the search term
+			# 	search_term = user_act.text
+			# 	self.set_state(user_id, LAST_SEARCH, search_term)
+			# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+			# 	if book_links:
+			# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+			# 		book_link_str = book_link_str + "<br /><br />"
+			# 	else:
+			# 		book_link_str = "End"
+			# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 			
 		sys_state["last_act"] = sys_act
 		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")

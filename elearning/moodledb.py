@@ -1038,6 +1038,11 @@ class MUser(Base):
 	recently_accessed_items = relationship("MRecentlyAcessedItem", back_populates="user", uselist=True)
 
 	def get_closest_badge(self, session: Session, courseid: int) -> Union[Tuple[MBadge, float, List[MCourseModule]], None]:
+		"""
+		Returns:
+			Closest uncompleted badge, the progress towards it, and the modules still needed to get it.
+			None, if all badges are completed.
+		"""
 		# get ids of regression badges to exclude from suggestions
 		bronze_badge = session.query(MBadge).filter(MBadge.name.startswith("Bronzemedaille Regression"), MBadge._courseid==courseid).first()
 		silver_badge = session.query(MBadge).filter(MBadge.name.startswith("Silbermedaille Regression"), MBadge._courseid==courseid).first()
