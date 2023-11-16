@@ -92,7 +92,7 @@ def make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, na
     }
 
     # Save the dictionary to a file using torch.save()
-    torch.save(data_dict, 'embeddings.pt')
+    torch.save(data_dict, name + 'embeddings.pt')
 
 
 
@@ -138,7 +138,7 @@ def manual(embedder, corpus_train, train_labels, corpus_embeddings = None):
             print(corpus[hit['corpus_id']], "(Score: {:.4f})".format(hit['score']))
         """
 
-def automatic(embedder, corpus_train, train_labels, corpus_test, test_labels, corpus_embeddings = None, threshold = 0.97, name=""):
+def automatic(embedder, corpus_train, train_labels, corpus_test, test_labels, corpus_embeddings = None, threshold = 0.947, name=""):
 
     # top_k here
     if(corpus_embeddings == None):
@@ -150,30 +150,33 @@ def automatic(embedder, corpus_train, train_labels, corpus_test, test_labels, co
     query_embeddings = embedder.encode(corpus_test, convert_to_tensor=True)
     pred_labels = []
     scores = []
-    all_labels = ['Bye', 'ChangeConfig', 'GetNextModule', 'GetProgress', 'Greet', 'Help', 'InformCompletionGoal', 'InformTimeConstraint', 'LoadMoreSearchResults', 'No',
-                  'RequestTest', 'SearchForContent', 'SearchForDefinition', 'SuggestImprovement', 'SuggestRepetition', 'Thanks', 'Yes', 'Bad']
+    all_labels = ['ContinueOpenModules', 'Hello', 'LoadMoreSearchResults', 'RequestBadgeProgress', 'RequestDeadlines', 'RequestForumPosts', 'RequestHelp', 'RequestNextSection', 'RequestProgress', 
+                  'RequestReview', 'RequestSectionSummary', 'RequestSettings', 'Search', 'Thanks', 'Bad']
     for idx, embedding in enumerate(query_embeddings):
         cos_scores = util.cos_sim(embedding, corpus_embeddings)[0]
         top_results = torch.max(cos_scores, dim=0)
-        #if top_results[0] < threshold:
-        #    pred_labels.append('Bad')
-        #else:
-        pred_labels.append(train_labels[top_results[1]])
-        scores.append(top_results[0].item())
+        if top_results[0] < threshold:
+            pred_labels.append('Bad')
+            scores.append(top_results[0].item())
+        else:
+            pred_labels.append(train_labels[top_results[1]])
+            scores.append(top_results[0].item())
+    
         if train_labels[top_results[1]] != test_labels[idx]:
             print("Query: {}, Match: {}, Score: {}, True label: {}, Predicted: {}".format(corpus_test[idx], corpus_train[top_results[1]], top_results[0], test_labels[idx], train_labels[top_results[1]]))
-    #print("-----------------------------------------")
-    #print("Accuracy: ", sum([1 if pred_labels[i] == test_labels[i] else 0 for i in range(len(pred_labels))])/len(pred_labels))
-    #print("F1: ", metrics.f1_score(test_labels, pred_labels, average='weighted', labels=all_labels))
-    #print("F1_macro: ", metrics.f1_score(test_labels, pred_labels, average='macro', labels=all_labels))
-    #print("F1_micro: ", metrics.f1_score(test_labels, pred_labels, average='micro', labels=all_labels))
-    #print("Precision: ", metrics.precision_score(test_labels, pred_labels, average='weighted', labels=all_labels))
-    #print("Recall: ", metrics.recall_score(test_labels, pred_labels, average='weighted', labels=all_labels))
-    #print("Confusion Matrix: \n", metrics.confusion_matrix(test_labels, pred_labels, labels=all_labels))
-    #print("number of wrongly classified without 'Bad': ", sum([1 if pred_labels[i] != test_labels[i] and pred_labels[i] != 'Bad' else 0 for i in range(len(pred_labels))]))
-    #print("Classification Report: \n", metrics.classification_report(test_labels, pred_labels, labels=all_labels))
-    #metrics.ConfusionMatrixDisplay.from_predictions(test_labels, pred_labels, labels=all_labels, xticks_rotation='vertical')
-    #plt.savefig(embedder._get_name() + '_len_' + str(len(corpus_test)) + '_cm.png', pad_inches=0.4, bbox_inches='tight')
+    print("pred_labels: ", len(pred_labels), " test_labels: ", len(test_labels))
+    print("-----------------------------------------")
+    print("Accuracy: ", sum([1 if pred_labels[i] == test_labels[i] else 0 for i in range(len(pred_labels))])/len(pred_labels))
+    print("F1: ", metrics.f1_score(test_labels, pred_labels, average='weighted', labels=all_labels))
+    print("F1_macro: ", metrics.f1_score(test_labels, pred_labels, average='macro', labels=all_labels))
+    print("F1_micro: ", metrics.f1_score(test_labels, pred_labels, average='micro', labels=all_labels))
+    print("Precision: ", metrics.precision_score(test_labels, pred_labels, average='weighted', labels=all_labels))
+    print("Recall: ", metrics.recall_score(test_labels, pred_labels, average='weighted', labels=all_labels))
+    print("Confusion Matrix: \n", metrics.confusion_matrix(test_labels, pred_labels, labels=all_labels))
+    print("number of wrongly classified without 'Bad': ", sum([1 if pred_labels[i] != test_labels[i] and pred_labels[i] != 'Bad' else 0 for i in range(len(pred_labels))]))
+    print("Classification Report: \n", metrics.classification_report(test_labels, pred_labels, labels=all_labels))
+    metrics.ConfusionMatrixDisplay.from_predictions(test_labels, pred_labels, labels=all_labels, xticks_rotation='vertical')
+    plt.savefig(embedder._get_name() + '_len_' + str(len(corpus_test)) + '_cm.png', pad_inches=0.4, bbox_inches='tight')
     #print("Length of query: ", len(query_embeddings))
     # print average score when incorrect
     print("Average score when incorrect: ", sum([scores[i] if pred_labels[i] != test_labels[i] else 0 for i in range(len(pred_labels))])/sum([1 if pred_labels[i] != test_labels[i] else 0 for i in range(len(pred_labels))]))
@@ -185,16 +188,17 @@ def automatic(embedder, corpus_train, train_labels, corpus_test, test_labels, co
     print("Max score when incorrect: ", max([scores[i] if pred_labels[i] != test_labels[i] else 0 for i in range(len(pred_labels))]))
     # print min score when correct
     print("Min score when correct: ", min([scores[i] if pred_labels[i] == test_labels[i] else 1000 for i in range(len(pred_labels))]))
-    #mistakes = sum([1 if pred_labels[i] != test_labels[i] and pred_labels[i] != 'Bad' else 0 for i in range(len(pred_labels))])
-    #accuracy_without_bad = sum([1 if pred_labels[i] == test_labels[i] and pred_labels[i] != 'Bad' else 0 for i in range(len(pred_labels))])/sum([1 if pred_labels[i] != 'Bad' else 0 for i in range(len(pred_labels))])
-    #count_bad = sum([1 if pred_labels[i] == 'Bad' else 0 for i in range(len(pred_labels))])
-    #return mistakes, accuracy_without_bad, count_bad
+    mistakes = sum([1 if pred_labels[i] != test_labels[i] and pred_labels[i] != 'Bad' else 0 for i in range(len(pred_labels))])
+    accuracy_without_bad = sum([1 if pred_labels[i] == test_labels[i] and pred_labels[i] != 'Bad' else 0 for i in range(len(pred_labels))])/sum([1 if pred_labels[i] != 'Bad' else 0 for i in range(len(pred_labels))])
+    count_bad = sum([1 if pred_labels[i] == 'Bad' else 0 for i in range(len(pred_labels))])
+    print("count_bad: ", count_bad)
+    return mistakes, accuracy_without_bad, count_bad
 
 def fine_tune_threshold(embedder, corpus_train, train_labels, corpus_test, test_labels, corpus_embeddings = None):
     mistakes = []
     accuracies = []
     bads = []
-    for threshold in np.arange(0.96, 0.983, 0.002):
+    for threshold in np.arange(0.94, 0.983, 0.002):
         mistake, acc, bad = automatic(embedder, corpus_train, train_labels, corpus_test, test_labels, corpus_embeddings, threshold)
         mistakes.append(mistake)
         accuracies.append(acc)
@@ -205,15 +209,16 @@ def fine_tune_threshold(embedder, corpus_train, train_labels, corpus_test, test_
     color = 'tab:red'
     ax1.set_xlabel('Threshold')
     ax1.set_ylabel('Mistakes/BAD', color = color)
-    ax1.plot(np.arange(0.96, 0.983, 0.002), mistakes, color = color)
-    ax1.plot(np.arange(0.96, 0.983, 0.002), bads, color = 'tab:orange')
+    ax1.plot(np.arange(0.94, 0.983, 0.002), mistakes, color = color)
+    ax1.plot(np.arange(0.94, 0.983, 0.002), bads, color = 'tab:orange')
     ax1.tick_params(axis ='y', labelcolor = color)
     # mistakes - bad:
-    ax1.plot(np.arange(0.96, 0.983, 0.002), [mistakes[i] - bads[i] for i in range(len(mistakes))], color = 'tab:green')
+    ax1.plot(np.arange(0.94, 0.983, 0.002), [mistakes[i] - bads[i] for i in range(len(mistakes))], color = 'tab:green')
     
     plt.savefig(embedder._get_name() + '_len_' + str(len(corpus_test)) + '_mistakes.png', pad_inches=0.4, bbox_inches='tight')
-    print("Minimum mistakes: ", min(mistakes), " at threshold: ", np.arange(0.96, 0.983, 0.002)[mistakes.index(min(mistakes))])
-    print("Maximum accuracy: ", max(accuracies), " at threshold: ", np.arange(0.96, 0.983, 0.002)[accuracies.index(max(accuracies))])
+    print("Minimum mistakes: ", min(mistakes), " at threshold: ", np.arange(0.94, 0.983, 0.002)[mistakes.index(min(mistakes))])
+    print("Maximum accuracy: ", max(accuracies), " at threshold: ", np.arange(0.94, 0.983, 0.002)[accuracies.index(max(accuracies))])
+    print(bads)
 
 
 
@@ -250,21 +255,21 @@ def main():
                 print("Done making csv")
                 continue
             case '2':
-                corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./short_corpus_paranthesis/', 'stratisfied')              
+                corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./new_corpus/', 'new_corpus')              
                 corpus_embeddings = None
-                make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, "short_corpus")
+                make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, "new_corpus_")
             case '3':
-                corpus_informs = corpus.load_corpus_per_inform('./short_corpus/')
+                corpus_informs = corpus.load_corpus_per_inform('./new_corpus/')
                 cross_validation(corpus_informs)
             case '4':
-                corpus_informs = corpus.load_corpus_per_inform('./short_corpus/')
-                corpus_train, _ = corpus.load_corpus('short_corpus_train.csv')
-                corpus_test, _ = corpus.load_corpus('short_corpus_test.csv')
+                corpus_informs = corpus.load_corpus_per_inform('./new_corpus/')
+                corpus_train, _ = corpus.load_corpus('new_corpus_train.csv')
+                corpus_test, _ = corpus.load_corpus('new_corpus_test.csv')
                 corpus_full = corpus_train + corpus_test
                 cross_validation_across_informs(corpus_informs, corpus_full)
             case '5':
-                corpus_train, train_labels = corpus.load_corpus('short_corpus_train.csv')
-                corpus_test, test_labels = corpus.load_corpus('short_corpus_test.csv')
+                corpus_train, train_labels = corpus.load_corpus('new_corpus_train.csv')
+                corpus_test, test_labels = corpus.load_corpus('new_corpus_test.csv')
                 corpus_embeddings = None
                 print("corpus_train: ", len(corpus_train))
                 print("corpus_test: ", len(corpus_test))
@@ -272,12 +277,12 @@ def main():
                 print("test_labels: ", len(test_labels))
 
             case '6':
-                with open('embeddings.pkl', "rb") as fIn:
+                with open('new_corpus_embeddings.pkl', "rb") as fIn:
                     stored_data = pickle.load(fIn)
                     corpus_train = stored_data['sentences']
                     corpus_embeddings = stored_data['embeddings']
                     train_labels = stored_data['labels']
-                corpus_test, test_labels = corpus.load_corpus('big_corpus_test.csv')
+                corpus_test, test_labels = corpus.load_corpus('new_corpus_test.csv')
             case '7':
                 transform_csv('./short_corpus/', './short_corpus_paranthesis/')
             case '8':
