@@ -17,7 +17,7 @@ class Utterance_Mapper():
         self.model = embedder_model
         self.embedder = SentenceTransformer(embedder_model, device=self.device)
         self.threshold = 0.945
-        data_dict = torch.load('embeddings.pt', map_location=self.device)
+        data_dict = torch.load('new_embeddings.pt', map_location=self.device)
 
         # Retrieve the embeddings and labels from the dictionary
         self.corpus = data_dict['corpus']
