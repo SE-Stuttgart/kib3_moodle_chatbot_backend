@@ -72,6 +72,13 @@ class BadgeMethod(TypeDecorator):
 		return BadgeMethodEnum(value)
 
 
+
+class BadgeCompletionStatus(Enum):
+	INCOMPLETE = 0
+	COMPLETED = 1
+	CLAIMED = 2	
+
+
 class BadgeStatusEnum(Enum):
 	INACTIVE = 0
 	ACTIVE = 1
@@ -841,11 +848,6 @@ class MLabel(Base):
 
 
 
-class MBadgeStatusEnum(Enum):
-	INCOMPLETE = 0
-	COMPLETED = 1
-	CLAIMED = 2	
-
 
 class MBadge(Base):
 	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}badge"
@@ -865,17 +867,17 @@ class MBadge(Base):
 	# 2. badge nicht claimed, aber alle vorraussetzungen gemacht (außer manuell auf abgeschlossen zu Klicken) -> check ob label.is_available() -> link ausgeben
 	# 3. badge ist claimed -> in tabelle badge_issued -> warte auf Event und sag herzlichen glückwunsch
 
-	def is_completed(self, session: Session, user_id: int, crit: "MBadgeCriteria") -> MBadgeStatusEnum:
+	def is_completed(self, session: Session, user_id: int, crit: "MBadgeCriteria") -> BadgeCompletionStatus:
 		if session.query(MBadgeIssued).filter(MBadgeIssued._userid==user_id, MBadgeIssued._badgeid==self.id).count() > 0:
 			# badge	is already claimed, no need to check further
-			return MBadgeStatusEnum.CLAIMED
+			return BadgeCompletionStatus.CLAIMED
 		# badge is not claimed yet, check if all requirements are completed
 		if len(crit.criteria_params) == 1 and crit.criteria_params[0].module.get_type_name(session) == "label":
 			# badge is a label - and all the requirements for this label are fulfilled
 			if is_available_course_module(session=session, user_id=user_id, course_module=crit.criteria_params[0].module):
-				return MBadgeStatusEnum.COMPLETED
+				return BadgeCompletionStatus.COMPLETED
 		# badge is neither claimed, nor are its requirements met fully
-		return MBadgeStatusEnum.INCOMPLETE
+		return BadgeCompletionStatus.INCOMPLETE
 
 
 	def _completed_bronze_silver_or_gold(self, session: Session, user_id: int) -> bool:
@@ -898,7 +900,7 @@ class MBadge(Base):
 													MBadgeCriteria._badgeid==self.id).first()
 
 
-	def criteria_completion_percentage(self, session: Session, user_id: int) -> Tuple[float, MBadgeStatusEnum, List["MCourseModule"]]:
+	def criteria_completion_percentage(self, session: Session, user_id: int) -> Tuple[float, BadgeCompletionStatus, List["MCourseModule"]]:
 		"""
 		Returns:
 			The completion towards this badge in percent.
@@ -909,25 +911,25 @@ class MBadge(Base):
 		# there should only be ONE possible criterium (either method=all or method=any) for this badge
 		crit = self.get_activity_criterion(session=session)
 		if not crit:
-			return (0.0, MBadgeStatusEnum.INCOMPLETE, [])
+			return (0.0, BadgeCompletionStatus.INCOMPLETE, [])
 		
 		# if badge is already completed, return 100% and no todo modules
 		completed = self.is_completed(session=session, user_id=user_id, crit=crit)
-		if completed in [MBadgeStatusEnum.CLAIMED, MBadgeStatusEnum.COMPLETED]:
+		if completed in [BadgeCompletionStatus.CLAIMED, BadgeCompletionStatus.COMPLETED]:
 			return (1.0, completed, []) 
 		
 		# special case for regression (has 3 associated badges: bronze, silver and gold)
 		# -> should be enough to get one
 		if "medaille Regression" in self.name:
 			if self._completed_bronze_silver_or_gold(session=session, user_id=user_id):
-				return (1.0, MBadgeStatusEnum.COMPLETED, [])
+				return (1.0, BadgeCompletionStatus.COMPLETED, [])
 			else:
 				# get regression quiz section
 				section_regression = session.query(MCourseSection).filter(MCourseSection._course_id==self._courseid,
 															  			MCourseSection.name=="Quizzes zum Thema A1-1: Regression").first()
 				if not section_regression:
 					# teacher altered section - give up by pretending badge was earned
-					return (1.0, MBadgeStatusEnum.CLAIMED, [])
+					return (1.0, BadgeCompletionStatus.CLAIMED, [])
 				# get completion of each quiz in regression quiz section
 				todo_modules = []
 				param_eval = []
@@ -939,7 +941,7 @@ class MBadge(Base):
 							param_eval.append(False)
 							todo_modules.append(module)
 				percentage_done = 1 - len(todo_modules) / len(param_eval)
-				return (percentage_done, MBadgeStatusEnum.INCOMPLETE, todo_modules)
+				return (percentage_done, BadgeCompletionStatus.INCOMPLETE, todo_modules)
 
 
 		# collect progress towards completion criteria
@@ -959,10 +961,10 @@ class MBadge(Base):
 			# no entry in param_eval can be True, otherwise the bade would already have been issued
 			# -> this also means: progress is 0!
 			# return a random choice from the possible completion options (because there can be multiple, but completing 1 is enough)
-			return (0.0, MBadgeStatusEnum.INCOMPLETE, [random.choice(todo_modules)])
+			return (0.0, BadgeCompletionStatus.INCOMPLETE, [random.choice(todo_modules)])
 		else:
 			percentage_done = 1 - len(todo_modules) / len(param_eval)
-			return (percentage_done, MBadgeStatusEnum.INCOMPLETE, todo_modules)
+			return (percentage_done, BadgeCompletionStatus.INCOMPLETE, todo_modules)
 
 
 class MBadgeCriteria(Base):
@@ -1037,7 +1039,7 @@ class MUser(Base):
 	progress = relationship("MChatbotProgressSummary", back_populates="user", uselist=False)
 	recently_accessed_items = relationship("MRecentlyAcessedItem", back_populates="user", uselist=True)
 
-	def get_closest_badge(self, session: Session, courseid: int) -> Union[Tuple[MBadge, float, List[MCourseModule]], None]:
+	def get_closest_badge(self, session: Session, courseid: int) -> Union[Tuple[MBadge, float, BadgeCompletionStatus, List[MCourseModule]], None]:
 		"""
 		Returns:
 			Closest uncompleted badge, the progress towards it, and the modules still needed to get it.
@@ -1054,7 +1056,7 @@ class MUser(Base):
 		open_badges = session.query(MBadge).filter(MBadge.id.not_in(closed_badge_ids), MBadge._courseid==courseid).all()
 		badge_completion_progress = sorted([(badge, *badge.criteria_completion_percentage(session=session, user_id=self.id)) for badge in open_badges], key=lambda p: p[1], reverse=True)
 		if len(badge_completion_progress) > 0:
-			return badge_completion_progress[0][0], badge_completion_progress[0][1], badge_completion_progress[0][3]
+			return badge_completion_progress[0]
 		return None
 
 

@@ -29,6 +29,7 @@ import locale
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime
 
+import config
 from elearning.booksearch import get_book_links
 from services.service import PublishSubscribe
 from services.service import Service
@@ -36,7 +37,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import MChatbotSettings, MCourseModulesViewed, MCourseSection, MGradeItem, MRecentlyAcessedItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
+from elearning.moodledb import BadgeCompletionStatus, MBadge, MChatbotSettings, MCourseModulesViewed, MCourseSection, MFile, MGradeItem, MRecentlyAcessedItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 
 locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
@@ -160,8 +161,6 @@ class ELearningPolicy(Service):
 				# all completed -> delete
 				self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._coursemodule_id.in_(section.sequence), MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).delete()
 		self.get_session().commit()
-
-				
 			
 
 
@@ -187,8 +186,16 @@ class ELearningPolicy(Service):
 		# 	self.set_state(user_id, JUST_LOGGED_IN, True)
 		if event_name == "\\core\\event\\user_loggedin":
 			self.clear_memory(user_id)
+		elif event_name == "\\core\\event\\badge_awarded":
+			return {'sys_acts': [
+				self.congratulate_badge_issued(user_id=user_id, badge_id=moodle_event['objectid'], contextid=moodle_event['contextid'])
+			]}
 		elif event_name == "\\core\\event\\course_module_completion_updated":
+			# TODO check if we finished a whole branch
+			# TODO if so, offer congratulations, the review, and then next possibilities?
+			# TODO recognize branches by Title / and or dependencies
 			# TODO comment on improvement, if quiz?
+			print("TEST")
 			pass
 		elif event_name == "\\core\\event\\user_graded":
 			self.open_chatbot(user_id)
@@ -334,7 +341,7 @@ class ELearningPolicy(Service):
 				# check what user's next closest badge would be
 				closest_badge_info = user.get_closest_badge(session=self.get_session(), courseid=courseid)
 				if not isinstance(closest_badge_info, type(None)):
-					badge, badge_progress, open_modules = closest_badge_info
+					badge, badge_progress, badge_status, open_modules = closest_badge_info
 					if badge_progress >= 0.5:
 						# only display progress towards next closest batch if user is sufficiently close
 						acts.append(SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
@@ -392,24 +399,33 @@ class ELearningPolicy(Service):
 			
 		return acts
 
-	def _handle_request_badge_progress(self, user_id: int) -> SysAct:
+	def _handle_request_badge_progress(self, user_id: int, courseid: int) -> SysAct:
 		# check what user's next closest badge would be
 		closest_badge_info = self.get_current_user(user_id).get_closest_badge(session=self.get_session(), courseid=courseid)
 		if not isinstance(closest_badge_info, type(None)):
-			badge, badge_progress, open_modules = closest_badge_info
-			# only display progress towards next closest batch if user is sufficiently close
-			return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
-				badge_name=badge.name, percentage_done=badge_progress,
-				missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
-									for module in open_modules]
-			))
+			badge, badge_progress, badge_status, open_modules = closest_badge_info
+			if badge_status != BadgeCompletionStatus.INCOMPLETE and badge_progress >= 0.5:
+				# only display progress towards next closest batch if user is sufficiently close
+				return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
+					badge_name=badge.name, percentage_done=badge_progress,
+					missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
+										for module in open_modules]
+				))
 		else: 
-			# all badges are already completed
+			# all badges aAre already completed
 			return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
 				badge_name=None, percentage_done=None, missing_activities=None
 			))
 
-
+	def congratulate_badge_issued(self, user_id: int, badge_id: int, contextid: int) -> SysAct:
+		self.open_chatbot(user_id=user_id)
+		# find badge
+		badge = self.get_session().query(MBadge).get(badge_id)
+		# get badge image link
+		return SysAct(act_type=SysActionType.CongratulateBadge,
+			slot_values=dict(badge_name=badge.name,
+					badge_img_url=f'<img src="{config.MOODLE_SERVER_URL}/pluginfile.php/{contextid}/badges/badgeimage/{badge.id}/f1" alt="{badge.name}"/>')
+		)
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
@@ -451,7 +467,7 @@ class ELearningPolicy(Service):
 				slot_values = self.get_stat_summary(user=self.get_current_user(user_id), courseid=courseid)
 				sys_acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
 			elif user_act.type == UserActionType.RequestBadgeProgress:
-				sys_acts.append(self._handle_request_badge_progress(user_id=user_id))
+				sys_acts.append(self._handle_request_badge_progress(user_id=user_id, courseid=courseid))
 
 			
 			# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
@@ -500,9 +516,9 @@ class ELearningPolicy(Service):
 			# 		book_link_str = "End"
 			# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 			
-		sys_state["last_act"] = sys_act
-		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
-		return {'sys_acts': [sys_act], "sys_state": sys_state}
+		sys_state["last_act"] = sys_acts
+		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_acts}")
+		return {'sys_acts':  sys_acts, "sys_state": sys_state}
 	
 	def get_current_user(self, user_id) -> MUser:
 			""" Get Moodle user by id from Chat Interface (or start run_chat with --user_id=...) """

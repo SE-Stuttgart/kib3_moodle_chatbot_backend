@@ -406,13 +406,18 @@ class ELearningNLG(Service):
 
     def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[str]):
         if badge_name == None:
-            return [("Du hast bereits alle Badges erhalten 🎉 Gut gemacht!", [])]
-        return [(f"""Hi! Du hast fast den Badge {badge_name} abgeschlossen!""", []),        
-                (self._donut_chart("Badge Fortschritt", percentage_done), []),
+            return [("Du hast bereits alle Auszeichnungen erhalten 🎉 Gut gemacht!", [])]
+        return [(f"""Du hast fast die Auszeichnung {badge_name} abgeschlossen!""", []),        
+                (self._donut_chart("Auszeichnungsfortschritt", percentage_done), []),
                 (f"""Wenn du noch
                 {self._enumeration(items=missing_activities)}
 
-                fertig machst, kriegst du ihn 😊""", [])]
+                fertig machst, kriegst du sie 😊""", [])]
+    
+    def congratulate_badge(self, badge_name: str, badge_img_url: str):
+        return [(f"""Du hast gerade die Auszeichnung {badge_name} erhalten, stark 💪
+                 <br>
+                 {badge_img_url}""", [])]
 
 
     def request_continue_or_next(self, last_viewed_course_module, next_available_modules):
@@ -547,6 +552,8 @@ class ELearningNLG(Service):
             return self.display_progress
         elif sys_act.type == SysActionType.DisplayBadgeProgress:
             return self.display_badge_progress
+        elif sys_act.type == SysActionType.CongratulateBadge:
+            return self.congratulate_badge
         raise NotImplementedError
 
 
