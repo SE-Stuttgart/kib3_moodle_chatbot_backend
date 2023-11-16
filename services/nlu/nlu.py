@@ -123,7 +123,7 @@ class ELearningNLU(Service):
         start = time.time()
         result = {}
         #print(self.uttance_mapper.get_labels())
-        if user_utterance is not None:
+        if user_utterance is not None and len(user_utterance) > 0:
             user_utterance = user_utterance.strip()
             user_act = self.uttance_mapper.get_most_similar_label("\"" +user_utterance + "\"")
             
@@ -176,6 +176,8 @@ class ELearningNLU(Service):
             result["user_acts"] = [user_act]
             end = time.time()
             print("extract_user_acts took: ", end-start)
+        else:
+            result = {"user_acts": []}
         return result
 
     @PublishSubscribe(sub_topics=["sys_state"])

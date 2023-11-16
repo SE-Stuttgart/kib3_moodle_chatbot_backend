@@ -159,7 +159,7 @@ class ELearningPolicy(Service):
 			if section.is_completed(user_id=user_id, session=self.get_session(), include_types=learning_material_types + assignment_material_types):
 				# all completed -> delete
 				self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._coursemodule_id.in_(section.sequence), MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).delete()
-				self.get_session().commit()
+		self.get_session().commit()
 
 				
 			
@@ -280,8 +280,9 @@ class ELearningPolicy(Service):
 		return dict(percentage_done=percentage_done,
 					percentage_repeated_quizzes=percentage_repeated_quizzes)
 
+	
+		
 	def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
-		# TODO select correct greeting based on given conditions
 		self.open_chatbot(user_id)
 		user = self.get_current_user(user_id)
 		acts = []
@@ -312,6 +313,7 @@ class ELearningPolicy(Service):
 		last_weekly_summaries = self.get_session().query(MChatbotWeeklySummary).filter(MChatbotWeeklySummary._userid==user_id)
 		last_weekly_summary = last_weekly_summaries.first()
 
+		append_suggestions = True
 		if self.get_moodle_server_time(user_id) >= last_weekly_summary.timecreated + timedelta(days=7):
 			# last time we showed the weekly stats is more than 7 days ago - show again
 			slot_values = self.get_weekly_progress(user_id=user_id, courseid=courseid, last_weekly_summary=last_weekly_summary)
@@ -328,55 +330,86 @@ class ELearningPolicy(Service):
 				progress.timecreated = self.get_moodle_server_time(user_id)
 				self.get_session().commit()
 				acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
-
-		# choose how to proceed
-		has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
-									.filter(MCourseModulesViewed._userid==user_id, MCourseModule._course_id==courseid).count() > 0
-		if has_seen_any_course_modules:
-			# last viewed module
-			last_completed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=True)
-			if len(last_completed_course_modules) > 0:
-				last_completed_course_module = last_completed_course_modules[0] # sorted ascending by date
-
-				# get open modules across sections, 1 per section
-				next_modules = {}
-				# prioritize already viewed modules
-				last_started_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=False)
-				for unfinished_module in last_started_course_modules:
-					if not unfinished_module._section_id in next_modules:
-						next_modules[unfinished_module._section_id] = unfinished_module
-				# fill with other started sections
-				for completed_module in last_completed_course_modules:
-					if not completed_module._section_id in next_modules:
-						# get first open module from this section
-						next_module = completed_module.section.get_first_available_module(user=user, session=self.get_session(),
-																			include_types=learning_material_types + assignment_material_types,
-																			allow_only_unfinished=True)
-						if next_module:
-							next_modules[completed_module._section_id] = next_module
-				next_available_module_links = [module.get_content_link(session=self.get_session(), alternative_display_text=module.section.name) for module in next_modules.values()]
-
-				# user has started, but not completed one or more sections
-				acts.append(
-						SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
-								last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session(), alternative_display_text=last_completed_course_module.get_name(self.get_session())),
-								next_available_modules=next_available_module_links
-						)))
-			# TODO: Forum post info
-			# TODO: Deadline reminder
 			else:
-				# user has completed all started sections, should get choice of next new and available sections
-				available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
-				acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-								next_available_sections=[section.get_link() for section in available_new_course_sections]
+				# check what user's next closest badge would be
+				closest_badge_info = user.get_closest_badge(session=self.get_session(), courseid=courseid)
+				if not isinstance(closest_badge_info, type(None)):
+					badge, badge_progress, open_modules = closest_badge_info
+					if badge_progress >= 0.5:
+						# only display progress towards next closest batch if user is sufficiently close
+						acts.append(SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
+							badge_name=badge.name, percentage_done=badge_progress,
+							missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
+												for module in open_modules]
 						)))
-		else:
-			# TODO return ice cream game
-			pass
-		
+						append_suggestions=False
+
+		if append_suggestions:
+			# choose how to proceed
+			has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
+										.filter(MCourseModulesViewed._userid==user_id, MCourseModule._course_id==courseid).count() > 0
+			if has_seen_any_course_modules:
+				# last viewed module
+				last_completed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=True)
+				if len(last_completed_course_modules) > 0:
+					last_completed_course_module = last_completed_course_modules[0] # sorted ascending by date
+
+					# get open modules across sections, 1 per section
+					next_modules = {}
+					# prioritize already viewed modules
+					last_started_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=False)
+					for unfinished_module in last_started_course_modules:
+						if not unfinished_module._section_id in next_modules:
+							next_modules[unfinished_module._section_id] = unfinished_module
+					# fill with other started sections
+					for completed_module in last_completed_course_modules:
+						if not completed_module._section_id in next_modules:
+							# get first open module from this section
+							next_module = completed_module.section.get_first_available_module(user=user, session=self.get_session(),
+																				include_types=learning_material_types + assignment_material_types,
+																				allow_only_unfinished=True)
+							if next_module:
+								next_modules[completed_module._section_id] = next_module
+					next_available_module_links = [module.get_content_link(session=self.get_session(), alternative_display_text=module.section.name) for module in next_modules.values()]
+
+					# user has started, but not completed one or more sections
+					acts.append(
+							SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
+									last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session(), alternative_display_text=last_completed_course_module.get_name(self.get_session())),
+									next_available_modules=next_available_module_links
+							)))
+				# TODO: Forum post info
+				# TODO: Deadline reminder
+				else:
+					# user has completed all started sections, should get choice of next new and available sections
+					available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
+					acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
+									next_available_sections=[section.get_link() for section in available_new_course_sections]
+							)))
+			else:
+				# TODO return ice cream game
+				pass
+			
 		return acts
 
-					
+	def _handle_request_badge_progress(self, user_id: int) -> SysAct:
+		# check what user's next closest badge would be
+		closest_badge_info = self.get_current_user(user_id).get_closest_badge(session=self.get_session(), courseid=courseid)
+		if not isinstance(closest_badge_info, type(None)):
+			badge, badge_progress, open_modules = closest_badge_info
+			# only display progress towards next closest batch if user is sufficiently close
+			return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
+				badge_name=badge.name, percentage_done=badge_progress,
+				missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
+									for module in open_modules]
+			))
+		else: 
+			# all badges are already completed
+			return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
+				badge_name=None, percentage_done=None, missing_activities=None
+			))
+
+
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
@@ -412,55 +445,60 @@ class ELearningPolicy(Service):
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
 			return {'sys_acts': sys_acts, "sys_state": sys_state}
 		# after first turn
+		sys_acts = []
 		for user_act in user_acts:
-			if user_act is not None:
-				
-				# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
-				# 	# load more search results
-				# 	# get the last search term and counter (from the nlu)
-				# 	search_term = self.get_state(user_id, LAST_SEARCH)
-				# 	counter = int(user_act.slot.split(":")[-1])
-				# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
-				# 	if book_links:
-				# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-				# 		book_link_str = book_link_str + "<br /><br />"
-				# 	else:
-				# 		book_link_str = "End"
-				# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-	
-				# elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
-				# 	reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
-				# 	matches = re.match(reg, user_act.text, re.I)
-				# 	if matches:
-				# 		matches = matches.groupdict()
-				# 		for key in matches.keys():
-				# 			if key.startswith("content") and matches.get(key):
-				# 				search_term = matches.get(key)
-						
-				# 		self.set_state(user_id, LAST_SEARCH, search_term)
-				# 		book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
-				# 		if book_links:
-				# 			book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-				# 			book_link_str = book_link_str + "<br /><br />"
-				# 		else:
-				# 			book_link_str = "None"
-				# 		sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-				# 	else:
-				# 		# Nicht erkannt -> nachfragen!
-				# 		sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
-				
-				# elif user_act.slot == 'SearchTerm':
-				# 	# system asked for only the search term -> utterance is the search term
-				# 	search_term = user_act.text
-				# 	self.set_state(user_id, LAST_SEARCH, search_term)
-				# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
-				# 	if book_links:
-				# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-				# 		book_link_str = book_link_str + "<br /><br />"
-				# 	else:
-				# 		book_link_str = "End"
-				# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-				pass
+			if user_act.type == UserActionType.RequestProgress:
+				slot_values = self.get_stat_summary(user=self.get_current_user(user_id), courseid=courseid)
+				sys_acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
+			elif user_act.type == UserActionType.RequestBadgeProgress:
+				sys_acts.append(self._handle_request_badge_progress(user_id=user_id))
+
+			
+			# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
+			# 	# load more search results
+			# 	# get the last search term and counter (from the nlu)
+			# 	search_term = self.get_state(user_id, LAST_SEARCH)
+			# 	counter = int(user_act.slot.split(":")[-1])
+			# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
+			# 	if book_links:
+			# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+			# 		book_link_str = book_link_str + "<br /><br />"
+			# 	else:
+			# 		book_link_str = "End"
+			# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
+
+			# elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
+			# 	reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
+			# 	matches = re.match(reg, user_act.text, re.I)
+			# 	if matches:
+			# 		matches = matches.groupdict()
+			# 		for key in matches.keys():
+			# 			if key.startswith("content") and matches.get(key):
+			# 				search_term = matches.get(key)
+					
+			# 		self.set_state(user_id, LAST_SEARCH, search_term)
+			# 		book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+			# 		if book_links:
+			# 			book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+			# 			book_link_str = book_link_str + "<br /><br />"
+			# 		else:
+			# 			book_link_str = "None"
+			# 		sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
+			# 	else:
+			# 		# Nicht erkannt -> nachfragen!
+			# 		sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
+			
+			# elif user_act.slot == 'SearchTerm':
+			# 	# system asked for only the search term -> utterance is the search term
+			# 	search_term = user_act.text
+			# 	self.set_state(user_id, LAST_SEARCH, search_term)
+			# 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
+			# 	if book_links:
+			# 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
+			# 		book_link_str = book_link_str + "<br /><br />"
+			# 	else:
+			# 		book_link_str = "End"
+			# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 			
 		sys_state["last_act"] = sys_act
 		self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
