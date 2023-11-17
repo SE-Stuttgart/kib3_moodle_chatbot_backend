@@ -405,22 +405,25 @@ class ELearningNLG(Service):
 
     def display_progress(self, percentage_done: float, percentage_repeated_quizzes: float):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
-        msgs = [("""In letzter Zeit hast du viel Neues gelernt:""", []),
+        return [("""In letzter Zeit hast du viel Neues gelernt:""", []),
                 (self._donut_chart("Kurs", percentage_done, "Wiederholte Quizze", percentage_repeated_quizzes), [])]
-        if random.random() < 0.4:
-            msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
-        return msgs
     
 
     def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[str]):
         if badge_name == None:
-            return [("Du hast bereits alle Auszeichnungen erhalten 🎉 Gut gemacht!", [])]
-        return [(f"""Du hast fast die Auszeichnung {badge_name} abgeschlossen!""", []),        
-                (self._donut_chart("Auszeichnungsfortschritt", percentage_done), []),
+            return [("""Du hast bereits alle gerade verfügbaren Auszeichnungen erhalten 🎉
+                     Wenn du neue Lerninhalte ansiehst, werden neue Badges verfügbar.""", [])]
+        msgs = []
+        if percentage_done >= 0.5:
+            msgs.append((f"""Du hast fast die Auszeichnung {badge_name} abgeschlossen!""", []))
+        else:
+            msgs.append((f"""Als nächsten Badge könntest du {badge_name} erhalten!""", []))
+        msgs += [(self._donut_chart("Auszeichnungsfortschritt", percentage_done), []),
                 (f"""Wenn du noch
                 {self._enumeration(items=missing_activities)}
 
                 fertig machst, kriegst du sie 😊""", [])]
+        return msgs
     
     def congratulate_badge(self, badge_name: str, badge_img_url: str):
         return [(f"""Du hast gerade die Auszeichnung <b>{badge_name}</b> erhalten:

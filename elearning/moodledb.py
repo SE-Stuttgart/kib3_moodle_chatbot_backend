@@ -506,7 +506,7 @@ class MCourseModule(Base):
 		#session.expire_all()
 		type_info = self.get_type_name(session)
 		if type_info == "book":
-			session.get(MBook, self.instance).name
+			return session.get(MBook, self.instance).name
 		elif type_info == "assign":
 			return session.get(MAssign, self.instance).name
 		elif type_info == 'resource':
@@ -937,6 +937,19 @@ class MBadge(Base):
 		# badge is neither claimed, nor are its requirements met fully
 		return BadgeCompletionStatus.INCOMPLETE
 
+	def is_available(self, session: Session, user_id: int) -> bool:
+		"""
+		Returns:
+			True, if all requirements for the badge are available to the user
+		"""
+		# there should only be ONE possible criterium (either method=all or method=any) for this badge
+		crit = self.get_activity_criterion(session=session)
+		# collect progress towards completion criteria
+		for param in crit.criteria_params:
+			if not is_available_course_module(session=session, user_id=user_id, course_module=param.module):
+				return False
+		return True
+			
 
 	def _completed_bronze_silver_or_gold(self, session: Session, user_id: int) -> bool:
 		# these badges are a single outlier in their configuration and not worth checking all the grading
@@ -1117,9 +1130,14 @@ class MUser(Base):
 		# get badges that are not issued
 		closed_badge_ids = [badge._badgeid for badge in session.query(MBadgeIssued).filter(MBadgeIssued._userid==self.id).all()] + \
 							[bronze_badge.id, silver_badge.id, gold_badge.id]
+		# get all open badges
 		open_badges = session.query(MBadge).filter(MBadge.id.not_in(closed_badge_ids), MBadge._courseid==courseid).all()
+		# sort out all badges that are not available yet
+		open_badges = list(filter(lambda badge: badge.is_available(session=session,user_id=self.id), open_badges))
+		# sort available open badges by progress (descending)
 		badge_completion_progress = sorted([(badge, *badge.criteria_completion_percentage(session=session, user_id=self.id)) for badge in open_badges], key=lambda p: p[1], reverse=True)
 		if len(badge_completion_progress) > 0:
+			# return closest badge
 			return badge_completion_progress[0]
 		return None
 
@@ -1415,12 +1433,25 @@ def is_available(json_condition: str, session: Session, user_id: int, current_se
 	return _recursive_availability(session=session, json_tree=data, user_id=user_id, current_server_time=current_server_time)
 
 
-def is_available_course_module(session: Session, user_id: int, course_module: MCourseModule):
-	#session.expire_all()
+def is_available_course_module(session: Session, user_id: int, course_module: MCourseModule, current_server_time: datetime.datetime = None):
+	section = course_module.section
+	if section.is_quiz_section():
+		# some quiz sections are available, even though the content section is not.
+		# this fixes it.
+		content_section = section.get_content_section(session)
+		if (not isinstance(content_section, type(None))) and (not is_available_course_sections(session=session, user_id=user_id, section=content_section, current_server_time=current_server_time)):
+			return False
+	else:
+		# some content sections are available, even though the quiz section is not.
+		# this fixes it.
+		quiz_section = section.get_quiz_section(session)
+		if (not isinstance(quiz_section, type(None))) and (not is_available_course_sections(session=session, user_id=user_id, section=quiz_section, current_server_time=current_server_time)):
+			return False
+	# sections are available, check module availability
 	return bool(course_module.visible) and is_available(json_condition=course_module.availability, session=session, user_id=user_id, current_server_time=None)
 
 
-def is_available_course_sections(session: Session, user_id: int, section: MCourseSection, current_server_time: datetime.datetime):
+def is_available_course_sections(session: Session, user_id: int, section: MCourseSection, current_server_time: datetime.datetime = None):
 	#session.expire_all()
 	if section.is_quiz_section():
 		# check if materials were already viewed, otherwise don't suggest quizzes

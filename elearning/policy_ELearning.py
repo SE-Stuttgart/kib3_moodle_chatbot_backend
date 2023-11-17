@@ -406,7 +406,7 @@ class ELearningPolicy(Service):
 					# user has started, but not completed one or more sections
 					acts.append(
 							SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
-									last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session(), alternative_display_text=last_completed_course_module.get_name(self.get_session())),
+									last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session()),
 									next_available_modules=next_available_module_links
 							)))
 				# TODO: Forum post info
@@ -423,17 +423,23 @@ class ELearningPolicy(Service):
 			
 		return acts
 
-	def _handle_request_badge_progress(self, user_id: int, courseid: int) -> SysAct:
+	def _handle_request_badge_progress(self, user_id: int, courseid: int, min_progress: float = 0.5) -> SysAct:
 		# check what user's next closest badge would be
 		closest_badge_info = self.get_current_user(user_id).get_closest_badge(session=self.get_session(), courseid=courseid)
 		if not isinstance(closest_badge_info, type(None)):
 			badge, badge_progress, badge_status, open_modules = closest_badge_info
-			if badge_status != BadgeCompletionStatus.INCOMPLETE and badge_progress >= 0.5:
+			if badge_status == BadgeCompletionStatus.INCOMPLETE and badge_progress >= min_progress:
 				# only display progress towards next closest batch if user is sufficiently close
 				return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
 					badge_name=badge.name, percentage_done=badge_progress,
 					missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
 										for module in open_modules]
+				))
+			else:
+				return SysAct(SysActionType.DisplayBadgeProgress, slot_values=dict(
+					badge_name=None,
+					percentage_done=None,
+					missing_activities=None
 				))
 		else: 
 			# all badges aAre already completed
@@ -511,7 +517,7 @@ class ELearningPolicy(Service):
 				slot_values = self.get_stat_summary(user=self.get_current_user(user_id), courseid=courseid)
 				sys_acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
 			elif user_act.type == UserActionType.RequestBadgeProgress:
-				sys_acts.append(self._handle_request_badge_progress(user_id=user_id, courseid=courseid))
+				sys_acts.append(self._handle_request_badge_progress(user_id=user_id, courseid=courseid, min_progress=0.0))
 
 			
 			# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
