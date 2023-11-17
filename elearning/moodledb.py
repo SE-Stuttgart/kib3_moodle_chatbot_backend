@@ -1,5 +1,6 @@
 # coding: utf-8
 import json
+import re
 from enum import Enum
 import random
 from typing import List, Tuple, Union
@@ -25,6 +26,12 @@ class Base:
 Base = declarative_base(cls=Base)
 # Base = declarative_base()
 metadata = Base.metadata
+
+
+"""
+Regexes
+"""
+re_topic_branch = re.compile(r'Thema ([A-Z])\d(-\d+)?:')
 
 """
 These are some helper classes for interfacing with moodle DB datatypes.
@@ -122,8 +129,10 @@ class MFile(Base):
 	contenthash = Column(String(40, 'utf8mb4_bin'), nullable=False, index=True, server_default=text("''"))
 	pathnamehash = Column(String(40, 'utf8mb4_bin'), nullable=False, unique=True, server_default=text("''")) 
 
-	# contextid = Column(BIGINT(10), nullable=False, index=True)
-	filearea = Column(String(50, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # 'content', 'draft'
+	itemid = Column(BIGINT(10), primary_key=True)
+	contextid = Column(BIGINT(10), nullable=False, index=True)
+	filearea = Column(String(50, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # 'content', 'draft', "package"
+	component = Column(LONGTEXT) # module name
 
 	filepath = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # /
 	filename = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # e.g. 'Regression.pdf'
@@ -365,6 +374,14 @@ class MCourseModulesViewed(Base):
 		return f"Completion: course_module_id {self._coursemoduleid} for user {self._userid}"
 
 
+class MContext(Base):
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}context'
+	id = Column(BIGINT(10), primary_key=True)
+	
+	course_module = relationship("MCourseModule", back_populates="context", uselist=False)
+
+	_instanceid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules.id"), nullable=False, index=True, name="instanceid")
+
 
 class MHVP(Base):
 	# TODO finish
@@ -377,7 +394,6 @@ class MHVP(Base):
 	intro = Column(LONGTEXT)
 	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
-
 
 
 class MH5PActivity(Base):
@@ -413,6 +429,7 @@ class MCourseModule(Base):
 	completions = relationship("MCourseModulesCompletion", backref="coursemodule")
 	views = relationship("MCourseModulesViewed", backref="coursemodule")
 	recently_accessed_items = relationship("MRecentlyAcessedItem", back_populates="coursemodule")
+	context = relationship("MContext", back_populates="course_module", uselist=False)
 
 	# internal database mapping info
 	_section_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course_sections.id'), nullable=False, server_default=text("'0'"), name='section')
@@ -445,6 +462,16 @@ class MCourseModule(Base):
 		else: 
 			return f'<a href="{base_path}/mod/{type_info}/view.php?id={self.id}">{display_name}</a>'
 
+	def get_h5p_parameters(self, session: Session):
+		file = session.query(MFile).filter(MFile.contextid==self.context.id,MFile.filename.endswith(".h5p")).first()
+		return {
+			"host": MOODLE_SERVER_URL,
+			"context": self.context.id,
+			"filearea": file.filearea,
+			"itemid": file.itemid,
+			"filename": file.filename
+		}
+
 	def get_hvp_embed_html(self, session: Session) -> Union[str, None]:
 		""" Returns the <iframe/> code to embed the h5p content if this course module is h5p content, else None """
 		#session.expire_all()
@@ -453,8 +480,13 @@ class MCourseModule(Base):
 		if type_info == "hvp":
 			return f"""
 			<iframe src="{MOODLE_SERVER_URL}/mod/hvp/embed.php?id={self.id}" allowfullscreen="allowfullscreen"
-				title="Multiple Choice: Welche Zusammenhänge sind kausal?" width="350" height="350" frameborder="0"></iframe>
+				title="Multiple Choice: Welche Zusammenhänge sind kausal?" frameborder="0"></iframe>
 			<script src="../../mod/hvp/library/js/h5p-resizer.js" charset="UTF-8"></script>
+			"""
+		elif type_info == "h5pactivity":
+			file = session.query(MFile).filter(MFile.contextid==self.context.id,MFile.filename.endswith(".h5p")).first()
+			return f"""<iframe src="{MOODLE_SERVER_URL}/h5p/embed.php?url={MOODLE_SERVER_URL}/pluginfile.php/{self.context.id}/mod_h5pactivity/{file.filearea}/{file.itemid}/{file.filename}&preventredirect=1&component=mod_h5pactivity" name="h5player" allowfullscreen="allowfullscreen" class="h5p-player border-0 block_chatbot-quiz"></iframe>
+			<script src="{MOODLE_SERVER_URL}/h5p/h5plib/v124/joubel/core/js/h5p-resizer.js"></script>
 			"""
 		return None # Not h5p content
 
@@ -464,8 +496,8 @@ class MCourseModule(Base):
 		Args:
 			user (MUser): the user to check completion for this course module
 
-		Returns:
-			completion state (bool): True, if user completed this course module, else False
+		Returns:odule,
+			completion state (bool): True, if user completed this course m else False
 		"""
 		#session.expire_all()
 		return session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user_id, MCourseModulesCompletion._coursemoduleid==self.id, MCourseModulesCompletion.completed==True).count() > 0
@@ -516,10 +548,36 @@ class MCourseModule(Base):
 		return session.query(MGradeGrade).filter(MGradeGrade._gradeItemId==grade_item_id, MGradeGrade._userid==user_id).first()
 
 
+	def get_branch_quizes_if_complete(self, session: Session, user_id: int) -> List["MCourseModule"]:
+		"""
+		Returns:
+			The list of all quizes belonging to the same topic branch in the course, if the whole branch is completed
+			e.g. (Branch A with sections 'Thema A:', 'Quizzes zum Thema A1-1:', ...)
+		"""
+		# figure out current branch
+		matches = re_topic_branch.match(self.section.name)
+		quizzes = []
+		if matches:
+			# extract topic letter
+			topic_letter = matches.group(1) # e.g., A, B, ...
+			# find all sections belonging to the same topic branch
+			sections = session.query(MCourseSection).filter(MCourseSection._course_id==self._course_id,
+												   			MCourseSection.name.contains(f"Thema {topic_letter}")).all()
+			for section in sections:
+				if not section.is_completed(user_id=user_id, session=session):
+					# if section is not completed yet, return nothing
+					return []
+				if section.name.startswith("Quizzes"):
+					# if we are in a quiz section, collect all the quizes
+					for module in section.modules:
+						if module.get_type_name(session) == "h5pactivity":
+							quizzes.append(module)
+		return quizzes
+
+
 	def __repr__(self) -> str:
 		""" Pretty printing """
 		return f"Course module {self.id}, type {self._type_id}"
-
 
 
 
@@ -949,19 +1007,25 @@ class MBadge(Base):
 		param_eval = []
 		for param in crit.criteria_params:
 			# skip labels
+			# TODO  and is_available_course_module(session, self.id, module) -> check section complete, or individual modules?
+			# in the second case, we still need to handle 0 todo_modules extra
 			if param.module.get_type_name(session) != "label":
 				if param.module.is_completed(user_id=user_id, session=session):
 					param_eval.append(True)
 				else:
 					param_eval.append(False)
 					todo_modules.append(param.module)
-		
+
 		# evaluate progress
 		if crit.method == BadgeMethodEnum.AGGREGATION_ANY:
 			# no entry in param_eval can be True, otherwise the bade would already have been issued
 			# -> this also means: progress is 0!
 			# return a random choice from the possible completion options (because there can be multiple, but completing 1 is enough)
-			return (0.0, BadgeCompletionStatus.INCOMPLETE, [random.choice(todo_modules)])
+			if len(todo_modules) > 0:
+				return (0.0, BadgeCompletionStatus.INCOMPLETE, [random.choice(todo_modules)])
+			else:
+				# this is probably a new badge for an existing user that already has the requirements, but never got the badge issued
+				return (1.0, BadgeCompletionStatus.COMPLETED, [])
 		else:
 			percentage_done = 1 - len(todo_modules) / len(param_eval)
 			return (percentage_done, BadgeCompletionStatus.INCOMPLETE, todo_modules)

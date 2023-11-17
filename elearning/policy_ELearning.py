@@ -18,6 +18,7 @@
 ###############################################################################
 from datetime import datetime, timedelta
 import decimal
+from enum import Enum
 import random
 import re
 import traceback
@@ -52,6 +53,7 @@ FIRST_TURN = 'first_turn'
 MODE = 'mode'
 S_INDEX = 's_index'
 LAST_SEARCH = 'last_search'
+REVIEW_QUIZZES = "review_quizzes"
 
 # JUST_LOGGED_IN = "just_logged_in"
 
@@ -60,6 +62,12 @@ assignment_material_types = ['h5pactivity']# query day-wise completions
 
 
 COURSE_PROGRESS_DISPLAY_PERCENTAGE_INCREMENT = 0.1
+
+
+
+class ChatbotWindowSize(Enum):
+	DEFAULT = 0
+	LARGE = 1
 
 
 class ELearningPolicy(Service):
@@ -109,7 +117,6 @@ class ELearningPolicy(Service):
 	@PublishSubscribe(pub_topics=['control_event'])
 	def open_chatbot(self, user_id: int):
 		""" Triggers the UI chatwindow to open """
-		print("OPENING CHAT UI")
 		user = self.get_current_user(user_id)
 		if (not user.settings) or user.settings.allow_auto_open:
 			return {
@@ -117,6 +124,19 @@ class ELearningPolicy(Service):
 				"user_id": user_id
 			}
 		
+	@PublishSubscribe(pub_topics=['control_event'])
+	def resize_chatbot(self, user_id: int, size: ChatbotWindowSize):
+		""" Resizes the chatwindow """
+		if size == ChatbotWindowSize.DEFAULT:
+			return {
+				"control_event": "UI_SIZE_DEFAULT",
+				"user_id": user_id
+			}
+		elif size == ChatbotWindowSize.LARGE:
+			return {
+				"control_event": "UI_SIZE_LARGE",
+				"user_id": user_id
+			}
 		
 	def _init_db(self):
 		success = False
@@ -162,8 +182,7 @@ class ELearningPolicy(Service):
 				self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._coursemodule_id.in_(section.sequence), MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).delete()
 		self.get_session().commit()
 			
-
-
+	
 	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct, html_content=str):
 		""" Responsible for reacting to events from mooodle.
@@ -195,8 +214,11 @@ class ELearningPolicy(Service):
 			# TODO if so, offer congratulations, the review, and then next possibilities?
 			# TODO recognize branches by Title / and or dependencies
 			# TODO comment on improvement, if quiz?
-			print("TEST")
-			pass
+			branch_quizzes = self.get_session().query(MCourseModule).get(moodle_event['contextinstanceid']).get_branch_quizes_if_complete(session=self.get_session(), user_id=user_id)
+			self.set_state(user_id, REVIEW_QUIZZES, branch_quizzes)
+			if len(branch_quizzes) > 0:
+				# ask user if they want to review any of the quizzes
+				return SysAct(act_type=SysActionType.RequestReviewOrNext)
 		elif event_name == "\\core\\event\\user_graded":
 			self.open_chatbot(user_id)
 			# extract grade info
@@ -337,6 +359,8 @@ class ELearningPolicy(Service):
 				progress.timecreated = self.get_moodle_server_time(user_id)
 				self.get_session().commit()
 				acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
+				acts.append(SysAct(act_type=SysActionType.RequestReviewOrNext))
+				append_suggestions = False
 			else:
 				# check what user's next closest badge would be
 				closest_badge_info = user.get_closest_badge(session=self.get_session(), courseid=courseid)
@@ -426,6 +450,12 @@ class ELearningPolicy(Service):
 			slot_values=dict(badge_name=badge.name,
 					badge_img_url=f'<img src="{config.MOODLE_SERVER_URL}/pluginfile.php/{contextid}/badges/badgeimage/{badge.id}/f1" alt="{badge.name}"/>')
 		)
+	
+	def display_quiz(self, user_id: int, coursemoduleid: int) -> SysAct:
+		quiz = self.get_session().query(MCourseModule).get(coursemoduleid)
+		hvp_params = quiz.get_h5p_parameters(self.get_session())
+		self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.LARGE)
+		return SysAct(act_type=SysActionType.DisplayQuiz, slot_values=dict(**hvp_params))
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
@@ -449,6 +479,8 @@ class ELearningPolicy(Service):
 		# update the turn count
 		turns = self.get_state(user_id, TURNS) + 1
 		self.set_state(user_id, TURNS, turns)
+
+		
 		
 		# go through the user acts 
 		sys_state = {}
@@ -463,7 +495,19 @@ class ELearningPolicy(Service):
 		# after first turn
 		sys_acts = []
 		for user_act in user_acts:
-			if user_act.type == UserActionType.RequestProgress:
+			if user_act.type == UserActionType.RequestReview:
+				if len(self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES)) > 0:
+					next_quiz = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES).pop()
+					self.set_state(user_id, REVIEW_QUIZZES, self.get_state(user_id, REVIEW_QUIZZES)[1:])
+					sys_acts.append(SysAct(act_type=SysActionType.DisplayQuiz, slot_values={"quiz_embed": next_quiz}))
+			elif user_act.type == UserActionType.RequestNextSection:
+				self.set_state(user_id, REVIEW_QUIZZES, [])
+				user = self.get_current_user(user_id)
+				available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
+				sys_acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
+								next_available_sections=[section.get_link() for section in available_new_course_sections]
+						)))
+			elif user_act.type == UserActionType.RequestProgress:
 				slot_values = self.get_stat_summary(user=self.get_current_user(user_id), courseid=courseid)
 				sys_acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
 			elif user_act.type == UserActionType.RequestBadgeProgress:

@@ -83,7 +83,13 @@ class ELearningNLG(Service):
         elif insufficient == "none":
             return ["""Frag mich nochmal, wenn du ein Quiz abgeschlossen hast 😁"""]
 
-
+    def request_review_or_next(self):
+        msgs = []
+        if random.random() < 0.4:
+            msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
+        msgs.append(("Willst du etwas Zeit nehmen um die Inhalte zu wiederholen?", ["Wiederholen", "Weitermachen"]))
+        return msgs
+        
     # TODO what should happen if moduleRequirements == False or moduleRequired == False?
     # seems like that kind of logic should be moved to the policy, or we need to handle output for the other cases
     def inform_new_module_matching_requirements(self, moduleRequirements: bool, moduleRequired: bool, moduleName: str):
@@ -359,6 +365,8 @@ class ELearningNLG(Service):
         pass
 
 
+    def display_quiz(self, **kwargs):
+        return [(f"$$QUIZ;{json.dumps(kwargs)}", [])]
 
     def display_weekly_summary(self, best_weekly_days: List[str], weekly_completions: Dict[str , list], weekly_completions_prev: Dict[str, list]):
         """ 
@@ -415,10 +423,11 @@ class ELearningNLG(Service):
                 fertig machst, kriegst du sie 😊""", [])]
     
     def congratulate_badge(self, badge_name: str, badge_img_url: str):
-        return [(f"""Du hast gerade die Auszeichnung {badge_name} erhalten, stark 💪
-                 <br>
-                 {badge_img_url}""", [])]
-
+        return [(f"""Du hast gerade die Auszeichnung <b>{badge_name}</b> erhalten:
+                <div style="text-align: center; padding: 0.5em;">
+                 {badge_img_url}
+                </div>""", []),
+                ("Stark 💪", [])]
 
     def request_continue_or_next(self, last_viewed_course_module, next_available_modules):
         return [(f"Letztes Mal hast du {last_viewed_course_module} abgeschlossen.", []),
@@ -437,8 +446,6 @@ class ELearningNLG(Service):
                 Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
                     "Was Anderes lernen"
                 ])]
-
-
    
     def generate_request(self, sys_act: SysAct):
         if "goal" in sys_act.slot_values:
@@ -550,10 +557,14 @@ class ELearningNLG(Service):
             return self.display_weekly_summary
         elif sys_act.type == SysActionType.DisplayProgress:
             return self.display_progress
+        elif sys_act.type == SysActionType.DisplayQuiz:
+            return self.display_quiz
         elif sys_act.type == SysActionType.DisplayBadgeProgress:
             return self.display_badge_progress
         elif sys_act.type == SysActionType.CongratulateBadge:
             return self.congratulate_badge
+        elif sys_act.type == SysActionType.RequestReviewOrNext:
+            return self.request_review_or_next
         raise NotImplementedError
 
 
