@@ -169,7 +169,6 @@ class ELearningPolicy(Service):
 	def clean_completed_sections_from_recentlyaccessed_items(self, user_id: int, course_id: int):
 		# check which module sections are completed.
 		# if so, remove all of its modules from the recently accessed items list.
-		user = self.get_current_user(user_id)
 		recently_accessed_modules = self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).all()
 		section_ids = set()
 		for recent_item in recently_accessed_modules:

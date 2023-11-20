@@ -4,8 +4,8 @@ import re
 from enum import Enum
 import random
 from typing import List, Tuple, Union
-from sqlalchemy import Column, DECIMAL, String, text, create_engine, desc
-from sqlalchemy.dialects.mysql import BIGINT, LONGTEXT, TINYINT
+from sqlalchemy import Column, DECIMAL, String, text, create_engine, desc, Text
+from sqlalchemy.dialects.mysql import BIGINT, TINYINT
 from sqlalchemy.dialects.mysql.types import MEDIUMINT
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.declarative import declarative_base
@@ -47,7 +47,7 @@ class UnixTimestamp(TypeDecorator):
 		return datetime.datetime.utcfromtimestamp(value)
 
 class Sequence(TypeDecorator):
-	impl = LONGTEXT
+	impl = Text
 
 	def process_bind_param(self, value, dialect):
 		return ",".join(value)
@@ -132,11 +132,11 @@ class MFile(Base):
 	itemid = Column(BIGINT(10), primary_key=True)
 	contextid = Column(BIGINT(10), nullable=False, index=True)
 	filearea = Column(String(50, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # 'content', 'draft', "package"
-	component = Column(LONGTEXT) # module name
+	component = Column(Text) # module name
 
 	filepath = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # /
 	filename = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''")) # e.g. 'Regression.pdf'
-	source = Column(LONGTEXT) # source file name, e.g. 'Regression.pdf'
+	source = Column(Text) # source file name, e.g. 'Regression.pdf'
 
 	mimetype = Column(String(100, 'utf8mb4_bin')) # e.g. "application/pdf"
 
@@ -161,7 +161,7 @@ class MBookChapter(Base):
 	subchapter = Column(BIGINT(10), nullable=False, server_default=text("'0'"))
 
 	title = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	content = Column(LONGTEXT, nullable=False)
+	content = Column(Text, nullable=False)
 	contentformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	hidden = Column(TINYINT(2), nullable=False, server_default=text("'0'"))
 
@@ -182,7 +182,7 @@ class MBook(Base):
 	course = Column(BIGINT(10), nullable=False, server_default=text("'0'"))
 	
 	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	intro = Column(LONGTEXT)
+	intro = Column(Text)
 	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	numbering = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	navstyle = Column(SMALLINT(), nullable=False, server_default=text("'1'"))
@@ -313,7 +313,7 @@ class MResource(Base):
 	id = Column(BIGINT(10), primary_key=True)
 	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
 	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	intro = Column(LONGTEXT)
+	intro = Column(Text)
 	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	display = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
@@ -391,7 +391,7 @@ class MHVP(Base):
 	id = Column(BIGINT(10), primary_key=True)
 	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
 	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	intro = Column(LONGTEXT)
+	intro = Column(Text)
 	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 
@@ -404,7 +404,7 @@ class MH5PActivity(Base):
 	id = Column(BIGINT(10), primary_key=True)
 	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
 	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	intro = Column(LONGTEXT)
+	intro = Column(Text)
 	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
@@ -424,7 +424,7 @@ class MCourseModule(Base):
 
 	id = Column(BIGINT(10), primary_key=True)
 	added = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
-	availability = Column(LONGTEXT) # input for is_available method (json_condition)
+	availability = Column(Text) # input for is_available method (json_condition)
 
 	completions = relationship("MCourseModulesCompletion", backref="coursemodule")
 	views = relationship("MCourseModulesViewed", backref="coursemodule")
@@ -597,9 +597,9 @@ class MCourseSection(Base):
 
 	# general course info
 	name = Column(String(255, 'utf8mb4_bin'))
-	summary = Column(LONGTEXT)
+	summary = Column(Text)
 	summaryformat = Column(TINYINT(2), nullable=False, server_default=text("'0'"))
-	availability = Column(LONGTEXT) # input for is_available (json_condition)
+	availability = Column(Text) # input for is_available (json_condition)
 	visible = Column(SMALLINT(), nullable=False, server_default=text("'1'"))
 
 	# List containing MCourseModule id's in the order they should be traversed by students
@@ -783,7 +783,7 @@ class MAssign(Base):
 	id = Column(BIGINT(10), primary_key=True)
 	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
 	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	intro = Column(LONGTEXT, nullable=False)
+	intro = Column(Text, nullable=False)
 	nosubmissions = Column(TINYINT(2), nullable=False, server_default=text("'0'"))
 
 	duedate = Column(UnixTimestamp, nullable=True)
@@ -849,6 +849,23 @@ class MChatbotSettings(Base):
 					   server_default=text("'0'"), name='userid', primary_key=True)
 
 
+class MChatbotHistory(Base):
+	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_history"
+
+	id = Column(BIGINT(10), primary_key=True, autoincrement=True)
+	timecreated = Column(UnixTimestamp)
+
+	speaker = Column(Text)
+	message = Column(Text)
+	act = Column(Text)
+
+	user = relationship("MUser", uselist=False) # user object
+
+	# internal database mapping info
+	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), nullable=False, index=True,
+					   server_default=text("'0'"), name='userid', primary_key=True)
+
+
 
 class MTag(Base):
 	""" Inside the tags, we store information like estimated duration of a course module """
@@ -900,7 +917,7 @@ class MLabel(Base):
 
 	id = Column(BIGINT(10), primary_key=True)
 	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	intro =  Column(LONGTEXT)
+	intro =  Column(Text)
 
 	_courseid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), name='courseid')
 

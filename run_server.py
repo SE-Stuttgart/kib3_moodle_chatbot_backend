@@ -22,6 +22,7 @@ def load_elearning_domain():
     from utils.domain.jsonlookupdomain import JSONLookupDomain
     from elearning.policy_ELearning import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
+    from elearning.dbloggerhandler import DBLoggingHandler
     from services.nlg.nlg import ELearningNLG
     from services.nlu.nlu import ELearningNLU
     domain = JSONLookupDomain('ELearning', display_name="ELearning")
@@ -29,7 +30,8 @@ def load_elearning_domain():
     e_learning_policy = ELearningPolicy(domain=domain, logger=logger)
     e_learning_bst = ELearningBST(domain=domain)
     e_learning_nlg = ELearningNLG(domain=domain, logger=logger)
-    return domain, [e_learning_nlu, e_learning_bst, e_learning_policy, e_learning_nlg]
+    e_learning_logger = DBLoggingHandler(domain=domain)
+    return domain, [e_learning_nlu, e_learning_bst, e_learning_policy, e_learning_nlg, e_learning_logger]
 
 #  setup dialog system
 domain_1, services_1 = load_elearning_domain()
@@ -195,6 +197,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
                 services_1[2].set_state(self.userid, "SLIDEFINDERTOKEN", slidefindertoken)
                 services_1[2].set_state(self.userid, "SERVERTIMESTAMP", moodle_timestamp)
                 services_1[2].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
+                services_1[-1].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
 
                 ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index].get_domain_name()}': True, f'courseid/{domains[domain_index].get_domain_name()}': courseid}, user_id=self.userid)
             elif topic == 'user_utterance':
