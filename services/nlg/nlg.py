@@ -326,10 +326,7 @@ class ELearningNLG(Service):
             <li>Navigation zu Lehrinhalten</li>
             <li>usw.</li>
         </ul>""", []),
-        ("Du kannst auch auf das Zahnrad oben klicken, um meine Einstellungen ändern.", [
-            "Einstellungen",
-            "Loslegen!"
-        ])]
+        ("Du kannst auch auf das Zahnrad oben klicken, um meine Einstellungen ändern.", [])]
     
     def welcomemsg(self):
         day_section = ""
@@ -449,7 +446,28 @@ class ELearningNLG(Service):
                 Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
                     "Was Anderes lernen"
                 ])]
+    
+    def inform_starter_module(self, module_link: str):
+        return [(f"Klicke einfach {module_link} um mit einem Spiel einzusteigen!", [
+            "Einstellungen",
+            "Loslegen!"
+        ])]
    
+    def feedback_to_quiz(self, success_percentage: float, next_quiz_link: str):
+        msgs = []
+        if success_percentage >= 0.99:
+            # all questions correct
+            msgs.append((f"Super gemacht, du scheinst dieses Thema echt gut zu verstehen 🤓", []))
+        elif success_percentage >= 0.70:
+            msgs.append((f"Gut gemacht, du scheinst dieses Thema zu verstehen 🤓", []))
+        else:
+            msgs.append((f"Toll dass du ein Quiz gemacht hast - bleib dran!", []))
+            if random.random() < 0.5:
+                msgs.append((f"Denk dran dass du jederzeit Quizze wiederholen kannst, um dein Verständnis zu verbessern!", []))
+        if next_quiz_link:
+            msgs.append((f"Bereit für das {next_quiz_link}?", []))
+        return msgs
+    
     def generate_request(self, sys_act: SysAct):
         if "goal" in sys_act.slot_values:
             return self.request_initial_goal
@@ -556,6 +574,8 @@ class ELearningNLG(Service):
         #     return self.generate_inform(sys_act)
         elif sys_act.type == SysActionType.InformNextOptions:
             return self.inform_next_options
+        elif sys_act.type == SysActionType.InformStarterModule:
+            return self.inform_starter_module
         elif sys_act.type == SysActionType.DisplayWeeklySummary:
             return self.display_weekly_summary
         elif sys_act.type == SysActionType.DisplayProgress:
@@ -568,6 +588,8 @@ class ELearningNLG(Service):
             return self.congratulate_badge
         elif sys_act.type == SysActionType.RequestReviewOrNext:
             return self.request_review_or_next
+        elif sys_act.type == SysActionType.FeedbackToQuiz:
+            return self.feedback_to_quiz
         raise NotImplementedError
 
 

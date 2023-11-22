@@ -21,6 +21,7 @@ import decimal
 from enum import Enum
 import random
 import re
+import threading
 import traceback
 from typing import List
 import time
@@ -38,7 +39,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import BadgeCompletionStatus, MBadge, MChatbotSettings, MCourseModulesViewed, MCourseSection, MFile, MGradeItem, MRecentlyAcessedItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
+from elearning.moodledb import BadgeCompletionStatus, MBadge, MChatbotSettings, MCourseModulesViewed, MCourseSection, MFile, MGradeItem, MH5PActivity, MRecentlyAcessedItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 
 locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
@@ -103,6 +104,7 @@ class ELearningPolicy(Service):
 		self.logger = logger
 		self.max_turns = max_turns
 		self.session = None
+		self.session_lock = threading.Lock()
 
 	def get_session(self):
 		if isinstance(self.session, type(None)):
@@ -179,7 +181,13 @@ class ELearningPolicy(Service):
 			if section.is_completed(user_id=user_id, session=self.get_session(), include_types=learning_material_types + assignment_material_types):
 				# all completed -> delete
 				self.get_session().query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._coursemodule_id.in_(section.sequence), MRecentlyAcessedItem._course_id==course_id, MRecentlyAcessedItem._userid==user_id).delete()
-		self.get_session().commit()
+		self.session_lock.acquire()
+		try:
+			self.get_session().commit()
+		except:
+			traceback.print_exc()
+		finally:
+			self.session_lock.release()
 			
 	
 	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state", "html_content"])
@@ -209,31 +217,34 @@ class ELearningPolicy(Service):
 				self.congratulate_badge_issued(user_id=user_id, badge_id=moodle_event['objectid'], contextid=moodle_event['contextid'])
 			]}
 		elif event_name == "\\core\\event\\course_module_completion_updated":
-			# TODO check if we finished a whole branch
+			# check if we finished a whole branch
 			# TODO if so, offer congratulations, the review, and then next possibilities?
-			# TODO recognize branches by Title / and or dependencies
-			# TODO comment on improvement, if quiz?
 			branch_quizzes = self.get_session().query(MCourseModule).get(moodle_event['contextinstanceid']).get_branch_quizes_if_complete(session=self.get_session(), user_id=user_id)
 			self.set_state(user_id, REVIEW_QUIZZES, branch_quizzes)
 			if len(branch_quizzes) > 0:
 				# ask user if they want to review any of the quizzes
-				return SysAct(act_type=SysActionType.RequestReviewOrNext)
+				return {"sys_acts": [SysAct(act_type=SysActionType.RequestReviewOrNext)]}
 		elif event_name == "\\core\\event\\user_graded":
 			self.open_chatbot(user_id)
 			# extract grade info
 			gradeItem: MGradeItem = self.get_session().get(MGradeItem, int(moodle_event['other']['itemid']))
 			# gradeItem: MGradeItem = grade.get_grade_item(self.get_session())
 			finalgrade = float(moodle_event['other']['finalgrade'])
-			if finalgrade == gradeItem.grademax:
-				# all questions correct
-				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - all questions correct, finalgrade: {finalgrade}")
-				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - all questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'positiveFeedback': 'True', 'completedQuiz': 'True'})}")
-				return {"sys_acts": [SysAct(act_type=SysActionType.Inform, slot_values={"positiveFeedback": "True", "completedQuiz": "True"})]}
-			else:
-				# not all questions correct
-				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions incorrect, finalgrade: {finalgrade}")
-				self.logger.dialog_turn(f"# USER {user_id} # POLICY_MOODLEEVENT - some questions correct, sysact: { SysAct(act_type=SysActionType.Inform, slot_values={'negativeFeedback': 'True', 'finishedQuiz': 'True'})}")
-				return {"sys_acts": [SysAct(act_type=SysActionType.Inform, slot_values={"negativeFeedback": "True", "finishedQuiz": "True"})]}
+			success_percentage = finalgrade / float(gradeItem.grademax)
+			# get course module and section
+			type_id_quiz = self.get_session().query(MModule).filter(MModule.name=="h5pactivity").first().id
+			course_module = self.get_session().query(MCourseModule).filter(MCourseModule._course_id==moodle_event['courseid'],
+																		   MCourseModule.instance==gradeItem.iteminstance,
+																		   MCourseModule._type_id==type_id_quiz).first()
+			section = course_module.section
+			next_quiz = section.get_next_available_module(currentModule=course_module, user=self.get_current_user(user_id),
+														  session=self.get_session(), include_types=['h5pactivity', 'hvp'],
+														  allow_only_unfinished=True)
+			next_quiz_link = next_quiz.get_content_link(session=self.get_session(), alternative_display_text="nächste Quiz") if next_quiz else None
+			return {"sys_acts": [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
+				success_percentage=success_percentage,
+				next_quiz_link=next_quiz_link
+			))]}
 		elif event_name.endswith("event\\course_module_viewed"):
 			pass
 
@@ -284,11 +295,17 @@ class ELearningPolicy(Service):
 		# update timestamp of last stat output
 		last_weekly_summary.timecreated = self.get_moodle_server_time(user_id)
 		last_weekly_summary.firstweek = False
-		self.get_session().commit()
+		self.session_lock.acquire()
+		try:
+			self.get_session().commit()
+		except:
+			traceback.print_exc()
+		finally:
+			self.session_lock.release()
 
-		return dict(best_weekly_days=cumulative_weekly_completions,
-			  	cumulative_weekly_completions=cumulative_weekly_completions,
-				cumulative_weekly_completions_prev=cumulative_weekly_completions_prev)
+		return dict(best_weekly_days=best_weekly_days,
+				  weekly_completions=cumulative_weekly_completions,
+				weekly_completions_prev=cumulative_weekly_completions_prev)
 	
 	def get_stat_summary(self, user: MUser, courseid: int):
 		# we should show total course progress every 10% of completion
@@ -327,10 +344,21 @@ class ELearningPolicy(Service):
 			last_weekly_summary = MChatbotWeeklySummary(_userid=user_id, timecreated=self.get_moodle_server_time(user_id), firstweek=True)
 			# create first entry for progress summaries
 			progress_summary = MChatbotProgressSummary(_userid=user_id, progress=0.0, timecreated=self.get_moodle_server_time(user_id))
-			self.get_session().add_all([last_weekly_summary, progress_summary, settings])
-			self.get_session().commit()
-
-			return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True})]
+			self.session_lock.acquire()
+			try:
+				self.get_session().add_all([last_weekly_summary, progress_summary, settings])
+				self.get_session().commit()
+			except:
+				traceback.print_exc()
+			finally:
+				self.session_lock.release()
+			# return ice cream game
+			icecreamgame_module_id = self.get_session().query(MModule).filter(MModule.name=='icecreamgame').first().id
+			icecreamgame_module = self.get_session().query(MCourseModule).filter(MCourseModule._course_id==courseid, MCourseModule._type_id==icecreamgame_module_id).first()
+			return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
+					SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
+						module_link=icecreamgame_module.get_content_link(session=self.get_session(), alternative_display_text="hier")
+					))]
 		
 		self.clean_completed_sections_from_recentlyaccessed_items(user_id=user_id, course_id=courseid)
 
@@ -356,7 +384,13 @@ class ELearningPolicy(Service):
 				progress = user.progress
 				progress.progress = slot_values["percentage_done"] 
 				progress.timecreated = self.get_moodle_server_time(user_id)
-				self.get_session().commit()
+				self.session_lock.acquire()
+				try:
+					self.get_session().commit()
+				except:
+					traceback.print_exc()
+				finally:
+					self.session_lock.release()
 				acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
 				acts.append(SysAct(act_type=SysActionType.RequestReviewOrNext))
 				append_suggestions = False
@@ -417,8 +451,12 @@ class ELearningPolicy(Service):
 									next_available_sections=[section.get_link() for section in available_new_course_sections]
 							)))
 			else:
-				# TODO return ice cream game
-				pass
+				# return ice cream game
+				icecreamgame_module_id = self.get_session().query(MModule).filter(MModule.name=='icecreamgame').first().id
+				icecreamgame_module = self.get_session().query(MCourseModule).filter(MCourseModule._course_id==courseid, MCourseModule._type_id==icecreamgame_module_id).first()
+				acts.append(SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
+					module_link=icecreamgame_module.get_content_link(session=self.get_session(), alternative_display_text="hier")
+				)))
 			
 		return acts
 
@@ -646,7 +684,7 @@ class ELearningPolicy(Service):
 			moduleName = random.choice(finished_modules)
 		if repeatContent == "insufficient":
 			instanceId = random.choice(insufficient_modules).get_grade_item(self.get_session()).iteminstance
-			quizModuleId = self.get_session().query(MModule).filter(MModule.name=='hvp').first().id
+			quizModuleId = self.get_session().query(MModule).filter(MModule.name=='h5pactitivty').first().id
 			moduleName = self.get_session().query(MCourseModule).filter(MCourseModule.instance==instanceId, MCourseModule._type_id==quizModuleId).first()
 		if repeatContent == "open":
 			moduleName = random.choice(finished_modules)
@@ -682,7 +720,7 @@ class ELearningPolicy(Service):
 		time_units = {"minute": 1, "minuten": 1, "stunde": 60, "stunden": 60,}
 		
 		spelled_numbers = {"eine": 1, "zwei": 2, "drei": 3, "vier": 4, "fünf": 5, 
-		     			"sechs": 6,"sieben": 7, "acht": 8, "neun": 9, "zehn": 10,}
+						 "sechs": 6,"sieben": 7, "acht": 8, "neun": 9, "zehn": 10,}
 		
 		spelled_special = {"eine halbe": 30, "eine viertel": 15, "eine dreiviertel": 45,}
 		

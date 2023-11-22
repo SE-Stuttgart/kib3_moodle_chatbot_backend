@@ -40,7 +40,8 @@ class SysActionType(Enum):
     RequestContinueOrNext = "RequestContinueOrNext"
 
     FeedbackToQuiz = "FeedbackToQuiz"
-    
+
+    InformStarterModule = "InformStarterModule" 
     InformDeadlines = "InformDeadlines"
     InformForumPost = "InformForumPost"
     InformNextOptions = "InformNextOptions"
