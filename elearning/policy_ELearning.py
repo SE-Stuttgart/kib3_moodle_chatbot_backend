@@ -571,7 +571,20 @@ class ELearningPolicy(Service):
 			# 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
 
 			# elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
-			# 	reg = "(Woher hätte ich die Antwort auf (?P<content1>.*) (kennen|wissen) sollen(\?)?|Woher hätte ich wissen sollen, was mit (?P<content2>.*) gemeint ist(\?)?|Wo finde ich (?<!neue)((et)?was|Info(s|rmation(en)?)? )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content3>.*)(\?)?|Wo steht ((et)?was )?(über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content6>.*)(\?)?|Wo kann ich Info(s|rmation(en)?)? (über(s| das| die| den)? (Thema )?|zu(m)? (Thema )?)?(?P<content4>.*) finden(\?)?|Was war (nochmal )?mit (?P<content9>.*) gemeint(\?)?|Was ist (nochmal )?mit (?P<content5>.*) gemeint(\?)?|Wo wird (das Thema |etwas zum Thema |der Bergiff )?(?P<content10>.*) erklärt(\?)?)"
+			# 	reg = (
+			#		r"(Wo\s*(kann ich|finde ich|steht)|Zeig mir|Welche)\s*"
+			#		r"(Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|mehr|(die )?Grundlagen|Tutorials|"
+			#		r"eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|"
+			#		r"Info(s( zum Thema)?|rmation(en|squellen))|Videos|Lernmaterialien|was)\s*"
+			#		r"(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*"
+			#		r"(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|"
+			#		r"(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*"
+			#		r"(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*"
+			#		r"(bedeutet|geben|gemeint ist)?(\?|$)|"
+			#		r"Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*"
+			#		r"(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*"
+			#		r"(?P<content3>.*?)\s*(gemeint)?(\?|$)"
+			#	)
 			# 	matches = re.match(reg, user_act.text, re.I)
 			# 	if matches:
 			# 		matches = matches.groupdict()
