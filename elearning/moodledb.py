@@ -897,11 +897,12 @@ class MTagInstance(Base):
 	_tagid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}tag.id"), nullable=False, index=True, name='tagid')
 
 
-class MRecentlyAcessedItem(Base):
-	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}block_recentlyaccesseditems'
+class MChatbotRecentlyAcessedItem(Base):
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_recentlyaccessed'
 
 	id = Column(BIGINT(10), primary_key=True)
 	timeaccess = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+	completionstate = Column(TINYINT)
 
 	user = relationship("MUser", back_populates="recently_accessed_items", uselist=False) # user object
 	coursemodule = relationship("MCourseModule", back_populates="recently_accessed_items", uselist=False)
@@ -1376,14 +1377,14 @@ class MUser(Base):
 		Returns the last viewed course module by the current user (that is completed, if completed = True),
 		or None, if the user has not yet accessed any course module (or not completed any)
 		"""
-		return [item.coursemodule for item in session.query(MRecentlyAcessedItem).join(MCourseModulesCompletion, MCourseModulesCompletion._userid==MRecentlyAcessedItem._userid).filter(MRecentlyAcessedItem._course_id==courseid, MCourseModulesCompletion._coursemoduleid==MRecentlyAcessedItem._coursemodule_id, MCourseModulesCompletion.completed==completed,
-																																												  		MRecentlyAcessedItem._userid==self.id) \
-				.order_by(desc(MRecentlyAcessedItem.timeaccess)).all()]
+		return [item.coursemodule for item in session.query(MChatbotRecentlyAcessedItem).join(MCourseModulesCompletion, MCourseModulesCompletion._userid==MChatbotRecentlyAcessedItem._userid).filter(MChatbotRecentlyAcessedItem._course_id==courseid, MCourseModulesCompletion._coursemoduleid==MChatbotRecentlyAcessedItem._coursemodule_id, MCourseModulesCompletion.completed==completed,
+																																												  		MChatbotRecentlyAcessedItem._userid==self.id) \
+				.order_by(desc(MChatbotRecentlyAcessedItem.timeaccess)).all()]
 	
 
 	def recent_incomplete_sections(self, session: Session, courseid: int) -> List[MCourseSection]:
 		incomplete_sections = []
-		recently_accessed = session.query(MRecentlyAcessedItem).filter(MRecentlyAcessedItem._course_id==courseid, MRecentlyAcessedItem._userid==self.id).all()
+		recently_accessed = session.query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==courseid, MChatbotRecentlyAcessedItem._userid==self.id).all()
 		for recent_access in recently_accessed:
 			section = recent_access.coursemodule.section
 			if not section.is_completed(self.id, session):

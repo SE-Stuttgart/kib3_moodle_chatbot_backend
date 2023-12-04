@@ -428,10 +428,12 @@ class ELearningNLG(Service):
                  {badge_img_url}
                 </div>""", []),
                 ("Stark 💪", [])]
+    
+    def inform_last_viewed_course_module(self, last_viewed_course_module):
+        return [(f"Letztes Mal hast du {last_viewed_course_module} abgeschlossen.", [])]
 
-    def request_continue_or_next(self, last_viewed_course_module, next_available_modules):
-        return [(f"Letztes Mal hast du {last_viewed_course_module} abgeschlossen.", []),
-                (f"""Folgende Abschntitte hast du angefangen, aber noch nicht abgeschlossen:
+    def request_continue_or_next(self, next_available_modules):
+        return [(f"""Folgende Abschntitte hast du angefangen, aber noch nicht abgeschlossen:
                 {self._enumeration(next_available_modules)}
                 
                 Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
@@ -576,6 +578,8 @@ class ELearningNLG(Service):
             return self.inform_next_options
         elif sys_act.type == SysActionType.InformStarterModule:
             return self.inform_starter_module
+        elif sys_act.type == SysActionType.InformLastViewedCourseModule:
+            return self.inform_last_viewed_course_module
         elif sys_act.type == SysActionType.DisplayWeeklySummary:
             return self.display_weekly_summary
         elif sys_act.type == SysActionType.DisplayProgress:

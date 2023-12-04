@@ -47,6 +47,7 @@ class SysActionType(Enum):
     InformNextOptions = "InformNextOptions"
     InformSummary = "InformSummary"
     InformSearchResults = "InformSearchResults"
+    InformLastViewedCourseModule = "InformLastViewedCourseModule"
     
     Bad = 'bad'
     Bye = 'closingmsg'
