@@ -253,7 +253,7 @@ class ELearningPolicy(Service):
 			section = course_module.section
 			next_quiz = section.get_next_available_module(currentModule=course_module, user=self.get_current_user(user_id),
 														  session=self.get_session(), include_types=['h5pactivity', 'hvp'],
-														  allow_only_unfinished=True)
+														  allow_only_unfinished=True, currentModuleCompletion=True)
 			next_quiz_link = next_quiz.get_content_link(session=self.get_session(), alternative_display_text="nächste Quiz") if next_quiz else None
 			return {"sys_acts": [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
 				success_percentage=success_percentage,

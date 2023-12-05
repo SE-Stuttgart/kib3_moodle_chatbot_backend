@@ -656,7 +656,7 @@ class MCourseSection(Base):
 		return session.query(MCourseSection).filter(MCourseSection.name==content_section_name,
 													  MCourseSection._course_id==self._course_id).first()
 
-	def get_next_available_module(self, currentModule: MCourseModule, user: "MUser", session: Session, include_types: List[str] = ['assign', 'book', 'h5pactitivty',  'quiz'], allow_only_unfinished: bool = False) -> Union[MCourseModule, None]:
+	def get_next_available_module(self, currentModule: MCourseModule, user: "MUser", session: Session, include_types: List[str] = ['assign', 'book', 'h5pactitivty',  'quiz', 'url'], allow_only_unfinished: bool = False, currentModuleCompletion=None) -> Union[MCourseModule, None]:
 		"""
 		Given a current course module (e.g. the most recently finished one) in this course section,
 		find the course module the student should do next.
@@ -673,21 +673,43 @@ class MCourseSection(Base):
 		"""
 		#session.expire_all()
 		# print("SEQUENCE", self.sequence, 'name', self.name, 'id', self.id)
-
+		unfinished_modules = []
 		for index, moduleId in enumerate(self.sequence):
-			if not currentModule:
-				nextModuleId = int(self.sequence[index])
-				module = session.get(MCourseModule, nextModuleId)
-				if is_available_course_module(session, user.id, module) and module.get_type_name(session) in include_types:
-					return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
-			elif int(moduleId) == currentModule.id:
-				# found position (index) of current module in order list - return following candidate
-				if len(self.sequence) > index + 1:
-					nextModuleId = int(self.sequence[index+1])
-					module = session.get(MCourseModule, nextModuleId)
-					if is_available_course_module(session, user.id, module) and module.get_type_name(session) in include_types and ((allow_only_unfinished and not module.is_completed(user.id, session)) or allow_only_unfinished == False):
-						return next(filter(lambda candidate: candidate.id == nextModuleId, self.modules), None)
+			# walk over all section modules
+			next_module = session.get(MCourseModule, moduleId)
+			if is_available_course_module(session, user.id, next_module) and next_module.get_type_name(session) in include_types:
+				# only look at modules that are 1) available and 2) whitelisted by type
+				# check module completion
+				if currentModule and int(moduleId) == currentModule.id and not isinstance(currentModuleCompletion, type(None)):
+					completed = currentModuleCompletion
+				else:
+					completed = next_module.is_completed(user.id, session)
+				open_respecting_unfinished = ((allow_only_unfinished and not completed) or allow_only_unfinished == False)
+				if open_respecting_unfinished and (not currentModule):
+					# module not completed, and we don't give in a currentModule: return first module
+					return next_module
+				if not completed and int(moduleId) == currentModule.id:
+					# module not completed, but it's the currentModule: return, because it still has to be finished
+					return currentModule
+				if not open_respecting_unfinished and int(moduleId) == currentModule.id:
+					# module is the current module, and it has been completed:
+					# get next module from section in sequence (if exists)
+					# - if that hasen't been completed yet, return it
+					if len(self.sequence) > index + 1:
+						nextModuleId = int(self.sequence[index+1])
+						next_module_candidate = session.get(MCourseModule, nextModuleId)
+						completed = next_module_candidate.is_completed(user.id, session)
+						open_respecting_unfinished_candidate = ((allow_only_unfinished and not completed) or allow_only_unfinished == False)
+						if open_respecting_unfinished_candidate and next_module_candidate.get_type_name(session) in include_types:
+							return next_module_candidate
+				if open_respecting_unfinished:
+					# keep track of all unfinished modules in the section
+					unfinished_modules.append(next_module)
+		if len(unfinished_modules) > 0:
+			# we haven't returned from any of the conditions above, so just return 1st unfinished module
+			return unfinished_modules[0]
 		return None
+
 	
 	def get_first_available_module(self, user: "MUser", session: Session, include_types: List[str] = ['assign', 'book', 'h5pactitivty',  'quiz'], allow_only_unfinished: bool = False) -> Union[MCourseModule, None]:
 		"""
