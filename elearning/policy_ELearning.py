@@ -168,28 +168,39 @@ class ELearningPolicy(Service):
 			self.set_state(user_id, LAST_SEARCH, {})
 			self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
 
-	def clean_completed_sections_from_recentlyaccessed_items(self, user_id: int, course_id: int):
-		# check which module sections are completed.
-		# if so, remove all of its modules from the recently accessed items list.
-		recently_accessed_modules = self.get_session().query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==course_id, MChatbotRecentlyAcessedItem._userid==user_id).all()
-		section_ids = set()
-		for recent_item in recently_accessed_modules:
-			section = recent_item.coursemodule.section
-			if section.id in section_ids:
-				continue # already checked this section
-			section_ids.add(section.id)
-			if section.is_completed(user_id=user_id, session=self.get_session(), include_types=learning_material_types + assignment_material_types):
-				# all completed -> delete
-				self.get_session().query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._coursemodule_id.in_(section.sequence), MChatbotRecentlyAcessedItem._course_id==course_id, MChatbotRecentlyAcessedItem._userid==user_id).delete()
-		self.session_lock.acquire()
-		try:
-			self.get_session().commit()
-		except:
-			traceback.print_exc()
-		finally:
-			self.session_lock.release()
 			
-	
+	def update_recently_viewed(self, user_id: int, course_id: int, course_module_id: int, time: int):
+		# check if we already have an entry
+		access_item = self.get_session().query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==course_id,
+																			 		MChatbotRecentlyAcessedItem._coursemodule_id==course_module_id,
+																					MChatbotRecentlyAcessedItem._userid==user_id).first()
+		if access_item:
+			# update timestamp
+			access_item.timeaccess = datetime.fromtimestamp(time)
+			self.get_session().commit()
+		else:
+			# create first entry
+			self.get_session().add(
+				MChatbotRecentlyAcessedItem(
+					timeaccess=datetime.fromtimestamp(time),
+					completionstate=0,
+					_userid=user_id,
+					_course_id=course_id,
+					_coursemodule_id=course_module_id
+				)
+			)
+			self.get_session().commit()
+
+	def update_recently_viewed_completion(self, user_id: int, course_id: int, course_module_id: int, completion: int):
+		# check if we already have an entry
+		access_item = self.get_session().query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==course_id,
+																			 		MChatbotRecentlyAcessedItem._coursemodule_id==course_module_id,
+																					MChatbotRecentlyAcessedItem._userid==user_id).first()
+		if access_item:
+			access_item.completionstate = completion
+			self.get_session().commit()
+
+
 	@PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct, html_content=str):
 		""" Responsible for reacting to events from mooodle.
@@ -207,6 +218,8 @@ class ELearningPolicy(Service):
 		print(moodle_event)
 		print("COMPLETION UPDATED?", moodle_event == "\\core\\event\\course_module_completion_updated")
 		print("=================")
+
+
 		# \mod_h5pactivity\event\statement_received
 		# if event_name == "\\core\\event\\user_loggedin":
 		# 	self.set_state(user_id, JUST_LOGGED_IN, True)
@@ -219,6 +232,7 @@ class ELearningPolicy(Service):
 		elif event_name == "\\core\\event\\course_module_completion_updated":
 			# check if we finished a whole branch
 			# TODO if so, offer congratulations, the review, and then next possibilities?
+			self.update_recently_viewed_completion(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], completion=moodle_event['other']['completionstate'])
 			branch_quizzes = self.get_session().query(MCourseModule).get(moodle_event['contextinstanceid']).get_branch_quizes_if_complete(session=self.get_session(), user_id=user_id)
 			self.set_state(user_id, REVIEW_QUIZZES, branch_quizzes)
 			if len(branch_quizzes) > 0:
@@ -246,7 +260,7 @@ class ELearningPolicy(Service):
 				next_quiz_link=next_quiz_link
 			))]}
 		elif event_name.endswith("event\\course_module_viewed"):
-			pass
+			self.update_recently_viewed(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], time=moodle_event['timecreated'])
 
 	def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: MChatbotWeeklySummary):
 		# calculate offet from beginning of day and current time
@@ -360,8 +374,6 @@ class ELearningPolicy(Service):
 						module_link=icecreamgame_module.get_content_link(session=self.get_session(), alternative_display_text="hier")
 					))]
 		
-		self.clean_completed_sections_from_recentlyaccessed_items(user_id=user_id, course_id=courseid)
-
 		# Add greeting
 		acts.append(SysAct(act_type=SysActionType.Welcome, slot_values={}))
 
@@ -587,6 +599,7 @@ class ELearningPolicy(Service):
 		acts = []
 		has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
 									.filter(MCourseModulesViewed._userid==user.id, MCourseModule._course_id==courseid).count() > 0
+		all_sections_completed = False
 		if has_seen_any_course_modules:
 			# last viewed module
 			last_completed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=True)
@@ -616,13 +629,16 @@ class ELearningPolicy(Service):
 					acts.append(SysAct(act_type=SysActionType.InformLastViewedCourseModule, slot_values=dict(
 						last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session()),
 					)))
-				acts.append(
-						SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
-								next_available_modules=next_available_module_links
-						)))
+				if len(next_available_module_links) > 0:
+					acts.append(
+							SysAct(act_type=SysActionType.RequestContinueOrNext, slot_values=dict(
+									next_available_modules=next_available_module_links
+							)))
+				else:
+					all_sections_completed = True
 			# TODO: Forum post info
 			# TODO: Deadline reminder
-			else:
+			if all_sections_completed:
 				# user has completed all started sections, should get choice of next new and available sections
 				available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user.id))
 				acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(

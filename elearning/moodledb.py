@@ -174,6 +174,15 @@ class MBookChapter(Base):
 
 	def get_parent_book(self):
 		return self.book
+	
+class MUrl(Base):
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}url'
+	id = Column(BIGINT(10), primary_key=True)
+	course = Column(BIGINT(10), nullable=False, server_default=text("'0'"))
+
+	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
+	externalurl = Column(Text)
+
 
 class MBook(Base):
 	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}book'
@@ -428,7 +437,7 @@ class MCourseModule(Base):
 
 	completions = relationship("MCourseModulesCompletion", backref="coursemodule")
 	views = relationship("MCourseModulesViewed", backref="coursemodule")
-	recently_accessed_items = relationship("MRecentlyAcessedItem", back_populates="coursemodule")
+	recently_accessed_items = relationship("MChatbotRecentlyAcessedItem", back_populates="coursemodule")
 	context = relationship("MContext", back_populates="course_module", uselist=False)
 
 	# internal database mapping info
@@ -459,6 +468,8 @@ class MCourseModule(Base):
 			return f'<a href="{base_path}/mod/glossary/view.php?id={self.id}">{display_name}</a>'
 		elif type_info == "hvp":
 			return f'<a href="{base_path}/mod/hvp/view.php?id={self.id}">{display_name}</a>'
+		elif type_info == "url":
+			return f'<a href="{base_path}/mod/url/view.php?id={self.id}">{display_name}</a>'
 		else: 
 			return f'<a href="{base_path}/mod/{type_info}/view.php?id={self.id}">{display_name}</a>'
 
@@ -520,6 +531,8 @@ class MCourseModule(Base):
 		elif type_info == "page":
 			# Section hat ein Attribut name, dass modul selbst nicht
 			return self.section.name
+		elif type_info == "url":
+			return session.get(MUrl, self.instance).name
 		elif type_info == 'icecreamgame':
 			return "Spiel zum Einstieg: Bestellen Sie Eis!"
 		else: 
@@ -719,6 +732,12 @@ class MCourseSection(Base):
 		completions = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==user_id).all()
 		completed_section_module_ids = [completion._coursemoduleid for completion in completions if completion._coursemoduleid in all_section_module_ids]
 		return len(all_section_module_ids.difference(completed_section_module_ids)) == 0
+	
+	def get_content_modules(self, session: Session, include_types=["url", "book", "resource", "quiz", "h5pactivity"]) -> List[MCourseModule]:
+		"""
+		Return the "Content" modules corresponding to the include types from this section.
+		"""
+		return [module for module in self.modules if module.get_type_name(session) in include_types]
 
 	def __repr__(self) -> str:
 		return f"Course section {self.name} ({self.id})"
@@ -754,7 +773,7 @@ class MCourse(Base):
 	modules = relationship("MCourseModule", backref="course")
 	sections = relationship("MCourseSection", backref='course')
 	gradeItems = relationship("MGradeItem", backref='course')
-	recently_accessed_items = relationship("MRecentlyAcessedItem", back_populates="course")
+	recently_accessed_items = relationship("MChatbotRecentlyAcessedItem", back_populates="course")
 
 	def __repr__(self) -> str:
 		""" Pretty printing """
@@ -1134,7 +1153,7 @@ class MUser(Base):
 	# chatbot settings
 	settings = relationship("MChatbotSettings", back_populates="user", uselist=False)
 	progress = relationship("MChatbotProgressSummary", back_populates="user", uselist=False)
-	recently_accessed_items = relationship("MRecentlyAcessedItem", back_populates="user", uselist=True)
+	recently_accessed_items = relationship("MChatbotRecentlyAcessedItem", back_populates="user", uselist=True)
 
 	def get_closest_badge(self, session: Session, courseid: int) -> Union[Tuple[MBadge, float, BadgeCompletionStatus, List[MCourseModule]], None]:
 		"""
@@ -1347,7 +1366,7 @@ class MUser(Base):
 		available = []
 		for section in session.query(MCourseSection).filter(MCourseSection._course_id==courseid):
 			if is_available_course_sections(session, self.id, section, current_server_time) and not section.is_completed(self.id, session):
-				some_modules_not_available = any([not is_available_course_module(session, self.id, module) for module in section.modules])
+				some_modules_not_available = any([not is_available_course_module(session, self.id, module) for module in section.get_content_modules(session=session)])
 				if not some_modules_not_available:
 					available.append(section)
 		return available
@@ -1375,18 +1394,24 @@ class MUser(Base):
 	def last_viewed_course_modules(self, session: Session, courseid: int, completed: bool = True) -> List[MCourseModule]:
 		"""
 		Returns the last viewed course module by the current user (that is completed, if completed = True),
-		or None, if the user has not yet accessed any course module (or not completed any)
+		or an empty list, if the user has not yet accessed any course module (or not completed any)
 		"""
-		return [item.coursemodule for item in session.query(MChatbotRecentlyAcessedItem).join(MCourseModulesCompletion, MCourseModulesCompletion._userid==MChatbotRecentlyAcessedItem._userid).filter(MChatbotRecentlyAcessedItem._course_id==courseid, MCourseModulesCompletion._coursemoduleid==MChatbotRecentlyAcessedItem._coursemodule_id, MCourseModulesCompletion.completed==completed,
-																																												  		MChatbotRecentlyAcessedItem._userid==self.id) \
+		return [item.coursemodule for item in session.query(MChatbotRecentlyAcessedItem)
+												.filter(MChatbotRecentlyAcessedItem._course_id==courseid, 
+														MChatbotRecentlyAcessedItem.completionstate==int(completed),
+														MChatbotRecentlyAcessedItem._userid==self.id)
 				.order_by(desc(MChatbotRecentlyAcessedItem.timeaccess)).all()]
 	
 
 	def recent_incomplete_sections(self, session: Session, courseid: int) -> List[MCourseSection]:
 		incomplete_sections = []
 		recently_accessed = session.query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==courseid, MChatbotRecentlyAcessedItem._userid==self.id).all()
+		section_ids_viewed = set()
 		for recent_access in recently_accessed:
 			section = recent_access.coursemodule.section
+			if section.id in section_ids_viewed:
+				continue # we already checked
+			section_ids_viewed.add(section.id)
 			if not section.is_completed(self.id, session):
 				incomplete_sections.append(section)
 		return incomplete_sections
@@ -1415,11 +1440,13 @@ def _recursive_availability(session: Session, json_tree: dict, user_id: int, cur
 				condition_values.append(condition['e']==completed)
 			elif condition['type'] == "grade":
 				grade = session.query(MGradeGrade).filter(MGradeGrade._userid==user_id,MGradeGrade._gradeItemId==condition['id']).first()
-				if grade:
+				if grade and not (grade.finalgrade is None):
 					if "min" in condition:
 						condition_values.append(grade.finalgrade >= condition["min"])
 					elif "max" in condition:
 						condition_values.append(grade.finalgrade <= condition["max"])
+				else:
+					condition_values.append(False)
 			elif condition['type'] == "date":
 				assert NotImplementedError
 				# date = datetime.datetime.fromtimestamp(condition['t'])
