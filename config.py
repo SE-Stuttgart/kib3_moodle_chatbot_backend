@@ -3,6 +3,7 @@ import os
 MOODLE_SERVER_WEB_HOST = "webserver" # IP Adress of moodle webserver 
 MOODLE_SERVER_WEB_PORT = os.environ['MOODLE_SERVER_PORT']    # Port of moodle webserver (default: 8080, or set to None)
 MOODLE_SERVER_IP_ADDR = f"{MOODLE_SERVER_WEB_HOST}:{MOODLE_SERVER_WEB_PORT}" # base adress of moodle website
+MOOLDE_SERVER_PROTOCOL = "https" if os.environ['MOODLE_SERVER_SSL'] == 'true' else "http"
 
 MOODLE_SERVER_URL = os.environ["MOODLE_SERVER_URL"]
 

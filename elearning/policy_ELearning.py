@@ -524,7 +524,20 @@ class ELearningPolicy(Service):
 			elif user_act.type == UserActionType.ContinueOpenModules:
 				user = self.get_current_user(user_id=user_id)
 				sys_acts.extend(self.get_user_next_module(user=user, courseid=courseid))
-
+			elif user_act.type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
+				if not user_act.value is None:
+					# we already extracted the search term from the user query - return results immediately
+					book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=user_act.value, word_context_length=5, start=0, end=3)
+					if book_links:
+						book_link_list = [f'<a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links]
+					else:
+						book_link_list = []
+					sys_act = SysAct(act_type=SysActionType.InformSearchResults, slot_values={"search_results": book_link_list})
+					# TODO set state with serach term to support the LoadMore results act
+					sys_acts.append(sys_act)
+				else:
+					# TODO we want to search, but didn't recognize the user input from the first query - ask for search term only
+					raise NotImplementedError 
 			
 			# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
 			# 	# load more search results

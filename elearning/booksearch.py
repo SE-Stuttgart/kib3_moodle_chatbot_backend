@@ -14,18 +14,18 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
     """
     print("course_id", course_id)
     print("searchTerm", searchTerm)
-    print("Adress: ", f"{config.MOODLE_SERVER_URL}/webservice/rest/server.php")
+    print("Adress: ", f"{config.MOOLDE_SERVER_PROTOCOL}://{config.MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php")
     http_client = httplib2.Http(".cache")
     body={
             "wstoken": wstoken,
             "wsfunction": "block_slidefinder_get_searched_locations",
             "moodlewsrestformat": "json",
-            "search_string": searchTerm,
-            "course_id": course_id,
-            "context_length": word_context_length
+            "searchstring": searchTerm,
+            "courseid": course_id,
+            "contextlength": word_context_length
     }
     try:
-        response = http_client.request(f"{config.MOODLE_SERVER_URL}/webservice/rest/server.php",
+        response = http_client.request(f"{config.MOOLDE_SERVER_PROTOCOL}://{config.MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php",
             method="POST",
             headers={'Content-type': 'application/x-www-form-urlencoded'},
             body=urllib.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode

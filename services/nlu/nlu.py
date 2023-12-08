@@ -131,11 +131,23 @@ class ELearningNLU(Service):
             user_act_type = UserActionType(user_act)        
             user_act = UserAct(text=user_utterance, act_type=user_act_type)
 
+            if user_act_type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
+                reg = (
+                    r"(Wo\s*(kann ich|finde ich|steht|ist)|Zeig mir|Welche|Ich *(suche|brauche|will))?\s*(mehr\s*)?(Material(ien)?|nach|Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|(die )?Grundlagen|Tutorials|eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|Info(s?( zum Thema)?|rmation(en|squellen)?)|Videos|(Lern)?material(ien)?|was)\s*(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*(bedeutet|geben|gemeint ist)?(\?|$)|Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*(?P<content3>.*?)\s*(gemeint)?(\?|$)"
+                )
+                matches = re.match(reg, user_act.text, re.I)
+                if matches:
+                    matches = matches.groupdict()
+                    for key in matches.keys():
+                        if key.startswith("content") and matches.get(key):
+                            user_act.value = matches.get(key)
+
             # TODO Bring back full logic for search etc.
             # user_requestable selber erstellen und abfragen
             last_acts = self.get_state(user_id, self.LAST_ACT)
 
-
+       
+               
             # if len(last_acts) == 0 and last_acts[0] and "modulContent" in last_acts[0].slot_values and last_acts[0].type == SysActionType.RequestSearchTerm:
             #     # if last was search but search term was not found -> last sysact asked for search term -> now user gives search term
             #     user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform, slot="SearchTerm")

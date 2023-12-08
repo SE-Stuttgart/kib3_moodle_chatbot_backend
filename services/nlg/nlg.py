@@ -454,6 +454,16 @@ class ELearningNLG(Service):
             "Einstellungen",
             "Loslegen!"
         ])]
+    
+    def inform_search_results(self, search_results):
+        return [(
+            f"""<ul>
+                {" ".join([f'<li>{res}</li>' for res in search_results])}
+            </ul>
+            """, (
+                "Mehr Ergebnisse"
+            )
+        )]
    
     def feedback_to_quiz(self, success_percentage: float, next_quiz_link: str):
         msgs = []
@@ -580,6 +590,8 @@ class ELearningNLG(Service):
             return self.inform_starter_module
         elif sys_act.type == SysActionType.InformLastViewedCourseModule:
             return self.inform_last_viewed_course_module
+        elif sys_act.type == SysActionType.InformSearchResults:
+            return self.inform_search_results
         elif sys_act.type == SysActionType.DisplayWeeklySummary:
             return self.display_weekly_summary
         elif sys_act.type == SysActionType.DisplayProgress:
