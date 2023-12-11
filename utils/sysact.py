@@ -38,6 +38,7 @@ class SysActionType(Enum):
     
     RequestReviewOrNext = "RequestReviewOrNext"
     RequestContinueOrNext = "RequestContinueOrNext"
+    RequestSearchTerm = "RequestSearchTerm"
 
     FeedbackToQuiz = "FeedbackToQuiz"
 

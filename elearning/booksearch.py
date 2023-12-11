@@ -1,13 +1,14 @@
+from collections import defaultdict
 import json
 import traceback
-from typing import Dict
+from typing import Dict, List, Tuple
 import httplib2
 import urllib
 import config
 
 
 
-def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Dict:
+def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Tuple[Dict[str, List[str]], bool]:
     """
     Args:
         word_context_length: how many words before and after the search term should be included in search result
@@ -45,46 +46,26 @@ def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTe
         Example entry in data (list):
         {'Filename': 'Das Koordinatensystem', 'PDF Pagenum': 1, 'Url': 'http://193.196.53.252:80/mod/book/view.php?id=19&chapterid=34', 'Matched String': 'Koordinatensystem', 'Context': '... das Koordinatensystem was ist wo?foto ...'}
         """
-        links = {}
-        files = {}
-
-        # count the number of search results per filename
         
-        # bundle the results per filename (filename and the context snippets)
-        
+        """
+        {'book_chapter_url': 'http://localhost:8081/mod/book/view.php?id=15&chapterid=1',
+            'context_snippet': '... Lizenzhinweise auf der letzten SeiteRegressionZahlen '
+                                'vorhersagenFoto:Mika BaumeisteraufUnsplash ...',
+            'filename': 'Regression.pdf',
+            'page_number': 1},
+        """
+        files = defaultdict(lambda: [])
+        counter = 0
+        has_more_results = len(data) >= end if end > 0 else False
 
-        for search_result in data:
-            
-
-            context = search_result['context_snippet']
-            if "?universität" in context:
-                context = context.split("?universität")[0]
-            if "universität stuttgart" in context:
-                context = context.split("universität stuttgart")[0]
-
-            # if the filename is not yet in the dict, add it
-            if search_result["filename"] not in files:
-                files[search_result["filename"]] = ["", search_result["book_chapter_url"]]
-            
-            # add the context snippet to the list of context snippets for this filename
-            #files[search_result["filename"]].append(context)
-            files[search_result["filename"]][0] = files[search_result["filename"]][0] + context + " <br \>"
-            # if the filename is not yet in the dict, add it
-            
-
-        # only give back the specified number of results, if start -1 give back all results
-        # if start out of range, give back empty dict, if end out of range, give back all results
-        
-        if start!=-1:
-            if start < len(files) and end < len(files):
-                files = dict(list(files.items())[start:end])
-            elif start < len(files) and end >= len(files):
-                files = dict(list(files.items())[start:])
-            else:
-                return {}
-        print(files)
-        
-        return files
+        # bundle the results by filename (filename and the context snippets)
+        for entry in data:
+            if counter < 0 or start <= counter < end:
+                files[entry['filename']].append(
+                    f"""<a href="{entry['book_chapter_url']}">{entry['context_snippet']}</a>"""
+                )
+            counter += 1
+        return files, has_more_results
     except:
         print(traceback.format_exc())
         return {f"{config.MOODLE_SERVER_URL}": "Fehler bei Suche"}

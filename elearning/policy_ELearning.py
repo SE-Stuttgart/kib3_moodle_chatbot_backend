@@ -23,7 +23,7 @@ import random
 import re
 import threading
 import traceback
-from typing import List
+from typing import List, Tuple
 import time
 from copy import deepcopy
 import locale
@@ -52,8 +52,8 @@ TURNS = 'turns'
 LAST_USER_ACT = 'last_act'
 FIRST_TURN = 'first_turn'
 MODE = 'mode'
-S_INDEX = 's_index'
 LAST_SEARCH = 'last_search'
+LAST_SEARCH_INDEX = 'last_search_index'
 REVIEW_QUIZZES = "review_quizzes"
 
 # JUST_LOGGED_IN = "just_logged_in"
@@ -174,7 +174,8 @@ class ELearningPolicy(Service):
 			self.set_state(user_id, TURNS, 0)
 			self.set_state(user_id, FIRST_TURN, True)
 			self.set_state(user_id, LAST_SEARCH, {})
-			self.set_state(user_id, S_INDEX, 0)  # the index in current suggestions for the current system reccomendation
+			self.set_state(user_id, LAST_SEARCH, None)
+			self.set_state(user_id, LAST_SEARCH_INDEX, 0)
 
 			
 	def update_recently_viewed(self, user_id: int, course_id: int, course_module_id: int, time: int):
@@ -473,6 +474,28 @@ class ELearningPolicy(Service):
 		hvp_params = quiz.get_h5p_parameters(self.get_session())
 		self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.LARGE)
 		return SysAct(act_type=SysActionType.DisplayQuiz, slot_values=dict(**hvp_params))
+	
+	def reset_search_term(self, user_id: int, user_acts: List[UserAct]):
+		"""
+		Reset last user's search term if no serach / load more act types found in user acts
+		"""
+		search_act = any([act.type in [UserActionType.Search, UserActionType.LoadMoreSearchResults] for act in user_acts])
+		if not search_act:
+			self.set_state(user_id, LAST_SEARCH, None)
+			self.set_state(user_id, LAST_SEARCH_INDEX, 0)
+
+	def search_resources(self, user_id: int, courseid: int, search_term: str, search_idx: int, num_results: int = 3) -> Tuple[List[str], bool]:
+		"""
+		Lookup resources, and increments search index. Also updates search term.
+		Returns:
+			List of search results
+			Boolean: if there are more search results
+		"""
+		book_links, has_more_results = get_book_links(webserviceuserid=self.get_webservice_user_id(), wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=search_idx, end=search_idx+num_results+1)
+		
+		self.set_state(user_id=user_id, attribute_name=LAST_SEARCH_INDEX, attribute_value=search_idx + num_results)
+		self.set_state(user_id=user_id, attribute_name=LAST_SEARCH, attribute_value=search_term)
+		return book_links, has_more_results
 
 	@PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state", "html_content"])
 	def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
@@ -497,8 +520,6 @@ class ELearningPolicy(Service):
 		turns = self.get_state(user_id, TURNS) + 1
 		self.set_state(user_id, TURNS, turns)
 
-		
-		
 		# go through the user acts 
 		sys_state = {}
 		if self.get_state(user_id, FIRST_TURN):
@@ -510,6 +531,7 @@ class ELearningPolicy(Service):
 				self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
 			return {'sys_acts': sys_acts, "sys_state": sys_state}
 		# after first turn
+		self.reset_search_term(user_id=user_id, user_acts=user_acts)
 		sys_acts = []
 		for user_act in user_acts:
 			if user_act.type == UserActionType.RequestReview:
@@ -534,18 +556,22 @@ class ELearningPolicy(Service):
 				sys_acts.extend(self.get_user_next_module(user=user, courseid=courseid))
 			elif user_act.type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
 				if not user_act.value is None:
+					# if we have a new search term, reset the search index and give out first three results
 					# we already extracted the search term from the user query - return results immediately
-					book_links = get_book_links(webserviceuserid=self.get_webservice_user_id(), wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=user_act.value, word_context_length=5, start=0, end=3)
-					if book_links:
-						book_link_list = [f'<a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links]
-					else:
-						book_link_list = []
-					sys_act = SysAct(act_type=SysActionType.InformSearchResults, slot_values={"search_results": book_link_list})
-					# TODO set state with serach term to support the LoadMore results act
+					book_link_list, has_more_search_results = self.search_resources(user_id=user_id, courseid=courseid, search_term=user_act.value, search_idx=0)
+					sys_act = SysAct(act_type=SysActionType.InformSearchResults, slot_values={"search_results": book_link_list, "load_more": has_more_search_results})
 					sys_acts.append(sys_act)
 				else:
-					# TODO we want to search, but didn't recognize the user input from the first query - ask for search term only
-					raise NotImplementedError 
+					if not self.get_state(user_id=user_id, attribute_name=LAST_SEARCH) is None:
+						# if we have a search term already, use that
+						last_search_term = self.get_state(user_id=user_id, attribute_name=LAST_SEARCH)
+						book_link_list, has_more_search_results = self.search_resources(user_id=user_id, courseid=courseid, search_term=last_search_term, search_idx=self.get_state(user_id=user_id, attribute_name=LAST_SEARCH_INDEX))
+						sys_act = SysAct(act_type=SysActionType.InformSearchResults, slot_values={"search_results": book_link_list, "load_more": has_more_search_results})
+						sys_acts.append(sys_act)
+					else:
+						# otherwise we want to search, but didn't recognize the user input from the first query - ask for search term only
+						sys_act = SysAct(act_type=SysActionType.RequestSearchTerm, slot_values={})
+						sys_acts.append(sys_act)
 			
 			# elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
 			# 	# load more search results

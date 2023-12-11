@@ -126,71 +126,27 @@ class ELearningNLU(Service):
         if user_utterance is not None and len(user_utterance) > 0:
             user_utterance = user_utterance.strip()
             user_act = self.uttance_mapper.get_most_similar_label("\"" +user_utterance + "\"")
-            
-            # temporary NLU fix
             user_act_type = UserActionType(user_act)        
             user_act = UserAct(text=user_utterance, act_type=user_act_type)
 
-            if user_act_type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
-                reg = (
-                    r"(Wo\s*(kann ich|finde ich|steht|ist)|Zeig mir|Welche|Ich *(suche|brauche|will))?\s*(mehr\s*)?(Material(ien)?|nach|Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|(die )?Grundlagen|Tutorials|eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|Info(s?( zum Thema)?|rmation(en|squellen)?)|Videos|(Lern)?material(ien)?|was)\s*(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*(bedeutet|geben|gemeint ist)?(\?|$)|Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*(?P<content3>.*?)\s*(gemeint)?(\?|$)"
-                )
-                matches = re.match(reg, user_act.text, re.I)
-                if matches:
-                    matches = matches.groupdict()
-                    for key in matches.keys():
-                        if key.startswith("content") and matches.get(key):
-                            user_act.value = matches.get(key)
-
-            # TODO Bring back full logic for search etc.
-            # user_requestable selber erstellen und abfragen
             last_acts = self.get_state(user_id, self.LAST_ACT)
-
-       
-               
-            # if len(last_acts) == 0 and last_acts[0] and "modulContent" in last_acts[0].slot_values and last_acts[0].type == SysActionType.RequestSearchTerm:
-            #     # if last was search but search term was not found -> last sysact asked for search term -> now user gives search term
-            #     user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform, slot="SearchTerm")
-            #     self.set_state(user_id, self.SEARCH_COUNTER, 3)
-                
-            # elif user_act == "Bye:
-
-            #     user_act = UserAct(text=user_utterance, act_type=UserActionType.Bye)
-            # elif user_act == "Thanks":
-            #     user_act = UserAct(text=user_utterance, act_type=UserActionType.Thanks)
-            # elif user_act == "LoadMoreSearchResults" or user_act == "Yes":
-            #     # if last act was SearchForDefinition or SearchForContent then get more results
-                
-            #     if 'modulContent' in last_acts.slot_values and last_acts.type == SysActionType.Inform:
-                
-            #     #if last_act and (last_act == "SearchForDefinition" or last_act == "SearchForContent"):
-            #         # increase search counter
-            #         search_counter = self.get_state(user_id, self.SEARCH_COUNTER)
-            #         user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform, slot="LoadMoreSearchResults: " + str(search_counter))
-                    
-            #         search_counter += 3
-            #         self.set_state(user_id, self.SEARCH_COUNTER, search_counter)
-            #     else:
-            #         user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform,
-            #                slot=user_act)
-            #         self._add_inform(user_id, user_act.slot)
-            # elif user_act == "SearchForDefinition" or user_act == "SearchForContent":
-            #     # set search counter to 3
-            #     self.set_state(user_id, self.SEARCH_COUNTER, 3)
-            #     user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform, slot=user_act)
-            
-            # # im moment alle requestable slots
-            # elif user_act in self.USER_REQUESTABLE:
-            #     user_act = UserAct(text=user_utterance, act_type=UserActionType.Request,
-            #                slot=user_act)
-            #     self._add_request(user_id, user_act.slot)
- 
-            # elif user_act in self.USER_INFORMABLE:
-            #     user_act = UserAct(text=user_utterance, act_type=UserActionType.Inform,
-            #                slot=user_act)
-            #     self._add_inform(user_id, user_act.slot)
-            # else:
-            #     user_act = UserAct(text=user_utterance, act_type=UserActionType.Bad)
+            if len(last_acts) > 0 and last_acts[0].type == SysActionType.RequestSearchTerm:
+                # check if system requested a new search term
+                user_act.type = UserActionType.Search
+                user_act.value = user_utterance
+            else:
+                if user_act_type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
+                    # if we have a search trigger, try to extract the search term(s) using rules
+                    reg = (
+                        r"(Wo\s*(kann ich|finde ich|steht|ist)|Zeig mir|Welche|Ich *(suche|brauche|will))?\s*(mehr\s*)?(Material(ien)?|nach|Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|(die )?Grundlagen|Tutorials|eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|Info(s?( zum Thema)?|rmation(en|squellen)?)|Videos|(Lern)?material(ien)?|was)\s*(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*(bedeutet|geben|gemeint ist)?(\?|$)|Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*(?P<content3>.*?)\s*(gemeint)?(\?|$)"
+                    )
+                    matches = re.match(reg, user_act.text, re.I)
+                    if matches:
+                        matches = matches.groupdict()
+                        for key in matches.keys():
+                            if key.startswith("content") and matches.get(key):
+                                user_act.value = matches.get(key)
+        
             result["user_acts"] = [user_act]
             end = time.time()
             print("extract_user_acts took: ", end-start)

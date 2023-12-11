@@ -68,10 +68,6 @@ class ELearningNLG(Service):
             return f"{name}s"
 
 
-
-    def request_initial_goal(self, goal):
-        return ["""Willst du heute neue Inhalte lernen, oder abgeschlossene Inhalte wiederholen?"""]
-
     # TODO is insufficient = 'none' a string, or of type(None)?
     def request_repeat_quiz(self, quiz_link, module, insufficient):
         if insufficient == True:
@@ -294,18 +290,13 @@ class ELearningNLG(Service):
         elif nextStep == 'repeatContents':
             return["""Sehr gut! Sollen wir ein paar Begriffe durchgehen und du sagst mir, welche du wiederholen möchtest?"""]
 
-    def request_feedback(self, feedback):
-        # german values, what follows on this questions?
-        if feedback == 'richtigkeit':
-            return["""Konnte ich die Frage richtig beantworten?"""]
-        elif feedback == 'Antwort':
-            return["""Ist meine  Antwort ausreichend?"""]
-        elif feedback == 'feedbackMoreInfo':
-            return["""Brauchst du eine ausführlichere Erklärung?"""]
-        elif feedback == 'feedbackSession':
-            return["""War diese Sitzung hilfreich?"""]
-        elif feedback == 'getBetterFeedback':
-            return["""Wie kann ich dir morgen besser helfen?"""]
+    def request_search_term(self):
+        return [
+            ("""Entschuldige, aber ich habe deinen Suchbegriff leider nicht aus der Nachricht erkannt.
+                Kannst du ihn vielleicht direkt eingeben?
+             """,
+             [])
+        ]
 
     def inform_help(self, help):
         return["""Du kommst nicht weiter? Kein Problem! Hier ist eine Liste von Themen, wonach du mich fragen kannst: <ul><li>Was du als nächstes lernen solltest <br> (z.B. \"Was kann ich als nächstes lernen?\")</li><li>Was du wiederholen kannst <br>(z.B. \"Bei welchem Modul bin ich nicht ausreichend?\")</li></ul>"""]
@@ -455,14 +446,23 @@ class ELearningNLG(Service):
             "Loslegen!"
         ])]
     
-    def inform_search_results(self, search_results):
+    def inform_search_results(self, search_results: Dict[str, List[str]], load_more: bool):
+        if len(search_results) == 0:
+            return [(
+                "Tut mir leid, aber es gibt keine (weiteren) Ergebnisse zu dieser Suche 😞"
+            , [])]
+
+        links_by_file = []
+        for filename in search_results:
+            links_by_file.append(f"""<h4>{filename.replace(".pdf", " (Buch)")}</h4>
+            <ul>
+                {" ".join([f'<li>{res}</li>' for res in search_results[filename]])}
+            </ul>""")
         return [(
-            f"""<ul>
-                {" ".join([f'<li>{res}</li>' for res in search_results])}
-            </ul>
-            """, [
+            "".join(links_by_file),
+            [
                 "Mehr Ergebnisse"
-            ]
+            ] if load_more else []
         )]
    
     def feedback_to_quiz(self, success_percentage: float, next_quiz_link: str):
@@ -479,111 +479,16 @@ class ELearningNLG(Service):
         if next_quiz_link:
             msgs.append((f"Bereit für das {next_quiz_link}?", []))
         return msgs
-    
-    def generate_request(self, sys_act: SysAct):
-        if "goal" in sys_act.slot_values:
-            return self.request_initial_goal
-        elif "quiz_link" in sys_act.slot_values and "module" in sys_act.slot_values and "insufficient" in sys_act.slot_values:
-            return self.request_repeat_quiz
-        elif "learningTime" in sys_act.slot_values:
-            return self.request_learning_time
-        elif "modulContent" in sys_act.slot_values:
-            return self.request_content
-        elif "pastModule" in sys_act.slot_values:
-            return self.request_past_module
-        elif "fitForSubmission" in sys_act.slot_values and "newTask" in sys_act.slot_values:
-            return self.request_fit_for_submission
-        elif "offerHelp" in sys_act.slot_values and "time" in sys_act.slot_values:
-            return self.request_offer_help
-        elif "feedback" in sys_act.slot_values:
-            return self.request_feedback
-        raise Exception(f"Sysact Request called with invalid slot combination: {list(sys_act.slot_values.keys())}")
-
-    def generate_inform(self, sys_act: SysAct):
-        if "moduleRequirements" in sys_act.slot_values and "moduleName" in sys_act.slot_values and "moduleRequired" in sys_act.slot_values:
-            return self.inform_new_module_matching_requirements
-        elif "positiveFeedback" in sys_act.slot_values and "test" in sys_act.slot_values:
-            return self.inform_positive_feedback_test
-        elif "positiveFeedback" in sys_act.slot_values and "repeatQuiz" in sys_act.slot_values:
-            return self.inform_positive_feedback_repeat_quiz
-        elif "moduleName" in sys_act.slot_values and "repeatContent" in sys_act.slot_values and "link" in sys_act.slot_values and "contentType" in sys_act.slot_values:
-            return self.inform_repeat_content
-        elif "moduleName" in sys_act.slot_values and "finishContent" in sys_act.slot_values:
-            return self.inform_finish_module
-        elif "moduleName" in sys_act.slot_values and "submission" in sys_act.slot_values:
-            return self.inform_remind_subission_deadline
-        elif "all_finished" in sys_act.slot_values:
-            return self.inform_all_finished
-        elif "moduleName" in sys_act.slot_values:
-            return self.inform_first_module
-        elif "modulContent" in sys_act.slot_values and "link" in sys_act.slot_values:
-            return self.inform_content
-        elif "notImplementedYet" in sys_act.slot_values:
-            return self.inform_not_implemented
-        elif "positiveFeedback" in sys_act.slot_values and "alreadyFinishedOne" in sys_act.slot_values and "repeat" in sys_act.slot_values:
-            return self.inform_positive_feedback_finished
-        elif "motivational" in sys_act.slot_values and "taskLeft" in sys_act.slot_values:
-            return self.inform_motivational
-        elif "NoMotivational" in sys_act.slot_values and "taskLeft" in sys_act.slot_values:
-            return self.inform_no_motivational
-        elif "pastModule" in sys_act.slot_values and "repeatContent" in sys_act.slot_values:
-            return self.inform_past_module_repeat
-        elif "positiveFeedback" in sys_act.slot_values and "newModule" in sys_act.slot_values:
-            return self.inform_positive_feedback_new_module
-        elif "positiveFeedback" in sys_act.slot_values and "completedQuiz" in sys_act.slot_values:
-            return self.inform_positive_feedback_completed_quiz
-        elif "positiveFeedback" in sys_act.slot_values and "completedModul" in sys_act.slot_values:
-            return self.inform_positive_feedback_completed_module
-        elif "negativeFeedback" in sys_act.slot_values and "finishedQuiz" in sys_act.slot_values:
-            return self.inform_negative_feedback_finished
-        elif "moduleName" in sys_act.slot_values and "nextModule" in sys_act.slot_values:
-            return self.inform_next_module
-        elif "moduleName" in sys_act.slot_values and "hasModule" in sys_act.slot_values:
-            return self.inform_moduleName
-        elif "fitForTest" in sys_act.slot_values and "link" in sys_act.slot_values:
-            return self.inform_fit_for_test
-        elif "repeat_module_affirm" in sys_act.slot_values and "module_link" in sys_act.slot_values:
-            return self.inform_repeat_module_affirm
-        elif "repeat_module_deny" in sys_act.slot_values:
-            return self.inform_repeat_module_deny
-        elif "new_module_deny" in sys_act.slot_values:
-            return self.inform_new_module_deny
-        elif "offerHep" in sys_act.slot_values: # typo
-            return self.inform_offer_help
-        elif "QuizWiederholen" in sys_act.slot_values and "completedModule" in sys_act.slot_values:
-            return self.inform_repeat_quiz
-        elif "complete_Module_affirm" in sys_act.slot_values:
-            return self.inform_complete_module_affirm
-        elif "complete_Module_deny" in sys_act.slot_values:
-            return self.inform_complete_module_deny
-        elif "postivieFeedback" in sys_act.slot_values and "offerHelp" in sys_act.slot_values:
-            return self.inform_positive_feedback_help
-        elif "contentTaskRequired" in sys_act.slot_values:
-            return self.inform_content_task_required
-        elif "suggestion" in sys_act.slot_values and "suggestion" in sys_act.slot_values:
-            return self.inform_offer_help_suggestion
-        elif "quiz_link" in sys_act.slot_values:
-            return self.inform_quiz_link
-        elif "motivateForQuiz" in sys_act.slot_values and "quiz_link" in sys_act.slot_values:
-            return self.inform_motivate_quiz
-        elif "nextStep" in sys_act.slot_values:
-            return self.inform_next_step
-        elif "help" in sys_act.slot_values:
-            return self.inform_help
-        raise Exception(f"Sysact Inform called with invalid slot combination: {list(sys_act.slot_values.keys())}")
-
-
+   
 
     def get_message_fn(self, sys_act: SysAct):
         # delegate system act to specific message generator
         if sys_act.type == SysActionType.Welcome:
             return self.generate_welcomemsg(sys_act)
-        # elif sys_act.type == SysActionType.Request:
-        #     return self.generate_request(sys_act)
         elif sys_act.type == SysActionType.RequestContinueOrNext:
             return self.request_continue_or_next
-        # elif sys_act.type == SysActionType.Inform:
-        #     return self.generate_inform(sys_act)
+        elif sys_act.type == SysActionType.RequestSearchTerm:
+            return self.request_search_term
         elif sys_act.type == SysActionType.InformNextOptions:
             return self.inform_next_options
         elif sys_act.type == SysActionType.InformStarterModule:
