@@ -392,17 +392,17 @@ class MContext(Base):
 	_instanceid = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}course_modules.id"), nullable=False, index=True, name="instanceid")
 
 
-class MHVP(Base):
-	# TODO finish
-	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}hvp'
+# class MHVP(Base):
+# 	# TODO finish
+# 	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}hvp'
 
-	# TODO link relationships
-	id = Column(BIGINT(10), primary_key=True)
-	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
-	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
-	intro = Column(Text)
-	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
-	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+# 	# TODO link relationships
+# 	id = Column(BIGINT(10), primary_key=True)
+# 	course = Column(BIGINT(10), nullable=False, index=True, server_default=text("'0'"))
+# 	name = Column(String(255, 'utf8mb4_bin'), nullable=False, server_default=text("''"))
+# 	intro = Column(Text)
+# 	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
+# 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 
 
 class MH5PActivity(Base):
@@ -524,8 +524,8 @@ class MCourseModule(Base):
 			return session.get(MResource, self.instance).name
 		elif type_info == "glossary":
 			return "Glossar"
-		elif type_info == "hvp":
-			return session.get(MHVP, self.instance).name
+		# elif type_info == "hvp":
+		# 	return session.get(MHVP, self.instance).name
 		elif type_info == "h5pactivity":
 			return session.get(MH5PActivity, self.instance).name
 		elif type_info == "page":
@@ -1356,7 +1356,7 @@ class MUser(Base):
 			* last completed course module (MCourseModule), if the user already completed any course module, else `None`
 		"""
 		#session.expire_all()
-		completions: List[MHVP] = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True).all()
+		completions: List[MH5PActivity] = session.query(MCourseModulesCompletion).filter(MCourseModulesCompletion._userid==self.id, MCourseModulesCompletion.completed==True).all()
 		completions = [completion for completion in completions if completion.coursemodule._course_id==courseid]
 		if len(completions) == 0:
 			return self.get_available_course_modules(session, courseid=courseid, current_server_time=current_server_time)[0] # return first result
