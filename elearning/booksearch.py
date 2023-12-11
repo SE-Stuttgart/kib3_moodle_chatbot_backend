@@ -7,7 +7,7 @@ import config
 
 
 
-def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Dict:
+def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Dict:
     """
     Args:
         word_context_length: how many words before and after the search term should be included in search result
@@ -22,7 +22,8 @@ def get_book_links(wstoken: str, course_id: int, searchTerm: str, word_context_l
             "moodlewsrestformat": "json",
             "searchstring": searchTerm,
             "courseid": course_id,
-            "contextlength": word_context_length
+            "contextlength": word_context_length,
+            "userid": webserviceuserid
     }
     try:
         response = http_client.request(f"{config.MOOLDE_SERVER_PROTOCOL}://{config.MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php",

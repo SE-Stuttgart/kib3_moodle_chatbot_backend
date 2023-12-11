@@ -460,9 +460,9 @@ class ELearningNLG(Service):
             f"""<ul>
                 {" ".join([f'<li>{res}</li>' for res in search_results])}
             </ul>
-            """, (
+            """, [
                 "Mehr Ergebnisse"
-            )
+            ]
         )]
    
     def feedback_to_quiz(self, success_percentage: float, next_quiz_link: str):

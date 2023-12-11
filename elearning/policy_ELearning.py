@@ -105,11 +105,19 @@ class ELearningPolicy(Service):
 		self.max_turns = max_turns
 		self.session = None
 		self.session_lock = threading.Lock()
+		self.webservice_user_id = None
 
 	def get_session(self):
 		if isinstance(self.session, type(None)):
 			self._init_db()
 		return self.session
+	
+	def get_webservice_user_id(self):
+		if self.webservice_user_id is None:
+			self.webservice_user_id = self.get_session().query(MUser.id).filter(MUser.username=="kib3_webservice",
+																	MUser.firstname=="KIB3 Webservice",
+																	MUser.lastname=="KIB3 Webservice").first()[0]
+		return self.webservice_user_id
 	
 	def get_moodle_server_time(self, userid: int) -> DateTime:
 		""" Returns the current moodle server time as unix timestamp """
@@ -527,7 +535,7 @@ class ELearningPolicy(Service):
 			elif user_act.type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
 				if not user_act.value is None:
 					# we already extracted the search term from the user query - return results immediately
-					book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=user_act.value, word_context_length=5, start=0, end=3)
+					book_links = get_book_links(webserviceuserid=self.get_webservice_user_id(), wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=user_act.value, word_context_length=5, start=0, end=3)
 					if book_links:
 						book_link_list = [f'<a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links]
 					else:
