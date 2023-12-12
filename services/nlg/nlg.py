@@ -353,8 +353,10 @@ class ELearningNLG(Service):
         pass
 
 
-    def display_quiz(self, **kwargs):
-        return [(f"$$QUIZ;{json.dumps(kwargs)}", [])]
+    def display_quiz(self, quiz_embed):
+        if quiz_embed is None:
+            return [("Momentan gibt es keine Quizze die wiederholt werden können.", [])]
+        return [(f"$$QUIZ;{json.dumps(quiz_embed)}", [])]
 
     def display_weekly_summary(self, best_weekly_days: List[str], weekly_completions: Dict[str , list], weekly_completions_prev: Dict[str, list]):
         """ 

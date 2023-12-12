@@ -1,10 +1,11 @@
 # coding: utf-8
+from collections import defaultdict
 import json
 import re
 from enum import Enum
 import random
 from typing import List, Tuple, Union
-from sqlalchemy import Column, DECIMAL, String, text, create_engine, desc, Text
+from sqlalchemy import Column, DECIMAL, String, select, text, create_engine, desc, Text
 from sqlalchemy.dialects.mysql import BIGINT, TINYINT
 from sqlalchemy.dialects.mysql.types import MEDIUMINT
 from sqlalchemy.exc import NoResultFound
@@ -232,6 +233,8 @@ class MGradeItem(Base):
 	# information about when gradeitem was created or updated by teacher
 	timecreated = Column(UnixTimestamp)
 	timemodified = Column(UnixTimestamp)
+	
+	gradehistory = relationship("MGradeGradesHistory", back_populates="gradeitem", uselist=True, lazy='dynamic')
 
 	# internal databasae table mapping information
 	_courseid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}course.id'), index=True, name='courseid')
@@ -259,9 +262,11 @@ class MGradeGradesHistory(Base):
 
 	# appropriately scaled rawgrade
 	finalgrade = Column(DECIMAL(10, 5)) 
+	
+	gradeitem = relationship("MGradeItem", back_populates="gradehistory", uselist=False)
 
 	# internal table mapping information
-	_gradeItemId = Column(BIGINT(10), name="itemid") #, ForeignKey("MGradeItem.id"), nullable=False, index=True, name="itemid")
+	_gradeItemId = Column(BIGINT(10), ForeignKey(f"{MOODLE_SERVER_DB_TALBE_PREFIX}grade_items.id"), nullable=False, index=True, name="itemid")
 	_userid = Column(BIGINT(10), name="userid") # ForeignKey("MUser.id"), nullable=False, index=True, name="userid")
 
 
@@ -280,6 +285,7 @@ class MGradeGrade(Base):
 
 	# appropriately scaled rawgrade
 	finalgrade = Column(DECIMAL(10, 5))
+	timemodified = Column(UnixTimestamp, index=True)
 
 	# internal table mapping information
 	_userid = Column(BIGINT(10), primary_key=True, name="userid") # Column(BIGINT(10), ForeignKey("MUser.id"), nullable=False, index=True)
@@ -417,6 +423,12 @@ class MH5PActivity(Base):
 	introformat = Column(SMALLINT(), nullable=False, server_default=text("'0'"))
 	timecreated = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
 	timemodified = Column(UnixTimestamp, nullable=False, server_default=text("'0'"))
+	
+	def get_course_module(self, session: Session) -> "MCourseModule":
+		type_id = session.query(MModule).filter(MModule.name=="h5pactivity").first().id
+		return session.query(MCourseModule).filter(MCourseModule.instance==self.id,
+											 		MCourseModule._type_id==type_id).first()
+	
 
 
 class MCourseModule(Base):
@@ -1230,11 +1242,37 @@ class MUser(Base):
 			results += session.query(MGradeGradesHistory).filter(MGradeGradesHistory._gradeItemId==grade_item.id, MGradeGradesHistory._userid==self.id, MGradeGradesHistory.finalgrade != None).count() >= 2
 		return results
 
-	def get_grade_history(self, session: Session) -> List[MGradeGradesHistory]:
-		""" Return all current and past grades of the current user (for all courses) """
-		#session.expire_all()
-		return session.query(MGradeGradesHistory).filter(MGradeGradesHistory._userid==self.id).all()
+	def get_grade_history(self, session: Session, courseid: int) -> List[Tuple[MGradeItem, MGradeGradesHistory]]:
+		""" Return all current and past grades of the current user (for all courses).
+			Ignores all finalgrade = None cases (i.e., the user has to have completed the quiz at least once).
+		"""
+		# get grade items and their history for the given course and user
+		return session.query(MGradeItem, MGradeGradesHistory).filter(MGradeItem._courseid==courseid,
+															 	MGradeItem.id==MGradeGradesHistory._gradeItemId,
+																MGradeGradesHistory._userid==self.id,
+																MGradeGradesHistory.finalgrade >= 0.0).all()
 
+	def get_oldest_worst_grade_attempt_quizzes(self, session: Session, courseid: int, max_results: int) -> List[MGradeItem]:
+		"""
+		Returns:
+			The oldest, worst (sorted in that order) grade attempt by the current user for the specified course
+		"""
+		result = session.query(MGradeItem, MGradeGrade) \
+						.filter(
+							MGradeItem._courseid==courseid,
+							MGradeItem.id==MGradeGrade._gradeItemId,
+							MGradeItem.itemmodule=="h5pactivity",
+							MGradeGrade.finalgrade >= 0.0,
+							MGradeGrade._userid==self.id) \
+						.order_by(MGradeGrade.finalgrade) \
+						.order_by(MGradeGrade.timemodified.desc()) \
+						.limit(max_results) \
+						.all()
+		if len(result) > 0:
+			# return only grade items, discard grade
+			return map(lambda entry: entry[0], result)
+		return []
+		
 	def get_all_course_modules(self, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'h5pactitivty',  'quiz']) -> List[MCourseModule]:
 		""" Return all course modules already completed by current user in the specified course """
 		#session.expire_all()
@@ -1270,7 +1308,6 @@ class MUser(Base):
 		else:
 			views = session.query(MCourseModulesViewed).filter(MCourseModulesViewed._userid==self.id)
 			return [view.coursemodule for view in views if view.coursemodule.get_type_name(session) in include_types and view.coursemodule._course_id==courseid]
-
 
 	def is_completed(self, session: Session, module_id: int ,courseid: int, include_types: List[str] = ['assign', 'book', 'h5pactitivty',  'quiz']) -> bool:
 		""" Return wheteher a module  is completed by this user or not """
@@ -1588,13 +1625,17 @@ def get_time_estimate_section(session: Session, user: MUser, section: MCourseSec
 
 
 # with Session() as session:
-# 	for badge in session.query(MBadge).filter(MBadge._courseid==2).all():
-# 		print("-----------")
-# 		print(badge.name)
-# 		progress, status, todo_modules = badge.criteria_completion_percentage(session=session, user_id=2)
-# 		print("Progress: ", progress * 100)
-# 		if progress < 1:
-# 			print("TODO:")
-# 			for todo_module in todo_modules:
-# 				print(" - ", todo_module.get_name(session))
+# 	# for badge in session.query(MBadge).filter(MBadge._courseid==2).all():
+# 	# 	print("-----------")
+# 	# 	print(badge.name)
+# 	# 	progress, status, todo_modules = badge.criteria_completion_percentage(session=session, user_id=2)
+# 	# 	print("Progress: ", progress * 100)
+# 	# 	if progress < 1:
+# 	# 		print("TODO:")
+# 	# 		for todo_module in todo_modules:
+# 	# 			print(" - ", todo_module.get_name(session))
+	
+# 	user = session.query(MUser).get(7)
+# 	print(user.username)
+# 	print(user.get_oldest_worst_grade_attempt_item(session=session, courseid=2))
 # conn.close()
