@@ -403,6 +403,12 @@ class ELearningNLG(Service):
                 </div>""", []),
                 ("Stark 💪", [])]
     
+    def congratulate_completion(self, name: str, branch: bool):
+        if branch:
+            return [(f"Herzlichen Glückwunsch! Du hast alle Themen im Zweig {name.upper()} fertig gemacht! 🎉🎉🎉", [])]
+        else:
+            return [(f"Super! Du hast den Abschnitt {name} abgeschlossen! 🎉", [])]
+    
     def inform_last_viewed_course_module(self, last_viewed_course_module):
         return [(f"Letztes Mal hast du {last_viewed_course_module} abgeschlossen.", [])]
 
@@ -492,6 +498,8 @@ class ELearningNLG(Service):
             return self.display_quiz_improvements
         elif sys_act.type == SysActionType.CongratulateBadge:
             return self.congratulate_badge
+        elif sys_act.type == SysActionType.CongratulateCompletion:
+            return self.congratulate_completion
         elif sys_act.type == SysActionType.RequestReviewOrNext:
             return self.request_review_or_next
         elif sys_act.type == SysActionType.FeedbackToQuiz:

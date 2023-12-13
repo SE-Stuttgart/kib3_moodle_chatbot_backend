@@ -36,6 +36,7 @@ class SysActionType(Enum):
     DisplayQuizImprovements = "DisplayQuizImprovements"
 
     CongratulateBadge = "CongratulateBadge"
+    CongratulateCompletion = "CongratulateCompletion"
     
     RequestReviewOrNext = "RequestReviewOrNext"
     RequestContinueOrNext = "RequestContinueOrNext"

@@ -247,11 +247,24 @@ class ELearningPolicy(Service):
             # check if we finished a whole branch
             # TODO if so, offer congratulations, the review, and then next possibilities?
             self.update_recently_viewed_completion(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], completion=moodle_event['other']['completionstate'])
-            branch_quizzes = self.get_session().query(MCourseModule).get(moodle_event['contextinstanceid']).get_branch_quizes_if_complete(session=self.get_session(), user_id=user_id)
+            course_module = self.get_session().query(MCourseModule).get(moodle_event['contextinstanceid'])
+            branch_quizzes, branch_letter = course_module.get_branch_quizes_if_complete(session=self.get_session(), user_id=user_id)
             self.set_state(user_id, REVIEW_QUIZZES, branch_quizzes)
             if len(branch_quizzes) > 0:
+                # we did complete a full branch
                 # ask user if they want to review any of the quizzes
-                return {"sys_acts": [SysAct(act_type=SysActionType.RequestReviewOrNext)]}
+                return {"sys_acts": [
+                    SysAct(act_type=SysActionType.CongratulateCompletion, slot_values={"name": branch_letter, "branch": True}),
+                    SysAct(act_type=SysActionType.RequestReviewOrNext)]}
+            else:
+                # did we complete a full section?
+                section = course_module.section
+                if section.is_completed(user_id=user_id, session=self.get_session()):
+                    return {
+                        "sys_acts": [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section.name, 'branch': False}),
+                                     SysAct(act_type=SysActionType.RequestReviewOrNext)]
+                    }
+
         elif event_name == "\\mod_h5pactivity\\event\\statement_received" and moodle_event['component'] == 'mod_h5pactivity':
             current_shown_quiz_id, previous_grade = self.get_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ)
             if int(moodle_event['contextinstanceid']) == current_shown_quiz_id:

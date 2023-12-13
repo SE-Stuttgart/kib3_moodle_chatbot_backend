@@ -593,7 +593,7 @@ class MCourseModule(Base):
 			for section in sections:
 				if not section.is_completed(user_id=user_id, session=session):
 					# if section is not completed yet, return nothing
-					return []
+					return [], None
 
 			results = session.query(MCourseModule, MGradeItem, MGradeGrade).filter(
 				MCourseModule._section_id.in_([section.id for section in sections]),
@@ -604,8 +604,8 @@ class MCourseModule(Base):
 				MGradeGrade._gradeItemId==MGradeItem.id,
 				MGradeGrade._userid==user_id
 			).order_by(MGradeGrade.finalgrade.desc()).order_by(MGradeGrade.timemodified).all()
-			return [(res[0].id, 100*res[2].finalgrade/res[2].rawgrademax) for res in results]
-		return []
+			return [(res[0].id, 100*res[2].finalgrade/res[2].rawgrademax) for res in results], topic_letter
+		return [], None
 
 	def __repr__(self) -> str:
 		""" Pretty printing """
