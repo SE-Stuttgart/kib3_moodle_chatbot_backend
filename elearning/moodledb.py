@@ -21,7 +21,7 @@ from urllib.parse import quote_plus as urlquote
 from config import MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX, MOODLE_SERVER_DB_NAME, MOODLE_SERVER_DB_PWD, MOODLE_SERVER_DB_USER, MOODLE_SERVER_URL
 
 class Base:
-    __allow_unmapped__ = True
+	__allow_unmapped__ = True
 
 
 Base = declarative_base(cls=Base)
@@ -586,11 +586,17 @@ class MCourseModule(Base):
 		if matches:
 			# extract topic letter
 			topic_letter = matches.group(1) # e.g., A, B, ...
-			results = session.query(MCourseSection, MCourseModule, MGradeItem, MGradeGrade).filter(
-				MCourseSection._course_id==self._course_id,
-				MCourseSection.name.contains(f"Thema {topic_letter}"),
-				MCourseSection.name.startswith("Quizzes"),
-				MCourseModule._section_id==MCourseSection.id,
+
+			# find all sections belonging to the same topic branch
+			sections = session.query(MCourseSection).filter(MCourseSection._course_id==self._course_id,
+ 															MCourseSection.name.contains(f"Thema {topic_letter}")).all()
+			for section in sections:
+				if not section.is_completed(user_id=user_id, session=session):
+					# if section is not completed yet, return nothing
+					return []
+
+			results = session.query(MCourseModule, MGradeItem, MGradeGrade).filter(
+				MCourseModule._section_id.in_([section.id for section in sections]),
 				MGradeItem.itemmodule=="hp5activity",
 				MGradeItem.itemtype=="mod",
 				MGradeItem._courseid==self._course_id,
@@ -598,7 +604,7 @@ class MCourseModule(Base):
 				MGradeGrade._gradeItemId==MGradeItem.id,
 				MGradeGrade._userid==user_id
 			).order_by(MGradeGrade.finalgrade.desc()).order_by(MGradeGrade.timemodified).all()
-			return [(res[1].id, 100*res[3].finalgrade/res[3].rawgrademax) for res in results]
+			return [(res[0].id, 100*res[2].finalgrade/res[2].rawgrademax) for res in results]
 		return []
 
 	def __repr__(self) -> str:
