@@ -33,6 +33,7 @@ class SysActionType(Enum):
     DisplayWeeklySummary = "DisplayWeeklySummary"
     DisplayBadgeProgress = "DisplayBadgeProgress"
     DisplayQuiz = "DisplayQuiz"
+    DisplayQuizImprovements = "DisplayQuizImprovements"
 
     CongratulateBadge = "CongratulateBadge"
     

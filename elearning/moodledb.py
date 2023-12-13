@@ -575,32 +575,31 @@ class MCourseModule(Base):
 		return session.query(MGradeGrade).filter(MGradeGrade._gradeItemId==grade_item_id, MGradeGrade._userid==user_id).first()
 
 
-	def get_branch_quizes_if_complete(self, session: Session, user_id: int) -> List["MCourseModule"]:
+	def get_branch_quizes_if_complete(self, session: Session, user_id: int) -> List[Tuple[int, float]]:
 		"""
 		Returns:
-			The list of all quizes belonging to the same topic branch in the course, if the whole branch is completed
-			e.g. (Branch A with sections 'Thema A:', 'Quizzes zum Thema A1-1:', ...)
+			The list of ids of all quizes belonging to the same topic branch in the course, if the whole branch is completed (sorted by grade and date),
+			along with the grade.
 		"""
 		# figure out current branch
 		matches = re_topic_branch.match(self.section.name)
-		quizzes = []
 		if matches:
 			# extract topic letter
 			topic_letter = matches.group(1) # e.g., A, B, ...
-			# find all sections belonging to the same topic branch
-			sections = session.query(MCourseSection).filter(MCourseSection._course_id==self._course_id,
-												   			MCourseSection.name.contains(f"Thema {topic_letter}")).all()
-			for section in sections:
-				if not section.is_completed(user_id=user_id, session=session):
-					# if section is not completed yet, return nothing
-					return []
-				if section.name.startswith("Quizzes"):
-					# if we are in a quiz section, collect all the quizes
-					for module in section.modules:
-						if module.get_type_name(session) == "h5pactivity":
-							quizzes.append(module)
-		return quizzes
-
+			results = session.query(MCourseSection, MCourseModule, MGradeItem, MGradeGrade).filter(
+				MCourseSection._course_id==self._course_id,
+				MCourseSection.name.contains(f"Thema {topic_letter}"),
+				MCourseSection.name.startswith("Quizzes"),
+				MCourseModule._section_id==MCourseSection.id,
+				MGradeItem.itemmodule=="hp5activity",
+				MGradeItem.itemtype=="mod",
+				MGradeItem._courseid==self._course_id,
+				MGradeItem.iteminstance==MCourseModule.instance,
+				MGradeGrade._gradeItemId==MGradeItem.id,
+				MGradeGrade._userid==user_id
+			).order_by(MGradeGrade.finalgrade.desc()).order_by(MGradeGrade.timemodified).all()
+			return [(res[1].id, 100*res[3].finalgrade/res[3].rawgrademax) for res in results]
+		return []
 
 	def __repr__(self) -> str:
 		""" Pretty printing """
@@ -689,7 +688,7 @@ class MCourseSection(Base):
 		for index, moduleId in enumerate(self.sequence):
 			# walk over all section modules
 			next_module = session.get(MCourseModule, moduleId)
-			if is_available_course_module(session, user.id, next_module) and next_module.get_type_name(session) in include_types:
+			if next_module.get_type_name(session) in include_types and is_available_course_module(session, user.id, next_module):
 				# only look at modules that are 1) available and 2) whitelisted by type
 				# check module completion
 				if currentModule and int(moduleId) == currentModule.id and not isinstance(currentModuleCompletion, type(None)):
@@ -1252,12 +1251,12 @@ class MUser(Base):
 																MGradeGradesHistory._userid==self.id,
 																MGradeGradesHistory.finalgrade >= 0.0).all()
 
-	def get_oldest_worst_grade_attempt_quizzes(self, session: Session, courseid: int, max_results: int) -> List[MGradeItem]:
+	def get_oldest_worst_grade_attempt_quizzes(self, session: Session, courseid: int, max_results: int) -> List[Tuple[MGradeItem, MGradeGrade]]:
 		"""
 		Returns:
 			The oldest, worst (sorted in that order) grade attempt by the current user for the specified course
 		"""
-		result = session.query(MGradeItem, MGradeGrade) \
+		return session.query(MGradeItem, MGradeGrade) \
 						.filter(
 							MGradeItem._courseid==courseid,
 							MGradeItem.id==MGradeGrade._gradeItemId,
@@ -1268,10 +1267,6 @@ class MUser(Base):
 						.order_by(MGradeGrade.timemodified.desc()) \
 						.limit(max_results) \
 						.all()
-		if len(result) > 0:
-			# return only grade items, discard grade
-			return map(lambda entry: entry[0], result)
-		return []
 		
 	def get_all_course_modules(self, session: Session, courseid: int, include_types: List[str] = ['assign', 'book', 'h5pactitivty',  'quiz']) -> List[MCourseModule]:
 		""" Return all course modules already completed by current user in the specified course """

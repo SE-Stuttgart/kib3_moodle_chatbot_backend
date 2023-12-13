@@ -94,12 +94,6 @@ class ELearningNLG(Service):
             Es gibt neues Material zu {moduleName}, für das du die Voraussetzungen erfüllst.
             Erinnerst du dich noch an das vorherige Modul?"""]
 
-    def inform_positive_feedback_test(self, positiveFeedback: bool, test):
-        return ["""Cool! Ich kann dir helfen, das Gelernte zu überprüfen.
-                Wenn du bereit bist, stelle ich dir Fragen dazu."""]
-    
-    def inform_positive_feedback_repeat_quiz(self, positiveFeedback: bool, repeatQuiz: bool):
-        return ["""Cool! Du könntest die Quizzes regelmäßig wiederholen, damit du die Inhalte bis zur Prüfung nicht vergisst!"""]
 
     def inform_repeat_content_finished(self, moduleName, repeatContent, link, contentType):
         if contentType == "resource":
@@ -178,13 +172,6 @@ class ELearningNLG(Service):
     def inform_not_implemented(self, notImplementedYet):
         return["""Leider ist diese Funktionalität noch nicht implementiert, wir arbeiten dran!"""]
 
-    def inform_positive_feedback_finished(self, positiveFeedback, finishedOne, repeat):
-        if finishedOne ==False:
-            if repeat == 'quiz':
-                return["""Sehr gut! Dann starte nochmal das Quiz, damit du dieses Modul abschließen kannst."""]
-        else:
-            return["""Sehr gut! Dann starte nochmal das Quiz, damit du auch dieses Modul abschließen kannst!"""]
-
     def inform_motivational(self, motivational, taskLeft):
         return[f"""{taskLeft}, du hast schon {motivational} geschafft! Die restlichen Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"""]
 
@@ -196,18 +183,6 @@ class ELearningNLG(Service):
 
     def inform_past_module_repeat(self, pastModule, repeatContent):
         return[f"""Dann wiederhole am besten das vorherige Thema, bevor du mit dem neuen startest: {repeatContent}"""]
-
-    def inform_positive_feedback_new_module(self, positiveFeedback, newModule):
-        return[f"""Sehr gut! Du kannst jetzt mit dem neuen Thema anfangen :-D: {newModule}"""]
-
-    def inform_positive_feedback_completed_quiz(self, positiveFeedback, completedQuiz):
-        return["""Gut gemacht! Du hast das Quiz erfolgreich abgeschlossen! 😊 """]
-
-    def inform_positive_feedback_completed_module(self, positiveFeedback, completedModule):
-        return[f"""Sehr gut! Du hast {completedModule} erfolgreich abgeschlossen und kannst mit den Quizzes starten!"""]
-
-    def inform_negative_feedback_finished(self, negativeFeedback, finishedQuiz):
-        return["""Schade, du hast nicht alle Fragen richtig beantwortet. Versuch es doch nochmal, beim nächsten Mal klappt es bestimmt besser!"""]
 
     def inform_next_module(self, moduleName, nextModule):
         return[f"""Dein nächstes Thema ist {moduleName}. Möchtest du damit beginnen?"""]
@@ -259,9 +234,6 @@ class ELearningNLG(Service):
     def reqmore(self, end):
         # does this make sense (and what is reqmore)
         return["""Super, du kannst mir einfach nochmal schreiben, falls du meine Hilfe brauchst!"""]
-
-    def inform_positive_feedback_help(self, positiveFeedback, offerHelp):
-        return["""Super, sag Bescheid, falls ich dir sonst noch helfen kann!"""]
 
     def inform_content_task_required(self, contentTaskRequired):
         # sentence and name doesnt fit
@@ -397,7 +369,16 @@ class ELearningNLG(Service):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
         return [("""In letzter Zeit hast du viel Neues gelernt:""", []),
                 (self._donut_chart("Kurs", percentage_done, "Wiederholte Quizze", percentage_repeated_quizzes), [])]
-    
+
+    def display_quiz_improvements(self, improvements: List[bool]):
+        percentage_improvements = sum(improvements)/len(improvements)
+        msgs = []
+        if percentage_improvements > 0.0:
+            msgs.append((f"Sehr gut, du hast dich in dieser Wiederholung bei {sum(improvements)} Quizzen verbessert!", []))
+            msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), ["Weitere Quizze Wiederholen", "Etwas neues lernen"]))
+        else:
+            msgs.append((f"Toll dass du {len(improvements)} Quizze nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]))
+        return msgs 
 
     def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[str]):
         if badge_name == None:
@@ -469,10 +450,10 @@ class ELearningNLG(Service):
    
     def feedback_to_quiz(self, success_percentage: float, next_quiz_link: str):
         msgs = []
-        if success_percentage >= 0.99:
+        if success_percentage >= 99:
             # all questions correct
             msgs.append((f"Super gemacht, du scheinst dieses Thema echt gut zu verstehen 🤓", []))
-        elif success_percentage >= 0.70:
+        elif success_percentage >= 70:
             msgs.append((f"Gut gemacht, du scheinst dieses Thema zu verstehen 🤓", []))
         else:
             msgs.append((f"Toll dass du ein Quiz gemacht hast - bleib dran!", []))
@@ -507,6 +488,8 @@ class ELearningNLG(Service):
             return self.display_quiz
         elif sys_act.type == SysActionType.DisplayBadgeProgress:
             return self.display_badge_progress
+        elif sys_act.type == SysActionType.DisplayQuizImprovements:
+            return self.display_quiz_improvements
         elif sys_act.type == SysActionType.CongratulateBadge:
             return self.congratulate_badge
         elif sys_act.type == SysActionType.RequestReviewOrNext:

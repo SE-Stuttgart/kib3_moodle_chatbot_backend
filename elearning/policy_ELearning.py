@@ -55,6 +55,8 @@ MODE = 'mode'
 LAST_SEARCH = 'last_search'
 LAST_SEARCH_INDEX = 'last_search_index'
 REVIEW_QUIZZES = "review_quizzes"
+CURRENT_REVIEW_QUIZ = "current_review_quiz"
+REVIEW_QUIZ_IMPROVEMENTS = "review_quiz_improvements"
 
 # JUST_LOGGED_IN = "just_logged_in"
 
@@ -177,6 +179,8 @@ class ELearningPolicy(Service):
             self.set_state(user_id, LAST_SEARCH, None)
             self.set_state(user_id, LAST_SEARCH_INDEX, 0)
             self.set_state(user_id, REVIEW_QUIZZES, [])
+            self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(None, None))
+            self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
 
             
     def update_recently_viewed(self, user_id: int, course_id: int, course_module_id: int, time: int):
@@ -244,31 +248,43 @@ class ELearningPolicy(Service):
             # TODO if so, offer congratulations, the review, and then next possibilities?
             self.update_recently_viewed_completion(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], completion=moodle_event['other']['completionstate'])
             branch_quizzes = self.get_session().query(MCourseModule).get(moodle_event['contextinstanceid']).get_branch_quizes_if_complete(session=self.get_session(), user_id=user_id)
-            self.set_state(user_id, REVIEW_QUIZZES, [quiz.get_h5p_parameters(self.get_session()) for quiz in branch_quizzes])
+            self.set_state(user_id, REVIEW_QUIZZES, branch_quizzes)
             if len(branch_quizzes) > 0:
                 # ask user if they want to review any of the quizzes
                 return {"sys_acts": [SysAct(act_type=SysActionType.RequestReviewOrNext)]}
-        elif event_name == "\\core\\event\\user_graded":
-            self.open_chatbot(user_id)
-            # extract grade info
-            gradeItem: MGradeItem = self.get_session().get(MGradeItem, int(moodle_event['other']['itemid']))
-            # gradeItem: MGradeItem = grade.get_grade_item(self.get_session())
-            finalgrade = float(moodle_event['other']['finalgrade'])
-            success_percentage = finalgrade / float(gradeItem.grademax)
-            # get course module and section
-            type_id_quiz = self.get_session().query(MModule).filter(MModule.name=="h5pactivity").first().id
-            course_module = self.get_session().query(MCourseModule).filter(MCourseModule._course_id==moodle_event['courseid'],
-                                                                           MCourseModule.instance==gradeItem.iteminstance,
-                                                                           MCourseModule._type_id==type_id_quiz).first()
+        elif event_name == "\\mod_h5pactivity\\event\\statement_received" and moodle_event['component'] == 'mod_h5pactivity':
+            current_shown_quiz_id, previous_grade = self.get_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ)
+            if int(moodle_event['contextinstanceid']) == current_shown_quiz_id:
+                sys_acts = []
+                current_grade = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
+                next_quizzes = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES)
+                next_quiz_id, next_quiz_grade = next_quizzes[0] if len(next_quizzes) > 0 else (None, None)
+                self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZZES, attribute_value=next_quizzes[1:])
+                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(next_quiz_id, next_quiz_grade))
+                improvements = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS)
+                improvements.append(True if current_grade > previous_grade else False)
+                self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=improvements)
+                if next_quiz_id:
+                    sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_id))
+                else:
+                    # create a graphic summary of how many quizzes the user did better on
+                    sys_acts.append(SysAct(act_type=SysActionType.DisplayQuizImprovements, slot_values={"improvements": improvements}))
+                    self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.DEFAULT)
+                return {"sys_acts": sys_acts}
+            # In the case that the quiz is done outside the chatbot, give feedback (about absolute grade) and offer next quiz (if applicable)
+            self.open_chatbot(user_id=user_id)
+            course_module = self.get_session().query(MCourseModule).get(int(moodle_event['contextinstanceid']))
+            success_percentage = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
             section = course_module.section
-            next_quiz = section.get_next_available_module(currentModule=course_module, user=self.get_current_user(user_id),
+            next_quiz_id = section.get_next_available_module(currentModule=course_module, user=self.get_current_user(user_id),
                                                           session=self.get_session(), include_types=['h5pactivity', 'hvp'],
                                                           allow_only_unfinished=True, currentModuleCompletion=True)
-            next_quiz_link = next_quiz.get_content_link(session=self.get_session(), alternative_display_text="nächste Quiz") if next_quiz else None
+            next_quiz_link = next_quiz_id.get_content_link(session=self.get_session(), alternative_display_text="nächste Quiz") if next_quiz_id else None
             return {"sys_acts": [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
                 success_percentage=success_percentage,
                 next_quiz_link=next_quiz_link
-            ))]}
+            ))]}             
+            # only in review loop comment on improvements, otherwise absolute grade only
         elif event_name.endswith("event\\course_module_viewed"):
             self.update_recently_viewed(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], time=moodle_event['timecreated'])
 
@@ -474,7 +490,7 @@ class ELearningPolicy(Service):
         quiz = self.get_session().query(MCourseModule).get(coursemoduleid)
         hvp_params = quiz.get_h5p_parameters(self.get_session())
         self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.LARGE)
-        return SysAct(act_type=SysActionType.DisplayQuiz, slot_values=dict(**hvp_params))
+        return SysAct(act_type=SysActionType.DisplayQuiz, slot_values=dict(quiz_embed=hvp_params))
     
     def reset_search_term(self, user_id: int, user_acts: List[UserAct]):
         """
@@ -498,14 +514,14 @@ class ELearningPolicy(Service):
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH, attribute_value=search_term)
         return book_links, has_more_results
     
-    def get_most_reviewable_quizzes(self, user_id: int, courseid: int, max_quizzes: int = 3):
+    def get_most_reviewable_quizzes(self, user_id: int, courseid: int, max_quizzes: int = 3) -> List[Tuple[int, float]]:
         review_grade_items = self.get_current_user(user_id).get_oldest_worst_grade_attempt_quizzes(
             session=self.get_session(),
             courseid=courseid,
             max_results=max_quizzes
         )
         # get corresonding course modules
-        return list(map(lambda gradeItem: self.get_session().query(MH5PActivity).get(gradeItem.iteminstance).get_course_module(self.get_session()).get_h5p_parameters(self.get_session()),
+        return list(map(lambda gradeItem: (self.get_session().query(MH5PActivity).get(gradeItem[0].iteminstance).get_course_module(self.get_session()).id, float(100*gradeItem[1].finalgrade/gradeItem[1].rawgrademax)),
                         review_grade_items))
 
     @PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state", "html_content"])
@@ -543,20 +559,23 @@ class ELearningPolicy(Service):
             return {'sys_acts': sys_acts, "sys_state": sys_state}
         # after first turn
         self.reset_search_term(user_id=user_id, user_acts=user_acts)
+        review_act = False
         sys_acts = []
         for user_act in user_acts:
             if user_act.type == UserActionType.RequestReview:
+                review_act = True
                 review_candidates = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES)
                 if len(review_candidates) == 0:
                     # get next quizzes to review, from worst and oldest to better and newer
                     review_candidates = self.get_most_reviewable_quizzes(user_id=user_id, courseid=courseid)
-                next_quiz = review_candidates[0] if len(review_candidates) > 0 else None
-                if not next_quiz is None:
-                    self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.LARGE)
+                next_quiz_id, next_quiz_grade = review_candidates[0] if len(review_candidates) > 0 else (None, None)
+                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(next_quiz_id, float(next_quiz_grade)))
+                if not next_quiz_id is None:
+                    sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_id))
+                else: 
+                    sys_acts.append(SysAct(act_type=SysActionType.DisplayQuiz, slot_values={"quiz_embed": None}))
                 self.set_state(user_id, REVIEW_QUIZZES, review_candidates[1:])
-                sys_acts.append(SysAct(act_type=SysActionType.DisplayQuiz, slot_values={"quiz_embed": next_quiz}))
             elif user_act.type == UserActionType.RequestNextSection:
-                self.set_state(user_id, REVIEW_QUIZZES, [])
                 user = self.get_current_user(user_id)
                 available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
                 sys_acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
@@ -588,66 +607,10 @@ class ELearningPolicy(Service):
                         # otherwise we want to search, but didn't recognize the user input from the first query - ask for search term only
                         sys_act = SysAct(act_type=SysActionType.RequestSearchTerm, slot_values={})
                         sys_acts.append(sys_act)
-            
-            # elif user_act.slot and 'LoadMoreSearchResults' in user_act.slot:
-            # 	# load more search results
-            # 	# get the last search term and counter (from the nlu)
-            # 	search_term = self.get_state(user_id, LAST_SEARCH)
-            # 	counter = int(user_act.slot.split(":")[-1])
-            # 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=counter, end=counter + 3)
-            # 	if book_links:
-            # 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-            # 		book_link_str = book_link_str + "<br /><br />"
-            # 	else:
-            # 		book_link_str = "End"
-            # 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-
-            # elif user_act.slot == 'SearchForContent' or user_act.slot == 'SearchForDefinition':
-            # 	reg = (
-            #		r"(Wo\s*(kann ich|finde ich|steht)|Zeig mir|Welche)\s*"
-            #		r"(Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|mehr|(die )?Grundlagen|Tutorials|"
-            #		r"eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|"
-            #		r"Info(s( zum Thema)?|rmation(en|squellen))|Videos|Lernmaterialien|was)\s*"
-            #		r"(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*"
-            #		r"(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|"
-            #		r"(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*"
-            #		r"(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*"
-            #		r"(bedeutet|geben|gemeint ist)?(\?|$)|"
-            #		r"Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*"
-            #		r"(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*"
-            #		r"(?P<content3>.*?)\s*(gemeint)?(\?|$)"
-            #	)
-            # 	matches = re.match(reg, user_act.text, re.I)
-            # 	if matches:
-            # 		matches = matches.groupdict()
-            # 		for key in matches.keys():
-            # 			if key.startswith("content") and matches.get(key):
-            # 				search_term = matches.get(key)
-                    
-            # 		self.set_state(user_id, LAST_SEARCH, search_term)
-            # 		book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
-            # 		if book_links:
-            # 			book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-            # 			book_link_str = book_link_str + "<br /><br />"
-            # 		else:
-            # 			book_link_str = "None"
-            # 		sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-            # 	else:
-            # 		# Nicht erkannt -> nachfragen!
-            # 		sys_act = SysAct(act_type=SysActionType.Request, slot_values={"modulContent": "modulContent"})
-            
-            # elif user_act.slot == 'SearchTerm':
-            # 	# system asked for only the search term -> utterance is the search term
-            # 	search_term = user_act.text
-            # 	self.set_state(user_id, LAST_SEARCH, search_term)
-            # 	book_links = get_book_links(wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=0, end=3)
-            # 	if book_links:
-            # 		book_link_str = "<br />".join(f'<br /> - <a href="{book_links[name][1]}">{name}</a> {book_links[name][0]}' for name in book_links)
-            # 		book_link_str = book_link_str + "<br /><br />"
-            # 	else:
-            # 		book_link_str = "End"
-            # 	sys_act = SysAct(act_type=SysActionType.Inform, slot_values={"modulContent": "modulContent", "link": book_link_str})
-            
+        if not review_act:
+            self.set_state(user_id, REVIEW_QUIZZES, [])
+            self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(None, None))
+            self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[]) 
         sys_state["last_act"] = sys_acts
         self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_acts}")
         return {'sys_acts':  sys_acts, "sys_state": sys_state}
