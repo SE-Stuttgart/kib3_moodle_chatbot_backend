@@ -60,7 +60,13 @@ class GUIServer(Service):
 
         not_first_turn = self.get_state(user_id, GUIServer.NOT_FIRST_TURN)
         if not_first_turn:
-            pass
+            # check if history contains missed messages
+            # if so, send and clear buffer
+            missed = self.get_state(user_id, "MISSED_MESSAGES")
+            if missed is not None:
+                for msg in missed:
+                    self.websockets[user_id].write_message(json.dumps([{"content": msg, "format": "text", "party": "system"}]))
+                self.set_state(user_id, "MISSED_MESSAGES", None)
         else:
             # chat history not found, start new dialog in backend
             self.set_state(user_id, GUIServer.NOT_FIRST_TURN, True)
@@ -109,19 +115,16 @@ class GUIServer(Service):
         for message in sys_utterance:
             if not user_id in self.websockets:
                 # store messages during page transition where socket is closed
-                # print("MISSED MSG", message)
-                pass
+                missed = self.get_state(user_id, "MISSED_MESSAGES")
+                if missed is None:
+                    missed = []
+                missed.append(message)
+                self.set_state(user_id, "MISSED_MESSAGES", missed)
             else:
                 asyncio.set_event_loop(self.loopy_loop)
                 # forward message to moodle frontend
                 self.websockets[user_id].write_message(json.dumps([{"content": message, "format": "text", "party": "system"}]))
     
-    @PublishSubscribe(sub_topics=['html_content'])
-    def forward_html_to_websocket(self, user_id, html_content: str = None):
-        asyncio.set_event_loop(self.loopy_loop)
-
-        # forward message to moodle frontend
-        self.websockets[user_id].write_message(json.dumps([{'content': html_content, "format": "html"}]))
 
 # setup dialog system
 domains = [domain_1]

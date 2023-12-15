@@ -222,8 +222,8 @@ class ELearningPolicy(Service):
 
 
 
-    @PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state", "html_content"])
-    def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct, html_content=str):
+    @PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state"])
+    def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct):
         """ Responsible for reacting to events from mooodle.
             Triggered by interaction with moodle (NOT the chatbot), e.g. when someone completes a coursemodule.
 
@@ -274,8 +274,11 @@ class ELearningPolicy(Service):
                     if last_completed_section_id != section.id:
                         self.set_state(user_id, LAST_FINISHED_SECTION_ID, section.id)
                         self.open_chatbot(user_id=user_id)
+                        sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section.name, 'branch': False})]
+                        sys_acts += self.get_user_next_module(user=self.get_current_user(user_id), courseid=moodle_event['courseid'],
+                                                            add_last_viewed_course_module=False, current_section_id=section.id)
                         return {
-                            "sys_acts": [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section.name, 'branch': False})]
+                            "sys_acts": sys_acts
                         }
 
         elif event_name == "\\mod_h5pactivity\\event\\statement_received" and moodle_event['component'] == 'mod_h5pactivity':
@@ -550,8 +553,8 @@ class ELearningPolicy(Service):
         return list(map(lambda gradeItem: (self.get_session().query(MH5PActivity).get(gradeItem[0].iteminstance).get_course_module(self.get_session()).id, float(100*gradeItem[1].finalgrade/gradeItem[1].rawgrademax)),
                         review_grade_items))
 
-    @PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state", "html_content"])
-    def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct,html_content=str):
+    @PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state"])
+    def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct):
         """
             Responsible for walking the policy through a single turn. Uses the current user
             action and system belief state to determine what the next system action should be.
@@ -657,7 +660,7 @@ class ELearningPolicy(Service):
             user = self.get_session().get(MUser, int(user_id))
             return user
     
-    def get_user_next_module(self, user: MUser, courseid: int, add_last_viewed_course_module: bool = False) -> List[SysAct]:
+    def get_user_next_module(self, user: MUser, courseid: int, add_last_viewed_course_module: bool = False, current_section_id: int = None) -> List[SysAct]:
         # choose how to proceed
         acts = []
         has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
@@ -674,11 +677,11 @@ class ELearningPolicy(Service):
                 # prioritize already viewed modules
                 last_started_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=False)
                 for unfinished_module in last_started_course_modules:
-                    if not unfinished_module._section_id in next_modules:
+                    if not unfinished_module._section_id in next_modules and unfinished_module._section_id != current_section_id:
                         next_modules[unfinished_module._section_id] = unfinished_module
                 # fill with other started sections
                 for completed_module in last_completed_course_modules:
-                    if not completed_module._section_id in next_modules:
+                    if not completed_module._section_id in next_modules and completed_module._section_id != current_section_id:
                         # get first open module from this section
                         next_module = completed_module.section.get_first_available_module(user=user, session=self.get_session(),
                                                                             include_types=learning_material_types + assignment_material_types,
