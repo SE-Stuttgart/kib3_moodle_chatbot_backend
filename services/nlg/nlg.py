@@ -270,9 +270,16 @@ class ELearningNLG(Service):
              [])
         ]
 
-    def inform_help(self, help):
-        return["""Du kommst nicht weiter? Kein Problem! Hier ist eine Liste von Themen, wonach du mich fragen kannst: <ul><li>Was du als nächstes lernen solltest <br> (z.B. \"Was kann ich als nächstes lernen?\")</li><li>Was du wiederholen kannst <br>(z.B. \"Bei welchem Modul bin ich nicht ausreichend?\")</li></ul>"""]
-
+    def inform_help(self):
+        return[("""Hier ist eine Liste von Themen, wonach du mich fragen kannst:
+               <ul>
+                <li>Was du als nächstes lernen kannst <br> (z.B. \"Was kann ich als nächstes lernen?\")</li>
+                <li>Weitermachen mit einem offenen Abschnitt <br> (z.B. \"Abschnitt fertig machen\")</li>
+                <li>Was du wiederholen kannst <br>(z.B. \"Ich will Quizze wiederholen\")</li>
+                <li>Welche Badges du als nächstes bekommen kannst <br>(z.B. \"Was sind die Voraussetzungen für den nächsten Badge?\")</li>
+                <li>Wie weit du im Kurs bist <br>(z.B. \"Wie viel fehlt noch im Kurs?\")</li>
+                <li>Nach Inhalten suchen <br>(z.B. \"Wo finde ich Informationen zu Regression?\")</li>
+               </ul>""", [])]
 
     def generate_welcomemsg(self, sys_act: SysAct):
         if "first_turn" in sys_act.slot_values:
@@ -468,7 +475,12 @@ class ELearningNLG(Service):
         if next_quiz_link:
             msgs.append((f"Bereit für das {next_quiz_link}?", []))
         return msgs
-   
+    
+    def bad_act(self, **kwargs):
+        return [("Das habe ich leider nicht verstanden. Kannst du es vielleicht nochmal anders formulieren?", ["Hilfe"])]
+
+    def you_are_welcome(self):
+        return [("Gerne 😊", [])]
 
     def get_message_fn(self, sys_act: SysAct):
         # delegate system act to specific message generator
@@ -504,6 +516,12 @@ class ELearningNLG(Service):
             return self.request_review_or_next
         elif sys_act.type == SysActionType.FeedbackToQuiz:
             return self.feedback_to_quiz
+        elif sys_act.type == SysActionType.Bad:
+            return self.bad_act
+        elif sys_act.type == SysActionType.YouAreWelecome:
+            return self.you_are_welcome
+        elif sys_act.type == SysActionType.InformHelp:
+            return self.inform_help
         raise NotImplementedError
 
 

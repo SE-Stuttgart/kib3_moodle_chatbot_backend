@@ -39,9 +39,9 @@ class UserActionType(Enum):
 
     LoadMoreSearchResults = "LoadMoreSearchResults"
 
-    Hello = 'hello'
-    Bye = 'bye'
-    Thanks = 'thanks'
+    Hello = 'Hello'
+    Bye = 'Bye'
+    Thanks = 'Thanks'
     Bad = 'bad'
 
 

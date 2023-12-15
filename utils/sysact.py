@@ -51,9 +51,11 @@ class SysActionType(Enum):
     InformSummary = "InformSummary"
     InformSearchResults = "InformSearchResults"
     InformLastViewedCourseModule = "InformLastViewedCourseModule"
+    InformHelp = 'InformHelp'
     
     Bad = 'bad'
     Bye = 'closingmsg'
+    YouAreWelecome = 'youarewelcome'
 
 
 class SysAct(Transmittable):

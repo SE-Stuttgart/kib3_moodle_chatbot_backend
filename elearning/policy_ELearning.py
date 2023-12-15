@@ -582,7 +582,7 @@ class ELearningPolicy(Service):
                     # get next quizzes to review, from worst and oldest to better and newer
                     review_candidates = self.get_most_reviewable_quizzes(user_id=user_id, courseid=courseid)
                 next_quiz_id, next_quiz_grade = review_candidates[0] if len(review_candidates) > 0 else (None, None)
-                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(next_quiz_id, float(next_quiz_grade)))
+                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(next_quiz_id, next_quiz_grade))
                 if not next_quiz_id is None:
                     sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_id))
                 else: 
@@ -620,10 +620,22 @@ class ELearningPolicy(Service):
                         # otherwise we want to search, but didn't recognize the user input from the first query - ask for search term only
                         sys_act = SysAct(act_type=SysActionType.RequestSearchTerm, slot_values={})
                         sys_acts.append(sys_act)
+            elif user_act.type == UserActionType.Bad:
+                sys_acts.append(SysAct(act_type=SysActionType.Bad))
+            elif user_act.type == UserActionType.Hello:
+                sys_acts.append(SysAct(act_type=SysActionType.Welcome))
+            elif user_act.type == UserActionType.Thanks:
+                sys_acts.append(SysAct(act_type=SysActionType.YouAreWelecome))
+            elif user_act.type == UserActionType.RequestHelp:
+                sys_acts.append(SysAct(act_type=SysActionType.InformHelp))
+            elif user_act.type == UserActionType.RequestSectionSummary:
+                # TODO 
+                pass
         if not review_act:
             self.set_state(user_id, REVIEW_QUIZZES, [])
             self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(None, None))
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[]) 
+            self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.DEFAULT)
         sys_state["last_act"] = sys_acts
         self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_acts}")
         return {'sys_acts':  sys_acts, "sys_state": sys_state}
