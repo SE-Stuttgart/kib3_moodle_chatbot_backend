@@ -450,10 +450,15 @@ class ELearningNLG(Service):
 
         links_by_file = []
         for filename in search_results:
-            links_by_file.append(f"""<h4>{filename.replace(".pdf", " (Buch)")}</h4>
-            <ul>
-                {" ".join([f'<li>{res}</li>' for res in search_results[filename]])}
-            </ul>""")
+            links_by_file.append(
+                f"""<div class="card" style="color: black">
+                        <div class="card-header">{filename.replace(".pdf", " (Buch)")}</div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                {" ".join([f'<li class="list-group-item">{res}</li>' for res in search_results[filename]])}
+                            </ul>
+                        </div>
+                    </div>""")
         return [(
             "".join(links_by_file),
             [

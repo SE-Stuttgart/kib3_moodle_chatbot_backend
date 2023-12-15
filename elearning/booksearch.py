@@ -62,7 +62,7 @@ def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTe
         for entry in data:
             if counter < 0 or start <= counter < end:
                 files[entry['filename']].append(
-                    f"""<a href="{entry['book_chapter_url']}">{entry['context_snippet']}</a>"""
+                    f"""<a href="{entry['book_chapter_url']}" style="color: black">{entry['context_snippet']}</a>"""
                 )
             counter += 1
         return files, has_more_results
