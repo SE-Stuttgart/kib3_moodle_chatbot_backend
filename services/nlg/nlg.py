@@ -428,8 +428,7 @@ class ELearningNLG(Service):
                 ])]
     
     def inform_next_options(self, next_available_sections):
-        return [("Super, du hast alle angefangenen Abschnitte fertig bekommen!", []),
-                (f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
+        return [(f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
                 {self._enumeration(items=next_available_sections)}
                 
                 Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [

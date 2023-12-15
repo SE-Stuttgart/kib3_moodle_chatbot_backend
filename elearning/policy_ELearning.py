@@ -44,21 +44,14 @@ from utils.useract import UserActionType, UserAct
 
 locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
 
-LAST_ACCESSED_COURSEMODULE = 'last_accessed_coursemodule'
-NEXT_SUGGESTED_COURSEMODULE = 'next_suggested_coursemodule'
-COURSE_MODULE_ID = 'course_module_id'
-ASSIGN_ID = 'assign_id'
 TURNS = 'turns'
-LAST_USER_ACT = 'last_act'
-FIRST_TURN = 'first_turn'
 MODE = 'mode'
 LAST_SEARCH = 'last_search'
 LAST_SEARCH_INDEX = 'last_search_index'
 REVIEW_QUIZZES = "review_quizzes"
 CURRENT_REVIEW_QUIZ = "current_review_quiz"
 REVIEW_QUIZ_IMPROVEMENTS = "review_quiz_improvements"
-
-# JUST_LOGGED_IN = "just_logged_in"
+LAST_FINISHED_SECTION_ID = 'last_finished_section'
 
 learning_material_types = ["url", "book", "resource"]
 assignment_material_types = ['h5pactivity']# query day-wise completions
@@ -172,15 +165,14 @@ class ELearningPolicy(Service):
             resets the policy after each dialog
         """
         if not self.get_state(user_id, TURNS):
-            self.set_state(user_id, LAST_USER_ACT, None)
             self.set_state(user_id, TURNS, 0)
-            self.set_state(user_id, FIRST_TURN, True)
             self.set_state(user_id, LAST_SEARCH, {})
             self.set_state(user_id, LAST_SEARCH, None)
             self.set_state(user_id, LAST_SEARCH_INDEX, 0)
             self.set_state(user_id, REVIEW_QUIZZES, [])
             self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(None, None))
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
+            self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
 
             
     def update_recently_viewed(self, user_id: int, course_id: int, course_module_id: int, time: int):
@@ -191,6 +183,7 @@ class ELearningPolicy(Service):
         if access_item:
             # update timestamp
             access_item.timeaccess = datetime.fromtimestamp(time)
+
             self.get_session().commit()
         else:
             # create first entry
@@ -205,14 +198,28 @@ class ELearningPolicy(Service):
             )
             self.get_session().commit()
 
-    def update_recently_viewed_completion(self, user_id: int, course_id: int, course_module_id: int, completion: int):
+    def update_recently_viewed_completion(self, user_id: int, course_id: int, course_module_id: int, completion: int, time: int):
         # check if we already have an entry
         access_item = self.get_session().query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==course_id,
                                                                                      MChatbotRecentlyAcessedItem._coursemodule_id==course_module_id,
                                                                                     MChatbotRecentlyAcessedItem._userid==user_id).first()
-        if access_item:
+        if completion == 0:
+            return # don't bother writing it, its incomplete
+        if access_item and access_item.completionstate != completion:
             access_item.completionstate = completion
             self.get_session().commit()
+        elif access_item is None:
+            self.get_session().add(
+                MChatbotRecentlyAcessedItem(
+                    timeaccess=datetime.fromtimestamp(time),
+                    completionstate=completion,
+                    _userid=user_id,
+                    _course_id=course_id,
+                    _coursemodule_id=course_module_id
+                )
+            )
+            self.get_session().commit()
+
 
 
     @PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state", "html_content"])
@@ -246,13 +253,14 @@ class ELearningPolicy(Service):
         elif event_name == "\\core\\event\\course_module_completion_updated":
             # check if we finished a whole branch
             # TODO if so, offer congratulations, the review, and then next possibilities?
-            self.update_recently_viewed_completion(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], completion=moodle_event['other']['completionstate'])
+            self.update_recently_viewed_completion(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], completion=moodle_event['other']['completionstate'], time=moodle_event['timecreated'])
             course_module = self.get_session().query(MCourseModule).get(moodle_event['contextinstanceid'])
             branch_quizzes, branch_letter = course_module.get_branch_quizes_if_complete(session=self.get_session(), user_id=user_id)
             self.set_state(user_id, REVIEW_QUIZZES, branch_quizzes)
             if len(branch_quizzes) > 0:
                 # we did complete a full branch
                 # ask user if they want to review any of the quizzes
+                self.open_chatbot(user_id=user_id)
                 return {"sys_acts": [
                     SysAct(act_type=SysActionType.CongratulateCompletion, slot_values={"name": branch_letter, "branch": True}),
                     SysAct(act_type=SysActionType.RequestReviewOrNext)]}
@@ -260,10 +268,15 @@ class ELearningPolicy(Service):
                 # did we complete a full section?
                 section = course_module.section
                 if section.is_completed(user_id=user_id, session=self.get_session()):
-                    return {
-                        "sys_acts": [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section.name, 'branch': False}),
-                                     SysAct(act_type=SysActionType.RequestReviewOrNext)]
-                    }
+                    # we get this event for each of the modules in a section with different materials (i.e., once for video, once for pdf, once for book):
+                    # check that we didn't already offer congratulations, otherwise the autocomplete plugin will trigger this event for each material type
+                    last_completed_section_id = self.get_state(user_id, LAST_FINISHED_SECTION_ID)
+                    if last_completed_section_id != section.id:
+                        self.set_state(user_id, LAST_FINISHED_SECTION_ID, section.id)
+                        self.open_chatbot(user_id=user_id)
+                        return {
+                            "sys_acts": [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section.name, 'branch': False})]
+                        }
 
         elif event_name == "\\mod_h5pactivity\\event\\statement_received" and moodle_event['component'] == 'mod_h5pactivity':
             current_shown_quiz_id, previous_grade = self.get_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ)
@@ -562,9 +575,8 @@ class ELearningPolicy(Service):
 
         # go through the user acts 
         sys_state = {}
-        if self.get_state(user_id, FIRST_TURN):
+        if turns == 1:
             # print first turn message
-            self.set_state(user_id, FIRST_TURN, False)
             sys_acts = self.choose_greeting(user_id, courseid)
             sys_state["last_act"] = sys_acts
             for sys_act in sys_acts:
