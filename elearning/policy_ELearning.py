@@ -39,7 +39,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import BadgeCompletionStatus, MBadge, MChatbotSettings, MCourseModulesViewed, MCourseSection, MFile, MGradeItem, MH5PActivity, MChatbotRecentlyAcessedItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
+from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MCourseSection, MFile, MGradeItem, MH5PActivity, MChatbotRecentlyAcessedItem, MUserSettings, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 
 locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
@@ -52,6 +52,7 @@ REVIEW_QUIZZES = "review_quizzes"
 CURRENT_REVIEW_QUIZ = "current_review_quiz"
 REVIEW_QUIZ_IMPROVEMENTS = "review_quiz_improvements"
 LAST_FINISHED_SECTION_ID = 'last_finished_section'
+SETTINGS = 'settings'
 
 learning_material_types = ["url", "book", "resource"]
 assignment_material_types = ['h5pactivity']# query day-wise completions
@@ -122,8 +123,7 @@ class ELearningPolicy(Service):
     @PublishSubscribe(pub_topics=['control_event'])
     def open_chatbot(self, user_id: int):
         """ Triggers the UI chatwindow to open """
-        user = self.get_current_user(user_id)
-        if (not user.settings) or user.settings.allow_auto_open:
+        if self.check_setting(user_id, 'enabled'):
             return {
                 "control_event": "UI_OPEN",
                 "user_id": user_id
@@ -164,6 +164,7 @@ class ELearningPolicy(Service):
         """
             resets the policy after each dialog
         """
+        # set user dialog state
         if not self.get_state(user_id, TURNS):
             self.set_state(user_id, TURNS, 0)
             self.set_state(user_id, LAST_SEARCH, {})
@@ -174,7 +175,30 @@ class ELearningPolicy(Service):
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
             self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
 
-            
+            # get user settings
+            settings = self.get_current_user(user_id).settings
+            if settings is None:
+                # new user: doesn't have settings yet - we generate them
+                settings = MUserSettings(
+                        _userid=user_id,
+                        _module_id=MModule.from_name(session=self.get_session(), name='book').id,
+                        enabled=True,
+                        logging=True,
+                        numsearchresults=5,
+                        numreviewquizzes=3,
+                        openonlogin=True,
+                        openonquiz=True,
+                        openonsection=True,
+                        openonbranch=True,
+                        openonbadge=True
+                    )
+                self.get_session().add(settings)
+                self.get_session().commit()
+            self.set_state(user_id, SETTINGS, settings)
+
+    def check_setting(self, user_id: int, setting_key: str):
+        return getattr(self.get_state(user_id, SETTINGS), setting_key)
+
     def update_recently_viewed(self, user_id: int, course_id: int, course_module_id: int, time: int):
         # check if we already have an entry
         access_item = self.get_session().query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==course_id,
@@ -260,7 +284,8 @@ class ELearningPolicy(Service):
             if len(branch_quizzes) > 0:
                 # we did complete a full branch
                 # ask user if they want to review any of the quizzes
-                self.open_chatbot(user_id=user_id)
+                if self.check_setting(user_id, 'openonbranch'):
+                    self.open_chatbot(user_id=user_id)
                 return {"sys_acts": [
                     SysAct(act_type=SysActionType.CongratulateCompletion, slot_values={"name": branch_letter, "branch": True}),
                     SysAct(act_type=SysActionType.RequestReviewOrNext)]}
@@ -273,7 +298,8 @@ class ELearningPolicy(Service):
                     last_completed_section_id = self.get_state(user_id, LAST_FINISHED_SECTION_ID)
                     if last_completed_section_id != section.id:
                         self.set_state(user_id, LAST_FINISHED_SECTION_ID, section.id)
-                        self.open_chatbot(user_id=user_id)
+                        if self.check_setting(user_id, 'openonsection'):
+                            self.open_chatbot(user_id=user_id)
                         sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section.name, 'branch': False})]
                         sys_acts += self.get_user_next_module(user=self.get_current_user(user_id), courseid=moodle_event['courseid'],
                                                             add_last_viewed_course_module=False, current_section_id=section.id)
@@ -301,7 +327,8 @@ class ELearningPolicy(Service):
                     self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.DEFAULT)
                 return {"sys_acts": sys_acts}
             # In the case that the quiz is done outside the chatbot, give feedback (about absolute grade) and offer next quiz (if applicable)
-            self.open_chatbot(user_id=user_id)
+            if self.check_setting(user_id, 'openonquiz'):
+                self.open_chatbot(user_id=user_id)
             course_module = self.get_session().query(MCourseModule).get(int(moodle_event['contextinstanceid']))
             success_percentage = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
             section = course_module.section
@@ -397,7 +424,8 @@ class ELearningPolicy(Service):
     
         
     def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
-        self.open_chatbot(user_id)
+        if self.check_setting(user_id, 'openonlogin'):
+            self.open_chatbot(user_id)
         user = self.get_current_user(user_id)
         acts = []
 
@@ -407,15 +435,13 @@ class ELearningPolicy(Service):
         if first_turn_ever == 0:
             # user is seeing chatbot for the first time - show some introduction
 
-            # create first entry for chatbot settings 
-            settings = MChatbotSettings(allow_auto_open=True, _userid=user_id)
             # create first entry for weekly summaries
             last_weekly_summary = MChatbotWeeklySummary(_userid=user_id, timecreated=self.get_moodle_server_time(user_id), firstweek=True)
             # create first entry for progress summaries
             progress_summary = MChatbotProgressSummary(_userid=user_id, progress=0.0, timecreated=self.get_moodle_server_time(user_id))
             self.session_lock.acquire()
             try:
-                self.get_session().add_all([last_weekly_summary, progress_summary, settings])
+                self.get_session().add_all([last_weekly_summary, progress_summary])
                 self.get_session().commit()
             except:
                 traceback.print_exc()
@@ -506,7 +532,8 @@ class ELearningPolicy(Service):
             ))
 
     def congratulate_badge_issued(self, user_id: int, badge_id: int, contextid: int) -> SysAct:
-        self.open_chatbot(user_id=user_id)
+        if self.check_setting(user_id, 'openonbadge'):
+            self.open_chatbot(user_id=user_id)
         # find badge
         badge = self.get_session().query(MBadge).get(badge_id)
         # get badge image link

@@ -5,7 +5,7 @@ import re
 from enum import Enum
 import random
 from typing import List, Tuple, Union
-from sqlalchemy import Column, DECIMAL, String, select, text, create_engine, desc, Text
+from sqlalchemy import Column, DECIMAL, String, select, text, create_engine, desc, Text, Boolean
 from sqlalchemy.dialects.mysql import BIGINT, TINYINT
 from sqlalchemy.dialects.mysql.types import MEDIUMINT
 from sqlalchemy.exc import NoResultFound
@@ -342,6 +342,15 @@ class MModule(Base):
 	id = Column(BIGINT(10), primary_key=True)
 	name = Column(String(20, 'utf8mb4_bin'), nullable=False, index=True, server_default=text("''"))
 
+	@staticmethod
+	def from_name(session: Session, name: str):
+		return session.query(MModule) \
+			.filter(MModule.name==name) \
+			.first()
+	
+	@staticmethod
+	def from_type_id(session: Session, id: int):
+		return session.query(MModule).get(id)
 
 class MCourseModulesCompletion(Base):
 	"""
@@ -896,19 +905,6 @@ class MChatbotProgressSummary(Base):
 
 
 
-class MChatbotSettings(Base):
-	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_settings"
-
-	allow_auto_open = Column(BOOLEAN, nullable=False)
-	preferred_content_fromat = Column(String(100, 'utf8mb4_bin'), nullable=True, index=True, server_default=text("''"))
-
-	user = relationship("MUser", back_populates="settings", uselist=False) # user object
-
-	# internal database mapping info
-	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), nullable=False, index=True,
-					   server_default=text("'0'"), name='userid', primary_key=True)
-
-
 class MChatbotHistory(Base):
 	__tablename__ = f"{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_history"
 
@@ -1157,6 +1153,30 @@ class MBadgeIssued(Base):
 	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), name="userid")	
 
 
+class MUserSettings(Base):
+	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_usersettings'
+	
+	id = Column(BIGINT(10), primary_key=True)
+
+	user = relationship("MUser", back_populates="settings", uselist=False) # user object
+	prefered_module = relationship("MModule", uselist=False)
+
+	enabled = Column(Boolean, nullable=False)
+	logging = Column(Boolean, nullable=False)
+	numsearchresults = Column(TINYINT(2), nullable=False)
+	numreviewquizzes = Column(TINYINT(2), nullable=False)
+	
+	openonlogin = Column(Boolean, nullable=False)
+	openonquiz = Column(Boolean, nullable=False)
+	openonsection = Column(Boolean, nullable=False)
+	openonbranch = Column(Boolean, nullable=False)
+	openonbadge = Column(Boolean, nullable=False)
+
+	# internal database mapping info
+	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), nullable=False, index=True, server_default=text("'0'"), name='userid')
+	_module_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}modules.id'), index=True, name='preferedcontenttype')
+
+
 class MUser(Base):
 	"""
 	A moodle user, containing
@@ -1190,7 +1210,7 @@ class MUser(Base):
 	# last accessed course
 	last_accessed_course = relationship("MUserLastacces", back_populates="user", uselist=False)
 	# chatbot settings
-	settings = relationship("MChatbotSettings", back_populates="user", uselist=False)
+	settings = relationship("MUserSettings", back_populates="user", uselist=False)
 	progress = relationship("MChatbotProgressSummary", back_populates="user", uselist=False)
 	recently_accessed_items = relationship("MChatbotRecentlyAcessedItem", back_populates="user", uselist=True)
 
