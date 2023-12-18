@@ -622,7 +622,7 @@ class ELearningPolicy(Service):
                 review_candidates = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES)
                 if len(review_candidates) == 0:
                     # get next quizzes to review, from worst and oldest to better and newer
-                    review_candidates = self.get_most_reviewable_quizzes(user_id=user_id, courseid=courseid)
+                    review_candidates = self.get_most_reviewable_quizzes(user_id=user_id, courseid=courseid, max_quizzes=self.check_setting(user_id, 'numreviewquizzes'))
                 next_quiz_id, next_quiz_grade = review_candidates[0] if len(review_candidates) > 0 else (None, None)
                 self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(next_quiz_id, next_quiz_grade))
                 if not next_quiz_id is None:
@@ -648,14 +648,14 @@ class ELearningPolicy(Service):
                 if not user_act.value is None:
                     # if we have a new search term, reset the search index and give out first three results
                     # we already extracted the search term from the user query - return results immediately
-                    book_link_list, has_more_search_results = self.search_resources(user_id=user_id, courseid=courseid, search_term=user_act.value, search_idx=0)
+                    book_link_list, has_more_search_results = self.search_resources(user_id=user_id, courseid=courseid, search_term=user_act.value, search_idx=0, num_results=self.check_setting(user_id, 'numsearchresults'))
                     sys_act = SysAct(act_type=SysActionType.InformSearchResults, slot_values={"search_results": book_link_list, "load_more": has_more_search_results})
                     sys_acts.append(sys_act)
                 else:
                     if not self.get_state(user_id=user_id, attribute_name=LAST_SEARCH) is None:
                         # if we have a search term already, use that
                         last_search_term = self.get_state(user_id=user_id, attribute_name=LAST_SEARCH)
-                        book_link_list, has_more_search_results = self.search_resources(user_id=user_id, courseid=courseid, search_term=last_search_term, search_idx=self.get_state(user_id=user_id, attribute_name=LAST_SEARCH_INDEX))
+                        book_link_list, has_more_search_results = self.search_resources(user_id=user_id, courseid=courseid, search_term=last_search_term, search_idx=self.get_state(user_id=user_id, attribute_name=LAST_SEARCH_INDEX), num_results=self.check_setting(user_id, 'numsearchresults'))
                         sys_act = SysAct(act_type=SysActionType.InformSearchResults, slot_values={"search_results": book_link_list, "load_more": has_more_search_results})
                         sys_acts.append(sys_act)
                     else:
