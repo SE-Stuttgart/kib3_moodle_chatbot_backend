@@ -41,7 +41,7 @@ SQLAlchemy==2.0.23
 threadpoolctl==3.2.0
 tokenizers==0.14.1
 torch>=1.6.0,<3.0.0
-torchvision==0.15.0
+torchvision==0.14.1
 tornado==6.2
 tqdm==4.66.1
 transformers==4.35.0
