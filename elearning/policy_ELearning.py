@@ -41,8 +41,16 @@ from utils.logger import DiasysLogger
 from utils import UserAct
 from elearning.moodledb import BadgeCompletionStatus, MBadge, MChatbotSettings, MCourseModulesViewed, MCourseSection, MFile, MGradeItem, MH5PActivity, MChatbotRecentlyAcessedItem, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
+from dotenv import load_dotenv
+import os
 
-locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
+# Load environment variables from the .env file
+load_dotenv()
+
+# Retrieve the LC_TIME environment variable
+locale_setting = os.getenv("LC_TIME")
+print(locale_setting)
+locale.setlocale(locale.LC_TIME, locale_setting)
 
 TURNS = 'turns'
 MODE = 'mode'
@@ -477,7 +485,7 @@ class ELearningPolicy(Service):
 
         if append_suggestions:
             # choose how to proceed
-            acts.extend(self.get_user_next_module(user=user, courseid=courseid, add_last_viewed_course_module=True))
+            acts.append(self.get_user_next_module(user=user, courseid=courseid, add_last_viewed_course_module=True))
             
         return acts
 
@@ -616,7 +624,7 @@ class ELearningPolicy(Service):
                 sys_acts.append(self._handle_request_badge_progress(user_id=user_id, courseid=courseid, min_progress=0.0))
             elif user_act.type == UserActionType.ContinueOpenModules:
                 user = self.get_current_user(user_id=user_id)
-                sys_acts.extend(self.get_user_next_module(user=user, courseid=courseid))
+                sys_acts.append(self.get_user_next_module(user=user, courseid=courseid))
             elif user_act.type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
                 if not user_act.value is None:
                     # if we have a new search term, reset the search index and give out first three results
@@ -665,6 +673,8 @@ class ELearningPolicy(Service):
         acts = []
         has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
                                     .filter(MCourseModulesViewed._userid==user.id, MCourseModule._course_id==courseid).count() > 0
+        
+        
         all_sections_completed = False
         if has_seen_any_course_modules:
             # last viewed module
@@ -704,12 +714,21 @@ class ELearningPolicy(Service):
                     all_sections_completed = True
             # TODO: Forum post info
             # TODO: Deadline reminder
-            if all_sections_completed:
-                # user has completed all started sections, should get choice of next new and available sections
-                available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user.id))
-                acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                next_available_sections=[section.get_link() for section in available_new_course_sections]
-                        )))
+                if all_sections_completed:
+                    # user has completed all started sections, should get choice of next new and available sections
+                    available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user.id))
+                    acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
+                                    next_available_sections=[section.get_link() for section in available_new_course_sections]
+                            )))
+            
+            else:
+                # has seen modules, but none completed or really started
+                # return ice cream game
+                icecreamgame_module_id = self.get_session().query(MModule).filter(MModule.name=='icecreamgame').first().id
+                icecreamgame_module = self.get_session().query(MCourseModule).filter(MCourseModule._course_id==courseid, MCourseModule._type_id==icecreamgame_module_id).first()
+                acts.append(SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
+                    module_link=icecreamgame_module.get_content_link(session=self.get_session(), alternative_display_text="hier")
+                )))
         else:
             # return ice cream game
             icecreamgame_module_id = self.get_session().query(MModule).filter(MModule.name=='icecreamgame').first().id

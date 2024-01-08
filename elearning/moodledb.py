@@ -1205,6 +1205,10 @@ class MUser(Base):
 		silver_badge = session.query(MBadge).filter(MBadge.name.startswith("Silbermedaille Regression"), MBadge._courseid==courseid).first()
 		gold_badge = session.query(MBadge).filter(MBadge.name.startswith("Goldmedaille Regression"), MBadge._courseid==courseid).first()
 
+		if not bronze_badge or not silver_badge or not gold_badge:
+			# no badges - give up by pretending all badges were earned
+			return None
+		
 		# get badges that are not issued
 		closed_badge_ids = [badge._badgeid for badge in session.query(MBadgeIssued).filter(MBadgeIssued._userid==self.id).all()] + \
 							[bronze_badge.id, silver_badge.id, gold_badge.id]

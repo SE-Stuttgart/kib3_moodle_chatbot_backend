@@ -170,7 +170,7 @@ class ELearningNLG(Service):
         return["""Könntest du mir bitte nochmal nur den Suchbegriff nennen?"""]
 
     def inform_not_implemented(self, notImplementedYet):
-        return["""Leider ist diese Funktionalität noch nicht implementiert, wir arbeiten dran!"""]
+        return[(f"""Leider ist diese Funktionalität noch nicht implementiert, wir arbeiten dran!""", [])]
 
     def inform_motivational(self, motivational, taskLeft):
         return[f"""{taskLeft}, du hast schon {motivational} geschafft! Die restlichen Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"""]
@@ -550,5 +550,8 @@ class ELearningNLG(Service):
             messages += message_fn(**sys_act.slot_values)
         for message in messages:
             self.logger.dialog_turn(f"# USER {user_id} # NLG - {message}")
+        
+        if len(messages) == 0:
+            messages += self.bad_act()
         return {'sys_utterance': messages}
 
