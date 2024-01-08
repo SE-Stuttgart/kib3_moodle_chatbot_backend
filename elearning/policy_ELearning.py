@@ -17,15 +17,11 @@
 #
 ###############################################################################
 from datetime import datetime, timedelta
-import decimal
 from enum import Enum
-import random
-import re
 import threading
 import traceback
 from typing import List, Tuple
 import time
-from copy import deepcopy
 import locale
 
 from sqlalchemy.orm import sessionmaker
@@ -39,7 +35,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MCourseSection, MFile, MGradeItem, MH5PActivity, MChatbotRecentlyAcessedItem, MUserSettings, connect_to_moodle_db, Base, MUser, MCourseModule, get_time_estimates, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
+from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MGradeItem, MH5PActivity, connect_to_moodle_db, Base, MUser, MCourseModule, fetch_branch_review_quizzes, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 
 locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
@@ -158,7 +154,12 @@ class ELearningPolicy(Service):
                 print("===== ERROR CONNECTING TO DB (Potentially have to wait for moodle setup to finish), RETRY IN 10 SECONDS ===== ")
                 traceback.print_exc()
                 time.sleep(10) 
-    
+
+    def check_setting(self, user_id: int, setting_key: str):
+        return getattr(self.get_state(user_id, SETTINGS), setting_key)
+
+    def get_wstoken(self, userid: int):
+        self.get_state(userid, 'SLIDEFINDERTOKEN')
 
     def dialog_start(self, user_id: str):
         """
@@ -176,75 +177,10 @@ class ELearningPolicy(Service):
             self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
 
             # get user settings
-            settings = self.get_current_user(user_id).settings
-            if settings is None:
-                # new user: doesn't have settings yet - we generate them
-                settings = MUserSettings(
-                        _userid=user_id,
-                        _module_id=MModule.from_name(session=self.get_session(), name='book').id,
-                        enabled=True,
-                        logging=True,
-                        numsearchresults=5,
-                        numreviewquizzes=3,
-                        openonlogin=True,
-                        openonquiz=True,
-                        openonsection=True,
-                        openonbranch=True,
-                        openonbadge=True
-                    )
-                self.get_session().add(settings)
-                self.get_session().commit()
+            settings = fetch_user_settings(wstoken=self.get_wstoken(user_id), userid=user_id)
             self.set_state(user_id, SETTINGS, settings)
 
-    def check_setting(self, user_id: int, setting_key: str):
-        return getattr(self.get_state(user_id, SETTINGS), setting_key)
-
-    def update_recently_viewed(self, user_id: int, course_id: int, course_module_id: int, time: int):
-        # check if we already have an entry
-        access_item = self.get_session().query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==course_id,
-                                                                                     MChatbotRecentlyAcessedItem._coursemodule_id==course_module_id,
-                                                                                    MChatbotRecentlyAcessedItem._userid==user_id).first()
-        if access_item:
-            # update timestamp
-            access_item.timeaccess = datetime.fromtimestamp(time)
-
-            self.get_session().commit()
-        else:
-            # create first entry
-            self.get_session().add(
-                MChatbotRecentlyAcessedItem(
-                    timeaccess=datetime.fromtimestamp(time),
-                    completionstate=0,
-                    _userid=user_id,
-                    _course_id=course_id,
-                    _coursemodule_id=course_module_id
-                )
-            )
-            self.get_session().commit()
-
-    def update_recently_viewed_completion(self, user_id: int, course_id: int, course_module_id: int, completion: int, time: int):
-        # check if we already have an entry
-        access_item = self.get_session().query(MChatbotRecentlyAcessedItem).filter(MChatbotRecentlyAcessedItem._course_id==course_id,
-                                                                                     MChatbotRecentlyAcessedItem._coursemodule_id==course_module_id,
-                                                                                    MChatbotRecentlyAcessedItem._userid==user_id).first()
-        if completion == 0:
-            return # don't bother writing it, its incomplete
-        if access_item and access_item.completionstate != completion:
-            access_item.completionstate = completion
-            self.get_session().commit()
-        elif access_item is None:
-            self.get_session().add(
-                MChatbotRecentlyAcessedItem(
-                    timeaccess=datetime.fromtimestamp(time),
-                    completionstate=completion,
-                    _userid=user_id,
-                    _course_id=course_id,
-                    _coursemodule_id=course_module_id
-                )
-            )
-            self.get_session().commit()
-
-
+   
 
     @PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state"])
     def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct):
@@ -277,32 +213,34 @@ class ELearningPolicy(Service):
         elif event_name == "\\core\\event\\course_module_completion_updated":
             # check if we finished a whole branch
             # TODO if so, offer congratulations, the review, and then next possibilities?
-            self.update_recently_viewed_completion(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], completion=moodle_event['other']['completionstate'], time=moodle_event['timecreated'])
-            course_module = self.get_session().query(MCourseModule).get(moodle_event['contextinstanceid'])
-            branch_quizzes, branch_letter = course_module.get_branch_quizes_if_complete(session=self.get_session(), user_id=user_id)
-            self.set_state(user_id, REVIEW_QUIZZES, branch_quizzes)
-            if len(branch_quizzes) > 0:
-                # we did complete a full branch
+
+            # find current section id from course module
+            cmid = moodle_event['contextinstanceid']
+            section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(user_id), cmid=cmid)
+            branch_review_info = fetch_branch_review_quizzes(wstoken=self.get_wstoken(user_id), userid=user_id, sectionid=section_id)
+            self.set_state(user_id, REVIEW_QUIZZES, branch_review_info.candidates)
+            if branch_review_info.completed and len(branch_review_info.candidates) > 0:
+                # we did complete a full branch, and there are review modules available
                 # ask user if they want to review any of the quizzes
                 if self.check_setting(user_id, 'openonbranch'):
                     self.open_chatbot(user_id=user_id)
                 return {"sys_acts": [
-                    SysAct(act_type=SysActionType.CongratulateCompletion, slot_values={"name": branch_letter, "branch": True}),
+                    SysAct(act_type=SysActionType.CongratulateCompletion, slot_values={"name": branch_review_info.branch, "branch": True}),
                     SysAct(act_type=SysActionType.RequestReviewOrNext)]}
             else:
                 # did we complete a full section?
-                section = course_module.section
-                if section.is_completed(user_id=user_id, session=self.get_session()):
+                section_completed = fetch_section_completionstate(wstoken=self.get_wstoken(user_id), userid=user_id, sectionid=section_id)
+                if section_completed:
                     # we get this event for each of the modules in a section with different materials (i.e., once for video, once for pdf, once for book):
                     # check that we didn't already offer congratulations, otherwise the autocomplete plugin will trigger this event for each material type
                     last_completed_section_id = self.get_state(user_id, LAST_FINISHED_SECTION_ID)
-                    if last_completed_section_id != section.id:
-                        self.set_state(user_id, LAST_FINISHED_SECTION_ID, section.id)
+                    if last_completed_section_id != section_id:
+                        self.set_state(user_id, LAST_FINISHED_SECTION_ID, section_id)
                         if self.check_setting(user_id, 'openonsection'):
                             self.open_chatbot(user_id=user_id)
-                        sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section.name, 'branch': False})]
+                        sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section_name, 'branch': False})]
                         sys_acts += self.get_user_next_module(user=self.get_current_user(user_id), courseid=moodle_event['courseid'],
-                                                            add_last_viewed_course_module=False, current_section_id=section.id)
+                                                            add_last_viewed_course_module=False, current_section_id=section_id)
                         return {
                             "sys_acts": sys_acts
                         }
@@ -341,8 +279,6 @@ class ELearningPolicy(Service):
                 next_quiz_link=next_quiz_link
             ))]}             
             # only in review loop comment on improvements, otherwise absolute grade only
-        elif event_name.endswith("event\\course_module_viewed"):
-            self.update_recently_viewed(user_id=user_id, course_id=moodle_event['courseid'], course_module_id=moodle_event['contextinstanceid'], time=moodle_event['timecreated'])
 
     def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: MChatbotWeeklySummary):
         # calculate offet from beginning of day and current time
@@ -747,111 +683,5 @@ class ELearningPolicy(Service):
         return acts
     
     
-    def get_repeatable_modul_sys_act(self, user_id, courseid):
-        """
-            Get a (random) module to repeat. 3 different types:
-            - finished (and completed) modules -> quiz
-            - insufficient modules (grade < 60%) -> hvp
-            - open modules (not finished) -> "continue"
-        """
-        two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=2)
-        finished_modules = self.get_modules(since_date=two_weeks_ago, is_finished=True, user_id=user_id, courseid=courseid)
-        grades = self.get_current_user(user_id).get_grades(self.get_session(), course_id=courseid) # get user grades
-        insufficient_modules = [grade for grade in grades if
-                grade.finalgrade and grade.finalgrade < (grade.rawgrademax * decimal.Decimal(0.6))] # threshold 60%
-
-        open_modules = self.get_modules(since_date=two_weeks_ago, is_finished=False, user_id=user_id, courseid=courseid)
-        
-        repeat_content_choices = []
-        if len(finished_modules) > 0:
-            repeat_content_choices.append("finished")
-        if len(insufficient_modules) > 0:
-            repeat_content_choices.append("insufficient")
-        if len(open_modules) > 0:
-            repeat_content_choices.append("open")
-
-        if len(repeat_content_choices) == 0:
-            # no content to repeat
-            self.set_state(user_id, MODE, 'new')
-            return SysAct(act_type=SysActionType.Inform,
-                          slot_values={"moduleName": "moduleName", "repeatContent": "noContent", "link":"-"})
-        
-        repeatContent = random.choice(repeat_content_choices)
-        if repeatContent == "finished":
-            self.set_state(user_id, MODE, 'quiz')
-            moduleName = random.choice(finished_modules)
-        if repeatContent == "insufficient":
-            instanceId = random.choice(insufficient_modules).get_grade_item(self.get_session()).iteminstance
-            quizModuleId = self.get_session().query(MModule).filter(MModule.name=='h5pactitivty').first().id
-            moduleName = self.get_session().query(MCourseModule).filter(MCourseModule.instance==instanceId, MCourseModule._type_id==quizModuleId).first()
-        if repeatContent == "open":
-            moduleName = random.choice(finished_modules)
-        
-        link = self.get_session().query(MCourseModule).filter(MCourseModule.id == moduleName.id).one().get_content_link(self.get_session())
-        
-        contentType = moduleName.get_type_name(self.get_session())
-        return SysAct(act_type=SysActionType.Inform,
-                      slot_values={"moduleName": moduleName.section.name, "repeatContent": repeatContent, "link": link,
-                                   "contentType": contentType if contentType in ["resource", "hvs", "quiz", "book"] else "else"})
-
-    def get_modules(self, since_date, is_finished, user_id, courseid) -> List[MCourseModule]:
-            """
-                get all modules where last_modified by current user is older than 'since_date' and
-                current user has finished module equals 'is_finished'
-            """
-            user = self.get_current_user(user_id)
-            if is_finished:
-                courses = user.get_completed_course_modules_before_date(since_date, self.get_session(), courseid)
-            else:
-                courses = user.get_not_finished_courses_before_date(since_date, self.get_session(), courseid)
-            return [course for course in courses]
-
-    def total_open_modules(self, user_id, courseid):
-        user = self.get_current_user(user_id)
-        return len(user.get_incomplete_available_course_modules(self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id)))
-
-    def total_completed_modules(self, user_id, courseid):
-        user = self.get_current_user(user_id)
-        return len(user.get_completed_course_modules(self.get_session(), courseid=courseid))
-
-    def convert_time_to_minutes(self, sentence):
-        time_units = {"minute": 1, "minuten": 1, "stunde": 60, "stunden": 60,}
-        
-        spelled_numbers = {"eine": 1, "zwei": 2, "drei": 3, "vier": 4, "fünf": 5, 
-                         "sechs": 6,"sieben": 7, "acht": 8, "neun": 9, "zehn": 10,}
-        
-        spelled_special = {"eine halbe": 30, "eine viertel": 15, "eine dreiviertel": 45,}
-        
-        pattern = r"\b(eine halbe|eine viertel|eine dreiviertel|\b(?:eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\b|\d+)\s*(minute|minuten|stunde|stunden)?\b"
-        matches = re.findall(pattern, sentence, re.IGNORECASE)
-
-        total_minutes = 0
-        
-        for match in matches:
-            number = match[0].lower()
-            unit_spelled = match[1].lower() if match[1] else None
-
-            found_special = False
-            for word in match:
-                word = word.lower()
-                if word in spelled_special:
-                    total_minutes += spelled_special[word]
-                    found_special = True
-                    break
-            
-            if found_special:
-                continue
-            unit = 1		
-
-            if unit_spelled:
-                if unit_spelled in time_units:
-                    unit = time_units[unit_spelled]
-            
-            if number in spelled_numbers:
-                quantity = spelled_numbers[number]
-            else:
-                quantity = int(number)
-            
-            total_minutes += quantity * unit		
-        
-        return total_minutes
+   
+ 

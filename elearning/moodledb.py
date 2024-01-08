@@ -1,5 +1,8 @@
 # coding: utf-8
+import traceback
+import httplib2
 from collections import defaultdict
+from dataclasses import dataclass
 import json
 import re
 from enum import Enum
@@ -18,7 +21,105 @@ from sqlalchemy.sql.sqltypes import SMALLINT
 from sqlalchemy.types import TypeDecorator, Float, BOOLEAN
 from urllib.parse import quote_plus as urlquote
 
-from config import MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX, MOODLE_SERVER_DB_NAME, MOODLE_SERVER_DB_PWD, MOODLE_SERVER_DB_USER, MOODLE_SERVER_URL
+import urllib3
+
+from config import MOODLE_SERVER_DB_ADDR, MOODLE_SERVER_DB_PORT, MOODLE_SERVER_DB_TALBE_PREFIX, MOODLE_SERVER_DB_NAME, MOODLE_SERVER_DB_PWD, MOODLE_SERVER_DB_USER, MOODLE_SERVER_URL, MOODLE_SERVER_WEB_HOST, MOOLDE_SERVER_PROTOCOL
+
+
+
+
+
+@dataclass
+class UserSettings:
+	userid: int
+	preferedcontenttypeid: int
+
+	enabled: bool
+	logging: bool
+	numsearchresults: int
+	numreviewquizzes: int
+	
+	openonlogin: bool
+	openonquiz: bool
+	openonsection: bool
+	openonbranch: bool
+	openonbadge: bool
+
+@dataclass
+class ModuleReview:
+	cmid: int
+	grade: Union[float, None]
+
+@dataclass
+class BranchReviewQuizzes:
+	completed: bool
+	branch: str # branch topic letter
+	candidates: List[ModuleReview]
+
+
+def api_call(wstoken: str, userid: int, wsfunction: str, params: dict):
+	http_client = httplib2.Http(".cache")
+	body={
+			"wstoken": wstoken,
+			"wsfunction": wsfunction,
+			"moodlewsrestformat": "json",
+			**params
+	}
+	try:
+		response = http_client.request(f"{MOOLDE_SERVER_PROTOCOL}://{MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php",
+			method="POST",
+			headers={'Content-type': 'application/x-www-form-urlencoded'},
+			body=urllib3.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode
+		print("response: ", response)
+		start_pos = 0
+		end_pos = len(response)
+		if response.startswith(b"\n<script"):
+			# remove debugging console log from response
+			start_pos = response.rfind(b"</script>") + len(b"</script>")
+		
+		# Extract the JSON part
+		json_part = response[start_pos:end_pos + 1]
+		# Decode the JSON part and parse it
+		data = json.loads(json_part.decode('unicode_escape').strip('"').replace('\/', '/'))
+		return data
+	except:
+		print(traceback.format_exc())
+		return {f"{MOODLE_SERVER_URL}": "Error while fetching user settings"}
+		return None
+	
+
+def fetch_user_settings(wstoken: str, userid: int) -> UserSettings:
+	response = api_call(wstoken=wstoken, userid=userid, wsfunction="block_chatbot_get_usersettings", params=dict(userid=userid))
+	assert response['userid'] == userid
+	return UserSettings(**response)
+
+def fetch_branch_review_quizzes(wstoken: str, userid: int, sectionid: int) -> BranchReviewQuizzes:
+	response = api_call(wstoken=wstoken, userid=userid, wsfunction="block_chatbot_get_branch_quizes_if_complete", params=dict(
+		userid=userid,
+		sectionid=sectionid,
+		includetypes="url,book,resource,h5pactivity,quiz"
+	))
+	branch_completed = response['completed']
+	cm_candidates = []
+	for candidate in response['candidates']:
+		cm_candidates.append(ModuleReview(**candidate))
+	return BranchReviewQuizzes(completed=branch_completed, candidates=cm_candidates)
+
+def fetch_section_id_and_name(wstoken: str, cmid: int) -> Tuple[int, str]:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_branch_quizes_if_complete", params=dict(
+		cmid=cmid
+	))
+	return response['id'], response['name']
+
+def fetch_section_completionstate(wstoken: str, userid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz") -> bool:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_section_completionstate", params=dict(
+		userid=userid,
+		sectionid=sectionid,
+		includetypes=includetypes
+	))
+	return response['completed']
+
+
 
 class Base:
 	__allow_unmapped__ = True
@@ -1153,29 +1254,6 @@ class MBadgeIssued(Base):
 	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), name="userid")	
 
 
-class MUserSettings(Base):
-	__tablename__ = f'{MOODLE_SERVER_DB_TALBE_PREFIX}chatbot_usersettings'
-	
-	id = Column(BIGINT(10), primary_key=True)
-
-	user = relationship("MUser", back_populates="settings", uselist=False) # user object
-	prefered_module = relationship("MModule", uselist=False)
-
-	enabled = Column(Boolean, nullable=False)
-	logging = Column(Boolean, nullable=False)
-	numsearchresults = Column(TINYINT(2), nullable=False)
-	numreviewquizzes = Column(TINYINT(2), nullable=False)
-	
-	openonlogin = Column(Boolean, nullable=False)
-	openonquiz = Column(Boolean, nullable=False)
-	openonsection = Column(Boolean, nullable=False)
-	openonbranch = Column(Boolean, nullable=False)
-	openonbadge = Column(Boolean, nullable=False)
-
-	# internal database mapping info
-	_userid = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}user.id'), nullable=False, index=True, server_default=text("'0'"), name='userid')
-	_module_id = Column(BIGINT(10), ForeignKey(f'{MOODLE_SERVER_DB_TALBE_PREFIX}modules.id'), index=True, name='preferedcontenttype')
-
 
 class MUser(Base):
 	"""
@@ -1210,7 +1288,7 @@ class MUser(Base):
 	# last accessed course
 	last_accessed_course = relationship("MUserLastacces", back_populates="user", uselist=False)
 	# chatbot settings
-	settings = relationship("MUserSettings", back_populates="user", uselist=False)
+	# settings = relationship("MUserSettings", back_populates="user", uselist=False)
 	progress = relationship("MChatbotProgressSummary", back_populates="user", uselist=False)
 	recently_accessed_items = relationship("MChatbotRecentlyAcessedItem", back_populates="user", uselist=True)
 
