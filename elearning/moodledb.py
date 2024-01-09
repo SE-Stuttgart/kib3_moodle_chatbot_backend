@@ -56,6 +56,13 @@ class BranchReviewQuizzes:
 	branch: str # branch topic letter
 	candidates: List[ModuleReview]
 
+@dataclass
+class CourseModuleAccess:
+	cmid: int
+	section: int
+	timeaccess: datetime.datetime
+	comepletionstate: int
+
 
 def api_call(wstoken: str, userid: int, wsfunction: str, params: dict):
 	http_client = httplib2.Http(".cache")
@@ -119,8 +126,66 @@ def fetch_section_completionstate(wstoken: str, userid: int, sectionid: int, inc
 	))
 	return response['completed']
 
+def fetch_has_seen_any_course_modules(wstoken: str, userid: int, courseid: int) -> bool:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_has_seen_any_course_modules", params=dict(
+		userid=userid,
+		courseid=courseid
+	))
+	return response['seen']
 
+def fetch_last_viewed_course_modules(wstoken: str, userid: int, courseid: int, completed: bool) -> List[CourseModuleAccess]:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_last_viewed_course_modules", params=dict(
+		userid=userid,
+		courseid=courseid,
+		completed=int(completed)
+	))
+	results = []
+	for result in response:
+		results.append(CourseModuleAccess(
+			timeaccess=datetime.datetime.utcfromtimestamp(result.pop('timeaccess')),
+			**result
+		))
+	return results
 
+def fetch_first_available_course_module_id(wstoken: str, userid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz", allow_only_unfinished: bool = False) -> Union[int, None]:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_first_available_course_module", params=dict(
+		userid=userid,
+		sectionid=sectionid,
+		includetypes=includetypes,
+		allowonlyunfinished=allow_only_unfinished
+	))
+	return response['cmid']
+
+def fetch_content_link(wstoken: str, cmid: int, alternative_display_text: str = "") -> str:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_course_module_content_link", params=dict(
+		cmid=cmid,
+		alternativedisplaytext=alternative_display_text
+	))
+	return response['url']
+
+def fetch_available_new_course_section_ids(wstoken: str, userid: int, courseid: int) -> List[int]:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_available_new_course_sections", params=dict(
+		userid=userid,
+		courseid=courseid
+	))
+	return response['sectionids']
+
+def fetch_icecreamgame_course_module_id(wstoken: str, courseid: int) -> int:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_icecreamgame_course_module_id", params=dict(
+		courseid=courseid
+	))
+	return response['id']
+
+def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmid: int, include_types: str = "url,book,resource,h5pactivity,quiz", allow_only_unfinished: bool = False, current_cm_completion: int = 0) -> int:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_next_available_course_module_id", params=dict(
+		userid=userid,
+		cmid=current_cmid,
+		includetypes=include_types,
+		allowonlyunfinished=allow_only_unfinished,
+		currentcoursemodulecompletion=current_cm_completion
+	))
+	return response['cmid']
+	
 class Base:
 	__allow_unmapped__ = True
 

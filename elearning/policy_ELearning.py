@@ -35,7 +35,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MGradeItem, MH5PActivity, connect_to_moodle_db, Base, MUser, MCourseModule, fetch_branch_review_quizzes, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
+from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MGradeItem, MH5PActivity, connect_to_moodle_db, Base, MUser, MCourseModule, fetch_available_new_course_section_ids, fetch_branch_review_quizzes, fetch_content_link, fetch_first_available_course_module_id, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
 from utils.useract import UserActionType, UserAct
 from dotenv import load_dotenv
 import os
@@ -247,7 +247,7 @@ class ELearningPolicy(Service):
                         if self.check_setting(user_id, 'openonsection'):
                             self.open_chatbot(user_id=user_id)
                         sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section_name, 'branch': False})]
-                        sys_acts += self.get_user_next_module(user=self.get_current_user(user_id), courseid=moodle_event['courseid'],
+                        sys_acts += self.get_user_next_module(userd=user_id, courseid=moodle_event['courseid'],
                                                             add_last_viewed_course_module=False, current_section_id=section_id)
                         return {
                             "sys_acts": sys_acts
@@ -275,13 +275,12 @@ class ELearningPolicy(Service):
             # In the case that the quiz is done outside the chatbot, give feedback (about absolute grade) and offer next quiz (if applicable)
             if self.check_setting(user_id, 'openonquiz'):
                 self.open_chatbot(user_id=user_id)
-            course_module = self.get_session().query(MCourseModule).get(int(moodle_event['contextinstanceid']))
+            course_module = self.get_session().query(MCourseModule).get()
             success_percentage = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
             section = course_module.section
-            next_quiz_id = section.get_next_available_module(currentModule=course_module, user=self.get_current_user(user_id),
-                                                          session=self.get_session(), include_types=['h5pactivity', 'hvp'],
-                                                          allow_only_unfinished=True, currentModuleCompletion=True)
-            next_quiz_link = next_quiz_id.get_content_link(session=self.get_session(), alternative_display_text="nächste Quiz") if next_quiz_id else None
+            next_quiz_id = fetch_next_available_course_module_id(wstoken=self.get_wstoken(user_id), current_cmid=int(moodle_event['contextinstanceid']),
+                                                                 include_types=['h5pactivity', 'hvp'], allow_only_unfinished=True, current_cm_completion=True)
+            next_quiz_link = fetch_content_link(wstoken=self.get_wstoken(user_id), alternative_display_text="nächste Quiz") if next_quiz_id else None
             return {"sys_acts": [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
                 success_percentage=success_percentage,
                 next_quiz_link=next_quiz_link
@@ -447,7 +446,7 @@ class ELearningPolicy(Service):
 
         if append_suggestions:
             # choose how to proceed
-            acts.append(self.get_user_next_module(user=user, courseid=courseid, add_last_viewed_course_module=True))
+            acts.append(self.get_user_next_module(userid=user_id, courseid=courseid, add_last_viewed_course_module=True))
             
         return acts
 
@@ -586,8 +585,7 @@ class ELearningPolicy(Service):
             elif user_act.type == UserActionType.RequestBadgeProgress:
                 sys_acts.append(self._handle_request_badge_progress(user_id=user_id, courseid=courseid, min_progress=0.0))
             elif user_act.type == UserActionType.ContinueOpenModules:
-                user = self.get_current_user(user_id=user_id)
-                sys_acts.append(self.get_user_next_module(user=user, courseid=courseid))
+                sys_acts.append(self.get_user_next_module(userid=user_id, courseid=courseid))
             elif user_act.type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
                 if not user_act.value is None:
                     # if we have a new search term, reset the search index and give out first three results
@@ -631,42 +629,45 @@ class ELearningPolicy(Service):
             user = self.get_session().get(MUser, int(user_id))
             return user
     
-    def get_user_next_module(self, user: MUser, courseid: int, add_last_viewed_course_module: bool = False, current_section_id: int = None) -> List[SysAct]:
+    def get_user_next_module(self, userid: int, courseid: int, add_last_viewed_course_module: bool = False, current_section_id: int = None) -> List[SysAct]:
         # choose how to proceed
         acts = []
-        has_seen_any_course_modules = self.get_session().query(MCourseModulesViewed).join(MCourseModule, MCourseModule.id==MCourseModulesViewed._coursemoduleid) \
-                                    .filter(MCourseModulesViewed._userid==user.id, MCourseModule._course_id==courseid).count() > 0
-        
+        has_seen_any_course_modules = fetch_has_seen_any_course_modules(userid=userid, courseid=courseid)
         
         all_sections_completed = False
         if has_seen_any_course_modules:
             # last viewed module
-            last_completed_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=True)
+            last_completed_course_modules = fetch_last_viewed_course_modules(wstoken=self.get_wstoken(userid),
+                                                                             courseid=courseid, completed=True)
             if len(last_completed_course_modules) > 0:
                 last_completed_course_module = last_completed_course_modules[0] # sorted ascending by date
 
                 # get open modules across sections, 1 per section
                 next_modules = {}
                 # prioritize already viewed modules
-                last_started_course_modules = user.last_viewed_course_modules(session=self.get_session(), courseid=courseid, completed=False)
+                last_started_course_modules = fetch_last_viewed_course_modules(wstoken=self.get_wstoken(userid), courseid=courseid, completed=False)
                 for unfinished_module in last_started_course_modules:
-                    if not unfinished_module._section_id in next_modules and unfinished_module._section_id != current_section_id:
-                        next_modules[unfinished_module._section_id] = unfinished_module
+                    if not unfinished_module.section in next_modules and unfinished_module.section != current_section_id:
+                        next_modules[unfinished_module.section] = unfinished_module
                 # fill with other started sections
                 for completed_module in last_completed_course_modules:
-                    if not completed_module._section_id in next_modules and completed_module._section_id != current_section_id:
+                    if not completed_module.section in next_modules and completed_module.section != current_section_id:
                         # get first open module from this section
-                        next_module = completed_module.section.get_first_available_module(user=user, session=self.get_session(),
-                                                                            include_types=learning_material_types + assignment_material_types,
-                                                                            allow_only_unfinished=True)
-                        if next_module:
-                            next_modules[completed_module._section_id] = next_module
-                next_available_module_links = [module.get_content_link(session=self.get_session(), alternative_display_text=module.section.name) for module in next_modules.values()]
+                        next_module_id= fetch_first_available_course_module_id(wstoken=self.get_wstoken(userid), userid=userid, sectionid=completed_module.section,
+
+                                                                             includetypes=",".join(learning_material_types + assignment_material_types),
+                                                                             allow_only_unfinished=True)
+                        if not next_module_id is None:
+                            next_modules[completed_module.section] = next_module_id
+                next_available_module_links = []
+                for module in next_modules.values():
+                    section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(userid), cmid=module.cmid)
+                    next_available_module_links.append(fetch_content_link(cmid=module.id, alternative_display_text=section_name))
 
                 # user has started, but not completed one or more sections
                 if add_last_viewed_course_module:
                     acts.append(SysAct(act_type=SysActionType.InformLastViewedCourseModule, slot_values=dict(
-                        last_viewed_course_module=last_completed_course_module.get_content_link(session=self.get_session()),
+                        last_viewed_course_module=fetch_content_link(wstoken=self.get_wstoken(userid), cmid=last_completed_course_module.cmid)
                     )))
                 if len(next_available_module_links) > 0:
                     acts.append(
@@ -679,25 +680,24 @@ class ELearningPolicy(Service):
             # TODO: Deadline reminder
                 if all_sections_completed:
                     # user has completed all started sections, should get choice of next new and available sections
-                    available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user.id))
+                    available_new_course_section_ids = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
+                    next_available_section_links = [fetch_content_link(wstoken=self.get_wstoken(userid), cmid=sectionid) for sectionid in available_new_course_section_ids]
                     acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                    next_available_sections=[section.get_link() for section in available_new_course_sections]
+                                    next_available_sections=next_available_section_links
                             )))
             
             else:
                 # has seen modules, but none completed or really started
                 # return ice cream game
-                icecreamgame_module_id = self.get_session().query(MModule).filter(MModule.name=='icecreamgame').first().id
-                icecreamgame_module = self.get_session().query(MCourseModule).filter(MCourseModule._course_id==courseid, MCourseModule._type_id==icecreamgame_module_id).first()
+                icecreamgame_module_id = fetch_icecreamgame_course_module_id(wstoken=self.get_wstoken(userid), courseid=courseid)
                 acts.append(SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                    module_link=icecreamgame_module.get_content_link(session=self.get_session(), alternative_display_text="hier")
+                    module_link=fetch_content_link(wstoken=self.get_wstoken(userid), cmid=icecreamgame_module_id, alternative_display_text="hier")
                 )))
         else:
             # return ice cream game
-            icecreamgame_module_id = self.get_session().query(MModule).filter(MModule.name=='icecreamgame').first().id
-            icecreamgame_module = self.get_session().query(MCourseModule).filter(MCourseModule._course_id==courseid, MCourseModule._type_id==icecreamgame_module_id).first()
+            icecreamgame_module_id = fetch_icecreamgame_course_module_id(wstoken=self.get_wstoken(userid), courseid=courseid)
             acts.append(SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                module_link=icecreamgame_module.get_content_link(session=self.get_session(), alternative_display_text="hier")
+                module_link=fetch_content_link(wstoken=self.get_wstoken(userid), cmid=icecreamgame_module_id, alternative_display_text="hier")
             )))
         return acts
     
