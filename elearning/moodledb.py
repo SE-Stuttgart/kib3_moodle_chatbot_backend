@@ -215,11 +215,12 @@ def fetch_user_statistics(wstoken: str, userid: int, courseid: int, include_type
 	))
 	return UserStatistics(**response)
 
-def fetch_last_user_weekly_summary(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity") -> WeeklySummary:
+def fetch_last_user_weekly_summary(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity", update_db: bool = False) -> WeeklySummary:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_last_viewed_course_modules", params=dict(
 		userid=userid,
 		courseid=courseid,
-		includetypes=include_types
+		includetypes=include_types,
+		update_db=update_db
 	))
 	return WeeklySummary(
 		timecreated=datetime.datetime.utcfromtimestamp(response.pop('timecreated')),

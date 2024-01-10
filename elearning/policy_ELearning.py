@@ -35,7 +35,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MGradeItem, MH5PActivity, connect_to_moodle_db, Base, MUser, MCourseModule, fetch_available_new_course_section_ids, fetch_branch_review_quizzes, fetch_content_link, fetch_first_available_course_module_id, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, MModule, MChatbotProgressSummary, MChatbotWeeklySummary, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MGradeItem, MH5PActivity, WeeklySummary, connect_to_moodle_db, Base, MUser, MCourseModule, fetch_available_new_course_section_ids, fetch_branch_review_quizzes, fetch_content_link, fetch_first_available_course_module_id, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, MModule, MChatbotProgressSummary, MChatbotWeeklySummary, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 from dotenv import load_dotenv
 import os
@@ -287,7 +287,7 @@ class ELearningPolicy(Service):
             ))]}             
             # only in review loop comment on improvements, otherwise absolute grade only
 
-    def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: MChatbotWeeklySummary):
+    def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: WeeklySummary):
         # calculate offet from beginning of day and current time
         now_chatbot_time = datetime.now()
         beginning_of_today_chatbot_time = datetime(now_chatbot_time.year, now_chatbot_time.month, now_chatbot_time.day, 0, 0, 0)
@@ -301,7 +301,7 @@ class ELearningPolicy(Service):
         prev_week_days = []
 
         # iterate over the last 7 days if first week of user, else last 14
-        for day in reversed(range((2-int(last_weekly_summary.firstweek))*7)):
+        for day in reversed(range((2-int(last_weekly_summary.first_week))*7)):
             # get day interval for DB query
             start_time = beginning_of_today - timedelta(days=day+1)
             end_time = beginning_of_today - timedelta(days=day)
@@ -332,18 +332,10 @@ class ELearningPolicy(Service):
         best_weekly_days = [last_week_days[i].strftime('%A') for i in range(len(last_week_data)) if last_week_data[i] == max(last_week_data)] if max(last_week_data) > 0 else []
         # shorten week days for stats to 2 letters: strftime('%A')[:2]
         cumulative_weekly_completions = {"y": [sum(last_week_data[:(i+1)]) for i in range(len(last_week_data))], "x": [day.strftime('%A')[:2] for day in last_week_days]}
-        cumulative_weekly_completions_prev = None if last_weekly_summary.firstweek else {"y": [sum(prev_week_data[:(i+1)]) for i in range(len(prev_week_data))], "x": [day.strftime('%A')[:2] for day in prev_week_days]}
+        cumulative_weekly_completions_prev = None if last_weekly_summary.first_week else {"y": [sum(prev_week_data[:(i+1)]) for i in range(len(prev_week_data))], "x": [day.strftime('%A')[:2] for day in prev_week_days]}
 
         # update timestamp of last stat output
-        last_weekly_summary.timecreated = self.get_moodle_server_time(user_id)
-        last_weekly_summary.firstweek = False
-        self.session_lock.acquire()
-        try:
-            self.get_session().commit()
-        except:
-            traceback.print_exc()
-        finally:
-            self.session_lock.release()
+        fetch_last_user_weekly_summary(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, update_db=True)
 
         return dict(best_weekly_days=best_weekly_days,
                   weekly_completions=cumulative_weekly_completions,
