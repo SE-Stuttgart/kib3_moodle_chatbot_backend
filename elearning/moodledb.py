@@ -63,6 +63,18 @@ class CourseModuleAccess:
 	timeaccess: datetime.datetime
 	comepletionstate: int
 
+@dataclass
+class UserStatistics:
+	course_completion_percentage: float
+	quiz_repetition_percentage: float
+
+@dataclass
+class WeeklySummary:
+	first_turn_ever: bool
+	first_week: bool
+	timecreated: datetime.datetime
+	course_progress_percentage: float
+
 
 def api_call(wstoken: str, userid: int, wsfunction: str, params: dict):
 	http_client = httplib2.Http(".cache")
@@ -92,7 +104,6 @@ def api_call(wstoken: str, userid: int, wsfunction: str, params: dict):
 	except:
 		print(traceback.format_exc())
 		return {f"{MOODLE_SERVER_URL}": "Error while fetching user settings"}
-		return None
 	
 
 def fetch_user_settings(wstoken: str, userid: int) -> UserSettings:
@@ -185,6 +196,35 @@ def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmi
 		currentcoursemodulecompletion=current_cm_completion
 	))
 	return response['cmid']
+
+def fetch_viewed_course_modules_count(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity", starttime: int = 0, endtime: int = -1) -> int:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_count_viewed_course_modules", params=dict(
+		userid=userid,
+		courseid=courseid,
+		includetypes=include_types,
+		starttime=starttime,
+		endtime=endtime
+	))
+	return response['count']
+
+def fetch_user_statistics(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity", update_db: bool = False) -> UserStatistics:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_user_statistics", params=dict(
+		userid=userid,
+		courseid=courseid,
+		includetypes=include_types
+	))
+	return UserStatistics(**response)
+
+def fetch_last_user_weekly_summary(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity") -> WeeklySummary:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_last_viewed_course_modules", params=dict(
+		userid=userid,
+		courseid=courseid,
+		includetypes=include_types
+	))
+	return WeeklySummary(
+		timecreated=datetime.datetime.utcfromtimestamp(response.pop('timecreated')),
+		**response
+	)
 	
 class Base:
 	__allow_unmapped__ = True

@@ -35,7 +35,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MGradeItem, MH5PActivity, connect_to_moodle_db, Base, MUser, MCourseModule, fetch_available_new_course_section_ids, fetch_branch_review_quizzes, fetch_content_link, fetch_first_available_course_module_id, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, MModule, MChatbotProgressSummary, MChatbotWeeklySummary
+from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MGradeItem, MH5PActivity, connect_to_moodle_db, Base, MUser, MCourseModule, fetch_available_new_course_section_ids, fetch_branch_review_quizzes, fetch_content_link, fetch_first_available_course_module_id, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, MModule, MChatbotProgressSummary, MChatbotWeeklySummary, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 from dotenv import load_dotenv
 import os
@@ -310,15 +310,18 @@ class ELearningPolicy(Service):
 
             # add module completions and quiz completions together.
             # module completions are divided by 3, because the autocomplete plugin always ensures 3 completions per module
-            completed = len(self.get_current_user(user_id).get_viewed_course_modules(session=self.get_session(),
-                                                            courseid=courseid,
-                                                            include_types=learning_material_types,
-                                                            timerange=[start_time, end_time])) / 3 \
-                                + len(self.get_current_user(user_id).get_viewed_course_modules(session=self.get_session(),
-                                                            courseid=courseid,
-                                                            include_types=assignment_material_types,
-                                                            timerange=[start_time, end_time]))
-
+            completed = fetch_viewed_course_modules_count(wstoken=self.get_wstoken(user_id),
+                                                          userid=user_id,
+                                                          courseid=courseid,
+                                                          include_types=learning_material_types,
+                                                          starttime=start_time,
+                                                          endtime=end_time) / 3
+            completed += fetch_viewed_course_modules_count(wstoken=self.get_wstoken(user_id),
+                                                          userid=user_id,
+                                                          courseid=courseid,
+                                                          include_types=assignment_material_types,
+                                                          starttime=start_time,
+                                                          endtime=end_time)
             if day < 7:
                 last_week_data.append(completed)
                 last_week_days.append(day_name)
@@ -346,65 +349,34 @@ class ELearningPolicy(Service):
                   weekly_completions=cumulative_weekly_completions,
                 weekly_completions_prev=cumulative_weekly_completions_prev)
     
-    def get_stat_summary(self, user: MUser, courseid: int):
+    def get_stat_summary(self, user_id: int, courseid: int, update_db: bool = False):
         # we should show total course progress every 10% of completion
-
-        # calculate current progress percentage
-        total_num_quizzes = self.get_session().query(MGradeItem).filter(MGradeItem._courseid==courseid).count()
-        done_quizes = user.count_grades(self.get_session(), courseid)
-        repeated_quizes = user.count_repeated_grades(self.get_session(), courseid)
-        percentage_repeated_quizzes = repeated_quizes / total_num_quizzes
-
-        total_num_modules = len(user.get_all_course_modules(session=self.get_session(), courseid=courseid,
-                                                    include_types=learning_material_types))
-        done_modules = len(user.get_viewed_course_modules(session=self.get_session(), courseid=courseid,
-                                                    include_types=learning_material_types))
-        percentage_done = (done_quizes + done_modules) / (total_num_quizzes + total_num_modules)
-
-        return dict(percentage_done=percentage_done,
-                    percentage_repeated_quizzes=percentage_repeated_quizzes)
+        user_stats = fetch_user_statistics(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, include_types=learning_material_types + assignment_material_types, update_db=update_db)
+        return dict(percentage_done=user_stats.course_completion_percentage,
+                    percentage_repeated_quizzes=user_stats.quiz_repetition_percentage)
 
     
         
     def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
         if self.check_setting(user_id, 'openonlogin'):
             self.open_chatbot(user_id)
-        user = self.get_current_user(user_id)
         acts = []
 
-        last_weekly_summaries = self.get_session().query(MChatbotWeeklySummary).filter(MChatbotWeeklySummary._userid==user_id)
-        first_turn_ever = last_weekly_summaries.count()
+        last_weekly_summary = fetch_last_user_weekly_summary(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
 
-        if first_turn_ever == 0:
-            # user is seeing chatbot for the first time - show some introduction
-
-            # create first entry for weekly summaries
-            last_weekly_summary = MChatbotWeeklySummary(_userid=user_id, timecreated=self.get_moodle_server_time(user_id), firstweek=True)
-            # create first entry for progress summaries
-            progress_summary = MChatbotProgressSummary(_userid=user_id, progress=0.0, timecreated=self.get_moodle_server_time(user_id))
-            self.session_lock.acquire()
-            try:
-                self.get_session().add_all([last_weekly_summary, progress_summary])
-                self.get_session().commit()
-            except:
-                traceback.print_exc()
-            finally:
-                self.session_lock.release()
-            # return ice cream game
-            icecreamgame_module_id = self.get_session().query(MModule).filter(MModule.name=='icecreamgame').first().id
-            icecreamgame_module = self.get_session().query(MCourseModule).filter(MCourseModule._course_id==courseid, MCourseModule._type_id==icecreamgame_module_id).first()
+        if last_weekly_summary.first_turn_ever:
+            # user is seeing chatbot for the first time - show some introduction & ice cream game
+            icecreamgame_module_id = fetch_icecreamgame_course_module_id(wstoken=self.get_wstoken(user_id), courseid=courseid)
+            icecreamgame_module_link = fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=icecreamgame_module_id, alternative_display_text="hier")
             return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                     SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                        module_link=icecreamgame_module.get_content_link(session=self.get_session(), alternative_display_text="hier")
+                        module_link=icecreamgame_module_link
                     ))]
         
         # Add greeting
         acts.append(SysAct(act_type=SysActionType.Welcome, slot_values={}))
 
         # check that we haven't displayed the weekly stats in more than 7 days
-        last_weekly_summaries = self.get_session().query(MChatbotWeeklySummary).filter(MChatbotWeeklySummary._userid==user_id)
-        last_weekly_summary = last_weekly_summaries.first()
-
         append_suggestions = True
         if self.get_moodle_server_time(user_id) >= last_weekly_summary.timecreated + timedelta(days=7):
             # last time we showed the weekly stats is more than 7 days ago - show again
@@ -412,21 +384,9 @@ class ELearningPolicy(Service):
             acts.append(SysAct(act_type=SysActionType.DisplayWeeklySummary, slot_values=slot_values))
         else:
             # we should show total course progress every 10% of completion
-            last_progress_percentage = user.progress.progress
-            slot_values = self.get_stat_summary(user=user, courseid=courseid)
+            slot_values = self.get_stat_summary(user_id=user_id, courseid=courseid, update_db=True)
 
-            if slot_values["percentage_done"] >= last_progress_percentage + COURSE_PROGRESS_DISPLAY_PERCENTAGE_INCREMENT:
-                # update stat summary to current value
-                progress = user.progress
-                progress.progress = slot_values["percentage_done"] 
-                progress.timecreated = self.get_moodle_server_time(user_id)
-                self.session_lock.acquire()
-                try:
-                    self.get_session().commit()
-                except:
-                    traceback.print_exc()
-                finally:
-                    self.session_lock.release()
+            if slot_values["percentage_done"] >= last_weekly_summary.course_progress_percentage + COURSE_PROGRESS_DISPLAY_PERCENTAGE_INCREMENT:
                 acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
                 acts.append(SysAct(act_type=SysActionType.RequestReviewOrNext))
                 append_suggestions = False
@@ -580,7 +540,7 @@ class ELearningPolicy(Service):
                                 next_available_sections=[section.get_link() for section in available_new_course_sections]
                         )))
             elif user_act.type == UserActionType.RequestProgress:
-                slot_values = self.get_stat_summary(user=self.get_current_user(user_id), courseid=courseid)
+                slot_values = self.get_stat_summary(user_id=user_id, courseid=courseid)
                 sys_acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
             elif user_act.type == UserActionType.RequestBadgeProgress:
                 sys_acts.append(self._handle_request_badge_progress(user_id=user_id, courseid=courseid, min_progress=0.0))
