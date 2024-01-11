@@ -19,15 +19,11 @@
 from datetime import datetime, timedelta
 from enum import Enum
 import threading
-import traceback
 from typing import List, Tuple
 import time
 import locale
 
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql.sqltypes import DateTime
 
-import config
 from elearning.booksearch import get_book_links
 from services.service import PublishSubscribe
 from services.service import Service
@@ -35,13 +31,13 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import BadgeCompletionStatus, MBadge, MCourseModulesViewed, MGradeItem, MH5PActivity, WeeklySummary, connect_to_moodle_db, Base, MUser, MCourseModule, fetch_available_new_course_section_ids, fetch_branch_review_quizzes, fetch_content_link, fetch_first_available_course_module_id, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, MModule, MChatbotProgressSummary, MChatbotWeeklySummary, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import os
 
 # Load environment variables from the .env file
-load_dotenv()
+# load_dotenv()
 
 # Retrieve the LC_TIME environment variable
 locale_setting = os.getenv("LC_TIME")
@@ -107,19 +103,10 @@ class ELearningPolicy(Service):
         self.session_lock = threading.Lock()
         self.webservice_user_id = None
 
-    def get_session(self):
-        if isinstance(self.session, type(None)):
-            self._init_db()
-        return self.session
+    def get_webservice_user_id(self, user_id: int):
+        return self.get_state(user_id, "WSUSERID")
     
-    def get_webservice_user_id(self):
-        if self.webservice_user_id is None:
-            self.webservice_user_id = self.get_session().query(MUser.id).filter(MUser.username=="kib3_webservice",
-                                                                    MUser.firstname=="KIB3 Webservice",
-                                                                    MUser.lastname=="KIB3 Webservice").first()[0]
-        return self.webservice_user_id
-    
-    def get_moodle_server_time(self, userid: int) -> DateTime:
+    def get_moodle_server_time(self, userid: int) -> datetime:
         """ Returns the current moodle server time as unix timestamp """
         difference = self.get_state(userid, "SERVERTIMEDIFFERENCE")
         return datetime.fromtimestamp(int(time.time()) + difference)
@@ -147,27 +134,11 @@ class ELearningPolicy(Service):
                 "user_id": user_id
             }
         
-    def _init_db(self):
-        success = False
-        while not success:
-            try:
-                engine, conn = connect_to_moodle_db()
-                self.Session = sessionmaker()
-                self.Session.configure(bind=engine)
-                self.session = self.Session()
-                Base.metadata.create_all(engine)
-                success = True
-                print("====== SUCCESS ======")
-            except:
-                print("===== ERROR CONNECTING TO DB (Potentially have to wait for moodle setup to finish), RETRY IN 10 SECONDS ===== ")
-                traceback.print_exc()
-                time.sleep(10) 
-
     def check_setting(self, user_id: int, setting_key: str):
         return getattr(self.get_state(user_id, SETTINGS), setting_key)
 
     def get_wstoken(self, userid: int):
-        self.get_state(userid, 'SLIDEFINDERTOKEN')
+        return self.get_state(userid, 'SLIDEFINDERTOKEN')
 
     def dialog_start(self, user_id: str):
         """
@@ -180,7 +151,7 @@ class ELearningPolicy(Service):
             self.set_state(user_id, LAST_SEARCH, None)
             self.set_state(user_id, LAST_SEARCH_INDEX, 0)
             self.set_state(user_id, REVIEW_QUIZZES, [])
-            self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(None, None))
+            self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
             self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
 
@@ -254,18 +225,18 @@ class ELearningPolicy(Service):
                         }
 
         elif event_name == "\\mod_h5pactivity\\event\\statement_received" and moodle_event['component'] == 'mod_h5pactivity':
-            current_shown_quiz_id, previous_grade = self.get_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ)
-            if int(moodle_event['contextinstanceid']) == current_shown_quiz_id:
+            previous_quiz_attempt_info = self.get_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ)
+            if int(moodle_event['contextinstanceid']) == previous_quiz_attempt_info.cmid:
                 sys_acts = []
                 current_grade = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
                 next_quizzes = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES)
-                next_quiz_id, next_quiz_grade = next_quizzes[0] if len(next_quizzes) > 0 else (None, None)
+                next_quiz_info = next_quizzes[0] if len(next_quizzes) > 0 else None
                 self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZZES, attribute_value=next_quizzes[1:])
-                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(next_quiz_id, next_quiz_grade))
+                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=next_quiz_info)
                 improvements = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS)
-                improvements.append(True if current_grade > previous_grade else False)
+                improvements.append(True if current_grade > previous_quiz_attempt_info.grade else False)
                 self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=improvements)
-                if next_quiz_id:
+                if next_quiz_info.cmid:
                     sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_id))
                 else:
                     # create a graphic summary of how many quizzes the user did better on
@@ -275,11 +246,9 @@ class ELearningPolicy(Service):
             # In the case that the quiz is done outside the chatbot, give feedback (about absolute grade) and offer next quiz (if applicable)
             if self.check_setting(user_id, 'openonquiz'):
                 self.open_chatbot(user_id=user_id)
-            course_module = self.get_session().query(MCourseModule).get()
             success_percentage = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
-            section = course_module.section
             next_quiz_id = fetch_next_available_course_module_id(wstoken=self.get_wstoken(user_id), current_cmid=int(moodle_event['contextinstanceid']),
-                                                                 include_types=['h5pactivity', 'hvp'], allow_only_unfinished=True, current_cm_completion=True)
+                                                                 include_types='h5pactivity', allow_only_unfinished=True, current_cm_completion=True)
             next_quiz_link = fetch_content_link(wstoken=self.get_wstoken(user_id), alternative_display_text="nächste Quiz") if next_quiz_id else None
             return {"sys_acts": [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
                 success_percentage=success_percentage,
@@ -313,13 +282,13 @@ class ELearningPolicy(Service):
             completed = fetch_viewed_course_modules_count(wstoken=self.get_wstoken(user_id),
                                                           userid=user_id,
                                                           courseid=courseid,
-                                                          include_types=learning_material_types,
+                                                          include_types=",".join(learning_material_types),
                                                           starttime=start_time,
                                                           endtime=end_time) / 3
             completed += fetch_viewed_course_modules_count(wstoken=self.get_wstoken(user_id),
                                                           userid=user_id,
                                                           courseid=courseid,
-                                                          include_types=assignment_material_types,
+                                                          include_types=",".join(assignment_material_types),
                                                           starttime=start_time,
                                                           endtime=end_time)
             if day < 7:
@@ -343,7 +312,7 @@ class ELearningPolicy(Service):
     
     def get_stat_summary(self, user_id: int, courseid: int, update_db: bool = False):
         # we should show total course progress every 10% of completion
-        user_stats = fetch_user_statistics(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, include_types=learning_material_types + assignment_material_types, update_db=update_db)
+        user_stats = fetch_user_statistics(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, include_types=",".join(learning_material_types + assignment_material_types), update_db=update_db)
         return dict(percentage_done=user_stats.course_completion_percentage,
                     percentage_repeated_quizzes=user_stats.quiz_repetition_percentage)
 
@@ -384,36 +353,34 @@ class ELearningPolicy(Service):
                 append_suggestions = False
             else:
                 # check what user's next closest badge would be
-                closest_badge_info = user.get_closest_badge(session=self.get_session(), courseid=courseid)
-                if not isinstance(closest_badge_info, type(None)):
-                    badge, badge_progress, badge_status, open_modules = closest_badge_info
-                    if badge_progress >= 0.5:
+                closest_badge_info = fetch_closest_badge(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
+                if not isinstance(closest_badge_info.id, type(None)):
+                    if closest_badge_info.completion_percentage >= 0.5:
                         # only display progress towards next closest batch if user is sufficiently close
                         acts.append(SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
-                            badge_name=badge.name, percentage_done=badge_progress,
-                            missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
-                                                for module in open_modules]
+                            badge_name=closest_badge_info.name, percentage_done=closest_badge_info.completion_percentage,
+                            missing_activities=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=cmid)
+                                                for cmid in closest_badge_info.open_modules]
                         )))
                         append_suggestions=False
 
         if append_suggestions:
             # choose how to proceed
-            acts.append(self.get_user_next_module(userid=user_id, courseid=courseid, add_last_viewed_course_module=True))
+            acts += self.get_user_next_module(userid=user_id, courseid=courseid, add_last_viewed_course_module=True)
             
         return acts
 
     def _handle_request_badge_progress(self, user_id: int, courseid: int, min_progress: float = 0.5) -> SysAct:
         # check what user's next closest badge would be
-        closest_badge_info = self.get_current_user(user_id).get_closest_badge(session=self.get_session(), courseid=courseid)
-        if not isinstance(closest_badge_info, type(None)):
-            badge, badge_progress, badge_status, open_modules = closest_badge_info
-            if badge_status == BadgeCompletionStatus.INCOMPLETE and badge_progress >= min_progress:
+        closest_badge_info = fetch_closest_badge(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
+        if not isinstance(closest_badge_info.id, type(None)):
+            if closest_badge_info.completion_percentage >= min_progress:
                 # only display progress towards next closest batch if user is sufficiently close
                 return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
-                    badge_name=badge.name, percentage_done=badge_progress,
-                    missing_activities=[module.get_content_link(session=self.get_session(), alternative_display_text=module.get_name(self.get_session()))
-                                        for module in open_modules]
-                ))
+                            badge_name=closest_badge_info.name, percentage_done=closest_badge_info,
+                            missing_activities=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=cmid)
+                                                for cmid in closest_badge_info.open_modules]
+                    ))
             else:
                 return SysAct(SysActionType.DisplayBadgeProgress, slot_values=dict(
                     badge_name=None,
@@ -430,16 +397,15 @@ class ELearningPolicy(Service):
         if self.check_setting(user_id, 'openonbadge'):
             self.open_chatbot(user_id=user_id)
         # find badge
-        badge = self.get_session().query(MBadge).get(badge_id)
+        badge_info = fetch_badge_info(wstoken=self.get_wstoken(user_id), badgeid=badge_id, contextid=contextid)
         # get badge image link
         return SysAct(act_type=SysActionType.CongratulateBadge,
-            slot_values=dict(badge_name=badge.name,
-                    badge_img_url=f'<img src="{config.MOODLE_SERVER_URL}/pluginfile.php/{contextid}/badges/badgeimage/{badge.id}/f1" alt="{badge.name}"/>')
+            slot_values=dict(badge_name=badge_info.name,
+                    badge_img_url=badge_info.url)
         )
     
     def display_quiz(self, user_id: int, coursemoduleid: int) -> SysAct:
-        quiz = self.get_session().query(MCourseModule).get(coursemoduleid)
-        hvp_params = quiz.get_h5p_parameters(self.get_session())
+        hvp_params = fetch_h5pquiz_params(wstoken=self.get_wstoken(user_id), cmid=coursemoduleid)
         self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.LARGE)
         return SysAct(act_type=SysActionType.DisplayQuiz, slot_values=dict(quiz_embed=hvp_params))
     
@@ -459,22 +425,12 @@ class ELearningPolicy(Service):
             List of search results
             Boolean: if there are more search results
         """
-        book_links, has_more_results = get_book_links(webserviceuserid=self.get_webservice_user_id(), wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=search_idx, end=search_idx+num_results+1)
+        book_links, has_more_results = get_book_links(webserviceuserid=self.get_webservice_user_id(user_id), wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=search_idx, end=search_idx+num_results+1)
         
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH_INDEX, attribute_value=search_idx + num_results)
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH, attribute_value=search_term)
         return book_links, has_more_results
     
-    def get_most_reviewable_quizzes(self, user_id: int, courseid: int, max_quizzes: int = 3) -> List[Tuple[int, float]]:
-        review_grade_items = self.get_current_user(user_id).get_oldest_worst_grade_attempt_quizzes(
-            session=self.get_session(),
-            courseid=courseid,
-            max_results=max_quizzes
-        )
-        # get corresonding course modules
-        return list(map(lambda gradeItem: (self.get_session().query(MH5PActivity).get(gradeItem[0].iteminstance).get_course_module(self.get_session()).id, float(100*gradeItem[1].finalgrade/gradeItem[1].rawgrademax)),
-                        review_grade_items))
-
     @PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state"])
     def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct):
         """
@@ -517,19 +473,18 @@ class ELearningPolicy(Service):
                 review_candidates = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES)
                 if len(review_candidates) == 0:
                     # get next quizzes to review, from worst and oldest to better and newer
-                    review_candidates = self.get_most_reviewable_quizzes(user_id=user_id, courseid=courseid, max_quizzes=self.check_setting(user_id, 'numreviewquizzes'))
-                next_quiz_id, next_quiz_grade = review_candidates[0] if len(review_candidates) > 0 else (None, None)
-                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(next_quiz_id, next_quiz_grade))
-                if not next_quiz_id is None:
-                    sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_id))
+                    review_candidates = fetch_oldest_worst_grade_course_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
+                next_quiz_info = review_candidates[0] if len(review_candidates) > 0 else None
+                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=next_quiz_info)
+                if not next_quiz_info is None:
+                    sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_info.cmid))
                 else: 
                     sys_acts.append(SysAct(act_type=SysActionType.DisplayQuiz, slot_values={"quiz_embed": None}))
                 self.set_state(user_id, REVIEW_QUIZZES, review_candidates[1:])
             elif user_act.type == UserActionType.RequestNextSection:
-                user = self.get_current_user(user_id)
-                available_new_course_sections = user.get_available_new_course_sections(session=self.get_session(), courseid=courseid, current_server_time=self.get_moodle_server_time(user_id))
+                available_new_course_sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
                 sys_acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                next_available_sections=[section.get_link() for section in available_new_course_sections]
+                                next_available_sections=[section.url for section in available_new_course_sections]
                         )))
             elif user_act.type == UserActionType.RequestProgress:
                 slot_values = self.get_stat_summary(user_id=user_id, courseid=courseid)
@@ -569,27 +524,23 @@ class ELearningPolicy(Service):
                 pass
         if not review_act:
             self.set_state(user_id, REVIEW_QUIZZES, [])
-            self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=(None, None))
+            self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[]) 
             self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.DEFAULT)
         sys_state["last_act"] = sys_acts
         self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_acts}")
         return {'sys_acts':  sys_acts, "sys_state": sys_state}
-    
-    def get_current_user(self, user_id) -> MUser:
-            """ Get Moodle user by id from Chat Interface (or start run_chat with --user_id=...) """
-            user = self.get_session().get(MUser, int(user_id))
-            return user
-    
+
     def get_user_next_module(self, userid: int, courseid: int, add_last_viewed_course_module: bool = False, current_section_id: int = None) -> List[SysAct]:
         # choose how to proceed
         acts = []
-        has_seen_any_course_modules = fetch_has_seen_any_course_modules(userid=userid, courseid=courseid)
+        has_seen_any_course_modules = fetch_has_seen_any_course_modules(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
         
         all_sections_completed = False
         if has_seen_any_course_modules:
             # last viewed module
             last_completed_course_modules = fetch_last_viewed_course_modules(wstoken=self.get_wstoken(userid),
+                                                                             userid=userid,
                                                                              courseid=courseid, completed=True)
             if len(last_completed_course_modules) > 0:
                 last_completed_course_module = last_completed_course_modules[0] # sorted ascending by date
@@ -597,7 +548,7 @@ class ELearningPolicy(Service):
                 # get open modules across sections, 1 per section
                 next_modules = {}
                 # prioritize already viewed modules
-                last_started_course_modules = fetch_last_viewed_course_modules(wstoken=self.get_wstoken(userid), courseid=courseid, completed=False)
+                last_started_course_modules = fetch_last_viewed_course_modules(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid, completed=False)
                 for unfinished_module in last_started_course_modules:
                     if not unfinished_module.section in next_modules and unfinished_module.section != current_section_id:
                         next_modules[unfinished_module.section] = unfinished_module
@@ -633,9 +584,8 @@ class ELearningPolicy(Service):
                 if all_sections_completed:
                     # user has completed all started sections, should get choice of next new and available sections
                     available_new_course_section_ids = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
-                    next_available_section_links = [fetch_content_link(wstoken=self.get_wstoken(userid), cmid=sectionid) for sectionid in available_new_course_section_ids]
                     acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                    next_available_sections=next_available_section_links
+                                    next_available_sections=[section.url for section in available_new_course_section_ids]
                             )))
             
             else:
