@@ -137,7 +137,7 @@ def fetch_branch_review_quizzes(wstoken: str, userid: int, sectionid: int) -> Br
 	return BranchReviewQuizzes(completed=branch_completed, candidates=cm_candidates)
 
 def fetch_section_id_and_name(wstoken: str, cmid: int) -> Tuple[int, str]:
-	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_branch_quizes_if_complete", params=dict(
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_section_id", params=dict(
 		cmid=cmid
 	))
 	return response['id'], response['name']

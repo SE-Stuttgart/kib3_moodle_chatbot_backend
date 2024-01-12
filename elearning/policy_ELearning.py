@@ -492,7 +492,7 @@ class ELearningPolicy(Service):
             elif user_act.type == UserActionType.RequestBadgeProgress:
                 sys_acts.append(self._handle_request_badge_progress(user_id=user_id, courseid=courseid, min_progress=0.0))
             elif user_act.type == UserActionType.ContinueOpenModules:
-                sys_acts.append(self.get_user_next_module(userid=user_id, courseid=courseid))
+                sys_acts += self.get_user_next_module(userid=user_id, courseid=courseid)
             elif user_act.type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
                 if not user_act.value is None:
                     # if we have a new search term, reset the search index and give out first three results
