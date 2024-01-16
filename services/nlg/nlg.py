@@ -95,7 +95,7 @@ class ELearningNLG(Service):
         if random.random() < 0.4:
             msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
         msgs.append(random.choice([
-            ("Willst du etwas Zeit nehmen um die Inhalte zu wiederholen?", ["Wiederholen", "Weitermachen"]),
+            ("Willst du dir etwas Zeit nehmen, um die Inhalte zu wiederholen?", ["Wiederholen", "Weitermachen"]),
             ("Möchtest du dein Wissen nochmal testen?", ["Wiederholen", "Weitermachen"]),
             ("Wie wäre eine kleine Quiz-Runde, um deine Erinnerung aufzufrischen?", ["Wiederholen", "Weitermachen"])
         ]))
@@ -109,18 +109,18 @@ class ELearningNLG(Service):
             ("""Entschuldige, aber ich habe deinen Suchbegriff leider nicht erkannt.
                 Kannst du ihn vielleicht direkt eingeben (ohne zusätzlichen Text)?
             """, []),
-            ("""Leider habe ich nicht verstanden wonach du suchst."
+            ("""Leider habe ich nicht verstanden, wonach du suchst."
                 Könntest du bitte nur den Suchbegriff eingeben?""", []),
             ("""Könntest du bitte nur den Suchbegriff nochmals eingeben?
                 Ich habe ihn leider nicht aus der Anfrage erkennen können.""", []),
         ]) ]
 
     def inform_help(self):
-        return[("""Hier ist eine Liste von Themen, wonach du mich fragen kannst:
+        return[("""Hier ist eine Liste von Dingen, nach denen du mich fragen kannst:
                <ul>
                 <li>Was du als nächstes lernen kannst <br> (z.B. \"Was kann ich als nächstes lernen?\")</li>
                 <li>Weitermachen mit einem offenen Abschnitt <br> (z.B. \"Abschnitt fertig machen\")</li>
-                <li>Was du wiederholen kannst <br>(z.B. \"Ich will Quizze wiederholen\")</li>
+                <li>Was du wiederholen willst <br>(z.B. \"Ich will Quizze wiederholen\")</li>
                 <li>Welche Badges du als nächstes bekommen kannst <br>(z.B. \"Was sind die Voraussetzungen für den nächsten Badge?\")</li>
                 <li>Wie weit du im Kurs bist <br>(z.B. \"Wie viel fehlt noch im Kurs?\")</li>
                 <li>Nach Inhalten suchen <br>(z.B. \"Wo finde ich Informationen zu Regression?\")</li>
@@ -179,10 +179,10 @@ class ELearningNLG(Service):
     def display_quiz(self, quiz_embed):
         if quiz_embed is None:
             return [random.choice([
-                ("Momentan gibt es keine Quizze die wiederholt werden können.", []),
+                ("Momentan gibt es keine Quizze, die wiederholt werden können.", []),
                 ("""Du hast noch keine Quizze gemacht.
-                    Ich lasse dich gerne wiederholen sobald sich das ändert!""", []),
-                ("Frage mich einfach nochmal sobald du ein Quiz gemacht hast 🙂", []),
+                    Ich lasse dich gerne wiederholen, sobald sich das ändert!""", []),
+                ("Frage mich einfach nochmal, sobald du ein Quiz gemacht hast 🙂", []),
             ])]
         return [(f"$$QUIZ;{json.dumps(quiz_embed)}", [])]
 
@@ -199,7 +199,7 @@ class ELearningNLG(Service):
                 (f"""$$LINECHART;Diese Woche;{json.dumps(weekly_completions)};Letzte Woche;{json.dumps(weekly_completions_prev)}""", [])]
 
         if (not isinstance(weekly_completions_prev, type(None))) and total_completions_this_week > total_completions_prev_week:
-            msgs.append(("Damit war diese Woche besser als die Vorherige, weiter so 🔥", []))
+            msgs.append(("Damit war diese Woche besser als die vorherige, weiter so 🔥", []))
         else:
             num_best_days = len(best_weekly_days)
             if num_best_days > 0:
@@ -220,7 +220,7 @@ class ELearningNLG(Service):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
         return [random.choice([
                     ("""In letzter Zeit hast du viel Neues gelernt:""", []),
-                    ("""Sieh mal wie viel du schon gelernt hast:""", []),
+                    ("""Sieh mal, wie viel du schon gelernt hast:""", []),
                     ("""Ich zeige dir mal, wie fleißig du warst:""", [])
                 ]),
                 (self._donut_chart("Kurs", percentage_done, "Wiederholte Quizze", percentage_repeated_quizzes), [])
@@ -231,16 +231,16 @@ class ELearningNLG(Service):
         msgs = []
         if percentage_improvements > 0.0:
             msgs.append(random.choice([
-                (f"Sehr gut, du hast dich in dieser Wiederholung bei {sum(improvements)} Quizzen verbessert!", []),
+                (f"Sehr gut, du hast dich in dieser Runde bei {sum(improvements)} Quizzen verbessert!", []),
                 (f"Wow, du hast dich diesmal bei {sum(improvements)} Quizzen verbessert!", []),
                 (f"Super, bei {sum(improvements)} Quizzen hast du dich gerade verbessert!", []),
             ]))
-            msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), ["Weitere Quizze Wiederholen", "Etwas neues lernen"]))
+            msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), ["Weitere Quizze Wiederholen", "Etwas Neues lernen"]))
         else:
             msgs.append(random.choice([
-                (f"Toll dass du {len(improvements)} Quizze nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]),
+                (f"Toll, dass du {len(improvements)} Quizze nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]),
                 (f"Du hast {len(improvements)} Quizze wiederholt - du bist auf dem richtigen Weg.", ["Weitere Quizze Wiederholen"]),
-                (f"{len(improvements)} Quizze wiederholt - wenn du so weiter machst, bist du gut für die Prüfung vorbereitet!", ["Weitere Quizze Wiederholen"])
+                (f"{len(improvements)} Quizze wiederholt - wenn du so weiter machst, bist du gut für die Prüfung vorbereitet!", ["Weitere Quizze wiederholen"])
             ]))
         return msgs 
 
@@ -252,14 +252,14 @@ class ELearningNLG(Service):
                         ("""Du hast so gut gearbeitet, dass du schon alle verfügbaren Auszeichnungen erhalten hast 🎉
                         Sieh dir neue Themen an, um weitere freizuschalten.""", []),
                         ("""Alle gerade verfügbaren Auszeichnungen hast du schon gesammelt 🎉
-                            Um mehr bekommen zu können musst du nur mit einem neuen Thema beginnen.""", []),
+                            Um mehr bekommen zu können, musst du nur mit einem neuen Thema beginnen.""", []),
                 ])]
         msgs = []
         if percentage_done >= 0.5:
             msgs.append(random.choice([
                 (f"""Du hast fast die Auszeichnung {badge_name} abgeschlossen!""", []),
-                (f"""Du bist ganz nah dran die Auszeichnung {badge_name} zu bekommen!""", []),
-                (f"""Mach noch ein kleines Bisschen weiter, und du kannst den Badge {badge_name} bekommen!""", []),
+                (f"""Du bist ganz nah dran, die Auszeichnung {badge_name} zu bekommen!""", []),
+                (f"""Mach noch ein kleines bisschen weiter, und du kannst den Badge {badge_name} bekommen!""", []),
             ]))
         else:
             msgs.append(random.choice([
@@ -315,7 +315,7 @@ class ELearningNLG(Service):
                 ])]
     
     def inform_starter_module(self, module_link: str):
-        return [(f"Klicke einfach {module_link} um mit einem Spiel einzusteigen!", [
+        return [(f"Klicke einfach {module_link}, um mit einem Spiel einzusteigen!", [
             "Einstellungen",
             "Loslegen!"
         ])]
@@ -361,11 +361,11 @@ class ELearningNLG(Service):
             ]))
         else:
             msgs.append(random.choice([
-                (f"Toll dass du ein Quiz gemacht hast - bleib dran!", []),
+                (f"Toll, dass du ein Quiz gemacht hast - bleib dran!", []),
                 (f"Super, ein weiteres Quiz abgeschlossen! Jeder Versuch bereitet dich besser auf die Prüfung vor.", []),
             ]))
             if random.random() < 0.5:
-                msgs.append((f"Denk dran dass du jederzeit Quizze wiederholen kannst, um dein Verständnis zu verbessern!", []))
+                msgs.append((f"Denk dran, dass du jederzeit Quizze wiederholen kannst, um dein Verständnis zu verbessern!", []))
         if next_quiz_link:
             msgs.append((f"Bereit für das {next_quiz_link}?", []))
         return msgs
@@ -374,7 +374,7 @@ class ELearningNLG(Service):
         return [random.choice([
             ("Das habe ich leider nicht verstanden. Kannst du es vielleicht nochmal anders formulieren?", ["Hilfe"]),
             ("Leider habe ich das nicht verstanden. Willst du es mit einer anderen Formulierung probieren?", ["Hilfe"]),
-            ("Tut imt leid, das konnte ich nicht verstehen. Vielleicht kann ich dir besser helfen, wenn du deine Eingabe nochmal umformulierst.", ["Hilfe"]),
+            ("Tut mir leid, das konnte ich nicht verstehen. Vielleicht kann ich dir besser helfen, wenn du deine Eingabe nochmal umformulierst.", ["Hilfe"]),
         ])]
 
     def you_are_welcome(self):
