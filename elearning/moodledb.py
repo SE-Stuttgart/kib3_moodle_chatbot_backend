@@ -13,6 +13,7 @@ from config import MOODLE_SERVER_URL, MOODLE_SERVER_WEB_HOST, MOOLDE_SERVER_PROT
 @dataclass
 class UserSettings:
 	userid: int
+	preferedcontenttyp: str
 	preferedcontenttypeid: int
 
 	enabled: bool
