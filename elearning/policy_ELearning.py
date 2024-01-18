@@ -31,7 +31,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 # from dotenv import load_dotenv
 import os
@@ -159,8 +159,6 @@ class ELearningPolicy(Service):
             settings = fetch_user_settings(wstoken=self.get_wstoken(user_id), userid=user_id)
             self.set_state(user_id, SETTINGS, settings)
 
-   
-
     @PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state"])
     def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct):
         """ Responsible for reacting to events from mooodle.
@@ -170,7 +168,6 @@ class ELearningPolicy(Service):
             * \\core\\event\\course_module_completion_updated
         """
         event_name = moodle_event['eventname'].lower().strip()
-        event_action = moodle_event['action'].lower().strip()
 
         print("=================")
         print("EVENT")
@@ -223,7 +220,6 @@ class ELearningPolicy(Service):
                         return {
                             "sys_acts": sys_acts
                         }
-
         elif event_name == "\\mod_h5pactivity\\event\\statement_received" and moodle_event['component'] == 'mod_h5pactivity':
             previous_quiz_attempt_info = self.get_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ)
             if int(moodle_event['contextinstanceid']) == previous_quiz_attempt_info.cmid:
@@ -255,6 +251,11 @@ class ELearningPolicy(Service):
                 next_quiz_link=next_quiz_link
             ))]}             
             # only in review loop comment on improvements, otherwise absolute grade only
+        elif event_name == "\\block_chatbot\\event\\usersettings_changed":
+            moodle_event.pop("eventname")
+            moodle_event.pop("id")
+            self.set_state(user_id, SETTINGS, UserSettings(**moodle_event))
+
 
     def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: WeeklySummary):
         # calculate offet from beginning of day and current time

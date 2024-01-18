@@ -87,11 +87,11 @@ class GUIServer(Service):
             import sys
             traceback.print_exc(file=sys.stdout)
             return {}
-    
+        
     @PublishSubscribe(pub_topics=['moodle_event'])
     def moodle_event(self, user_id, domain_idx=0, event_data: dict = None):
         asyncio.set_event_loop(self.loopy_loop)
-        if event_data['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
+        if 'eventname' in event_data and event_data['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
             # clear chat history when user logs back in
             self.clear_memory(user_id)
         return {f'moodle_event/{self.domains[domain_idx].get_domain_name()}': event_data}
@@ -202,10 +202,22 @@ class MoodleEventHandler(tornado.web.RequestHandler):
         user_id = int(event_data['userid'])
         gui_service.moodle_event(user_id=user_id, event_data=event_data)
 
+
+class UserSettingsHandler(tornado.web.RequestHandler):
+    def get(self):
+        pass
+
+    def post(self):
+        settings_data = json.loads(self.request.body)
+        user_id = int(settings_data["userid"])
+        settings_data['eventname'] = "\\block_chatbot\\event\\usersettings_changed"
+        gui_service.moodle_event(user_id=user_id, event_data=settings_data)
+
 def make_app():
     return tornado.web.Application([
         (r"/ws", SimpleWebSocket),
-        (r"/event", MoodleEventHandler)
+        (r"/event", MoodleEventHandler),
+        (r"/usersettings", UserSettingsHandler)
     ])
 
 if __name__ == "__main__":
