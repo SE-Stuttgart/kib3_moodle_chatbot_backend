@@ -67,6 +67,15 @@ class ChatbotWindowSize(Enum):
     LARGE = 1
 
 
+class ChatbotOpeningContext(Enum):
+    DEFAULT = "default"
+    LOGIN = "openonlogin"
+    QUIZ = "openonquiz"
+    SECTION = "openonsection"
+    BRANCH = "openonbranch"
+    BADGE = "openonbadge"
+
+
 class ELearningPolicy(Service):
     """ Base class for handcrafted policies.
 
@@ -112,13 +121,14 @@ class ELearningPolicy(Service):
         return datetime.fromtimestamp(int(time.time()) + difference)
 
     @PublishSubscribe(pub_topics=['control_event'])
-    def open_chatbot(self, user_id: int):
-        """ Triggers the UI chatwindow to open """
+    def open_chatbot(self, user_id: int, context: ChatbotOpeningContext):
+        """ Triggers the UI chatwindow to open, respecting the opening context and the user settings """
         if self.check_setting(user_id, 'enabled'):
-            return {
-                "control_event": "UI_OPEN",
-                "user_id": user_id
-            }
+            if context == ChatbotOpeningContext.DEFAULT or self.check_setting(user_id=user_id, setting_key=context.value):
+                return {
+                    "control_event": "UI_OPEN",
+                    "user_id": user_id
+                }
         
     @PublishSubscribe(pub_topics=['control_event'])
     def resize_chatbot(self, user_id: int, size: ChatbotWindowSize):
@@ -198,8 +208,7 @@ class ELearningPolicy(Service):
             if branch_review_info.completed and len(branch_review_info.candidates) > 0:
                 # we did complete a full branch, and there are review modules available
                 # ask user if they want to review any of the quizzes
-                if self.check_setting(user_id, 'openonbranch'):
-                    self.open_chatbot(user_id=user_id)
+                self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.BRANCH)
                 return {"sys_acts": [
                     SysAct(act_type=SysActionType.CongratulateCompletion, slot_values={"name": branch_review_info.branch, "branch": True}),
                     SysAct(act_type=SysActionType.RequestReviewOrNext)]}
@@ -212,8 +221,7 @@ class ELearningPolicy(Service):
                     last_completed_section_id = self.get_state(user_id, LAST_FINISHED_SECTION_ID)
                     if last_completed_section_id != section_id:
                         self.set_state(user_id, LAST_FINISHED_SECTION_ID, section_id)
-                        if self.check_setting(user_id, 'openonsection'):
-                            self.open_chatbot(user_id=user_id)
+                        self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.SECTION)
                         sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section_name, 'branch': False})]
                         sys_acts += self.get_user_next_module(userd=user_id, courseid=moodle_event['courseid'],
                                                             add_last_viewed_course_module=False, current_section_id=section_id)
@@ -240,8 +248,7 @@ class ELearningPolicy(Service):
                     self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.DEFAULT)
                 return {"sys_acts": sys_acts}
             # In the case that the quiz is done outside the chatbot, give feedback (about absolute grade) and offer next quiz (if applicable)
-            if self.check_setting(user_id, 'openonquiz'):
-                self.open_chatbot(user_id=user_id)
+            self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.QUIZ)
             success_percentage = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
             next_quiz_id = fetch_next_available_course_module_id(wstoken=self.get_wstoken(user_id), current_cmid=int(moodle_event['contextinstanceid']),
                                                                  include_types='h5pactivity', allow_only_unfinished=True, current_cm_completion=True)
@@ -320,8 +327,7 @@ class ELearningPolicy(Service):
     
         
     def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
-        if self.check_setting(user_id, 'openonlogin'):
-            self.open_chatbot(user_id)
+        self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.LOGIN)
         acts = []
 
         last_weekly_summary = fetch_last_user_weekly_summary(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
@@ -395,8 +401,7 @@ class ELearningPolicy(Service):
             ))
 
     def congratulate_badge_issued(self, user_id: int, badge_id: int, contextid: int) -> SysAct:
-        if self.check_setting(user_id, 'openonbadge'):
-            self.open_chatbot(user_id=user_id)
+        self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.BADGE)
         # find badge
         badge_info = fetch_badge_info(wstoken=self.get_wstoken(user_id), badgeid=badge_id, contextid=contextid)
         # get badge image link
