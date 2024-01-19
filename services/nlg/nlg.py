@@ -317,7 +317,6 @@ class ELearningNLG(Service):
     def inform_starter_module(self, module_link: str):
         return [(f"Klicke einfach {module_link}, um mit einem Spiel einzusteigen!", [
             "Einstellungen",
-            "Loslegen!"
         ])]
     
     def inform_search_results(self, search_results: Dict[str, List[str]], load_more: bool):
