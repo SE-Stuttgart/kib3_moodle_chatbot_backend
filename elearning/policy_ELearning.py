@@ -18,6 +18,7 @@
 ###############################################################################
 from datetime import datetime, timedelta
 from enum import Enum
+import json
 import threading
 from typing import List, Tuple
 import time
@@ -223,14 +224,14 @@ class ELearningPolicy(Service):
                         self.set_state(user_id, LAST_FINISHED_SECTION_ID, section_id)
                         self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.SECTION)
                         sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section_name, 'branch': False})]
-                        sys_acts += self.get_user_next_module(userd=user_id, courseid=moodle_event['courseid'],
+                        sys_acts += self.get_user_next_module(userid=user_id, courseid=moodle_event['courseid'],
                                                             add_last_viewed_course_module=False, current_section_id=section_id)
                         return {
                             "sys_acts": sys_acts
                         }
         elif event_name == "\\mod_h5pactivity\\event\\statement_received" and moodle_event['component'] == 'mod_h5pactivity':
             previous_quiz_attempt_info = self.get_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ)
-            if int(moodle_event['contextinstanceid']) == previous_quiz_attempt_info.cmid:
+            if (not previous_quiz_attempt_info is None) and int(moodle_event['contextinstanceid']) == previous_quiz_attempt_info.cmid:
                 sys_acts = []
                 current_grade = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
                 next_quizzes = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES)
@@ -240,8 +241,8 @@ class ELearningPolicy(Service):
                 improvements = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS)
                 improvements.append(True if current_grade > previous_quiz_attempt_info.grade else False)
                 self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=improvements)
-                if next_quiz_info.cmid:
-                    sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_id))
+                if not next_quiz_info is None:
+                    sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_info.cmid))
                 else:
                     # create a graphic summary of how many quizzes the user did better on
                     sys_acts.append(SysAct(act_type=SysActionType.DisplayQuizImprovements, slot_values={"improvements": improvements}))
@@ -250,13 +251,24 @@ class ELearningPolicy(Service):
             # In the case that the quiz is done outside the chatbot, give feedback (about absolute grade) and offer next quiz (if applicable)
             self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.QUIZ)
             success_percentage = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
-            next_quiz_id = fetch_next_available_course_module_id(wstoken=self.get_wstoken(user_id), current_cmid=int(moodle_event['contextinstanceid']),
+            next_quiz_id = fetch_next_available_course_module_id(wstoken=self.get_wstoken(user_id), userid=user_id, current_cmid=int(moodle_event['contextinstanceid']),
                                                                  include_types='h5pactivity', allow_only_unfinished=True, current_cm_completion=True)
-            next_quiz_link = fetch_content_link(wstoken=self.get_wstoken(user_id), alternative_display_text="nächste Quiz") if next_quiz_id else None
-            return {"sys_acts": [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
-                success_percentage=success_percentage,
-                next_quiz_link=next_quiz_link
-            ))]}             
+            if next_quiz_id is None:
+                # there are no more quizzes in the current section - suggest to move on to new section
+                available_new_course_sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid=user_id), userid=user_id, courseid=moodle_event['courseid'])
+                sys_acts = [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
+                            success_percentage=success_percentage,
+                            next_quiz_link=None))]
+                sys_acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
+                                next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=section.firstcmid, alternative_display_text=section.name) for section in available_new_course_sections]
+                        )))
+                return {"sys_acts": sys_acts}
+            else:
+                next_quiz_link = fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=next_quiz_id, alternative_display_text="nächste Quiz") if next_quiz_id else None
+                return {"sys_acts": [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
+                    success_percentage=success_percentage,
+                    next_quiz_link=next_quiz_link
+                ))]}             
             # only in review loop comment on improvements, otherwise absolute grade only
         elif event_name == "\\block_chatbot\\event\\usersettings_changed":
             moodle_event.pop("eventname")
@@ -413,7 +425,7 @@ class ELearningPolicy(Service):
     def display_quiz(self, user_id: int, coursemoduleid: int) -> SysAct:
         hvp_params = fetch_h5pquiz_params(wstoken=self.get_wstoken(user_id), cmid=coursemoduleid)
         self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.LARGE)
-        return SysAct(act_type=SysActionType.DisplayQuiz, slot_values=dict(quiz_embed=hvp_params))
+        return SysAct(act_type=SysActionType.DisplayQuiz, slot_values=dict(quiz_embed=hvp_params.serialize()))
     
     def reset_search_term(self, user_id: int, user_acts: List[UserAct]):
         """
@@ -431,7 +443,7 @@ class ELearningPolicy(Service):
             List of search results
             Boolean: if there are more search results
         """
-        book_links, has_more_results = get_book_links(webserviceuserid=self.get_webservice_user_id(user_id), wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=search_idx, end=search_idx+num_results+1)
+        book_links, has_more_results = get_book_links(webserviceuserid=self.get_webservice_user_id(user_id), wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=search_idx, end=search_idx+num_results)
         
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH_INDEX, attribute_value=search_idx + num_results)
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH, attribute_value=search_term)
@@ -478,8 +490,9 @@ class ELearningPolicy(Service):
                 review_act = True
                 review_candidates = self.get_state(user_id=user_id, attribute_name=REVIEW_QUIZZES)
                 if len(review_candidates) == 0:
-                    # get next quizzes to review, from worst and oldest to better and newer
-                    review_candidates = fetch_oldest_worst_grade_course_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
+                    # get next quizzes to review, from worst and oAldest to better and newer
+                    max_num_quizzes = self.check_setting(user_id=user_id, setting_key="numreviewquizzes")
+                    review_candidates = fetch_oldest_worst_grade_course_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, max_num_quizzes=max_num_quizzes)
                 next_quiz_info = review_candidates[0] if len(review_candidates) > 0 else None
                 self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=next_quiz_info)
                 if not next_quiz_info is None:
@@ -490,7 +503,7 @@ class ELearningPolicy(Service):
             elif user_act.type == UserActionType.RequestNextSection:
                 available_new_course_sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
                 sys_acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                next_available_sections=[section.url for section in available_new_course_sections]
+                                next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=section.firstcmid, alternative_display_text=section.name) for section in available_new_course_sections]
                         )))
             elif user_act.type == UserActionType.RequestProgress:
                 slot_values = self.get_stat_summary(user_id=user_id, courseid=courseid)
@@ -571,7 +584,7 @@ class ELearningPolicy(Service):
                 next_available_module_links = []
                 for module in next_modules.values():
                     section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(userid), cmid=module.cmid)
-                    next_available_module_links.append(fetch_content_link(cmid=module.id, alternative_display_text=section_name))
+                    next_available_module_links.append(fetch_content_link(module.cmid, alternative_display_text=section_name))
 
                 # user has started, but not completed one or more sections
                 if add_last_viewed_course_module:
@@ -591,7 +604,7 @@ class ELearningPolicy(Service):
                     # user has completed all started sections, should get choice of next new and available sections
                     available_new_course_section_ids = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
                     acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                    next_available_sections=[section.url for section in available_new_course_section_ids]
+                                    next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(userid), cmid=section.firstcmid, alternative_display_text=section.name) for section in available_new_course_section_ids]
                             )))
             
             else:

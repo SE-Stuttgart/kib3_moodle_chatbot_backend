@@ -78,6 +78,16 @@ class H5PQuizParameters:
 	itemid: int
 	filename: str
 
+	def serialize(self) -> dict:
+		return {
+			"host": self.host,
+			"context": self.context,
+			"filearea": self.filearea,
+			"itemid": self.itemid,
+			"filename": self.filename
+		}
+
+
 @dataclass
 class QuizInfo:
 	cmid: int
@@ -87,6 +97,8 @@ class QuizInfo:
 class SectionInfo:
 	id: int
 	url: str
+	name: str
+	firstcmid: int
 
 def api_call(wstoken: str, wsfunction: str, params: dict):
 	http_client = httplib2.Http(".cache")
@@ -135,7 +147,7 @@ def fetch_branch_review_quizzes(wstoken: str, userid: int, sectionid: int) -> Br
 	cm_candidates = []
 	for candidate in response['candidates']:
 		cm_candidates.append(ModuleReview(**candidate))
-	return BranchReviewQuizzes(completed=branch_completed, candidates=cm_candidates)
+	return BranchReviewQuizzes(completed=branch_completed, candidates=cm_candidates, branch=response['branch'])
 
 def fetch_section_id_and_name(wstoken: str, cmid: int) -> Tuple[int, str]:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_section_id", params=dict(
@@ -207,7 +219,7 @@ def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmi
 		cmid=current_cmid,
 		includetypes=include_types,
 		allowonlyunfinished=int(allow_only_unfinished),
-		currentcoursemodulecompletion=current_cm_completion
+		currentcoursemodulecompletion=int(current_cm_completion)
 	))
 	return response['cmid']
 
@@ -262,10 +274,11 @@ def fetch_h5pquiz_params(wstoken: str, cmid: int) -> H5PQuizParameters:
 	))
 	return H5PQuizParameters(**response)
 
-def fetch_oldest_worst_grade_course_ids(wstoken: str, userid: int, courseid: int) -> List[QuizInfo]:
-	response = api_call(wstoken=wstoken, wsfunction="get_oldest_worst_grade_attempts", params=dict(
+def fetch_oldest_worst_grade_course_ids(wstoken: str, userid: int, courseid: int, max_num_quizzes: int) -> List[QuizInfo]:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_oldest_worst_grade_attempts", params=dict(
 		userid=userid,
-		courseid=courseid
+		courseid=courseid,
+		max_results=max_num_quizzes
 	))
 	return [QuizInfo(**res) for res in response]
 
