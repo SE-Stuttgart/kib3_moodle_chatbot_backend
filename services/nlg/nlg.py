@@ -120,7 +120,7 @@ class ELearningNLG(Service):
                <ul>
                 <li><b>Was du als nächstes lernen kannst </b><br> (z.B. \"Was kann ich als nächstes lernen?\")</li>
                 <li><b>Weitermachen mit einem offenen Abschnitt </b><br> (z.B. \"Abschnitt fertig machen\")</li>
-                <li><b>Was du wiederholen kannst </b><br>(z.B. \"Ich will Quizze wiederholen\")</li>
+                <li><b>Was du wiederholen willst </b><br>(z.B. \"Ich will Quizze wiederholen\")</li>
                 <li><b>Welche Badges du als nächstes bekommen kannst </b><br>(z.B. \"Was sind die Voraussetzungen für den nächsten Badge?\")</li>
                 <li><b>Wie weit du im Kurs bist </b><br>(z.B. \"Wie viel fehlt noch im Kurs?\")</li>
                 <li><b>Nach Inhalten suchen </b><br>(z.B. \"Wo finde ich Informationen zu Regression?\")</li>
@@ -219,9 +219,9 @@ class ELearningNLG(Service):
     def display_progress(self, percentage_done: float, percentage_repeated_quizzes: float):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
         return [random.choice([
-                    ("""In letzter Zeit hast du viel Neues gelernt:""", []),
-                    ("""Sieh mal, wie viel du schon gelernt hast:""", []),
-                    ("""Ich zeige dir mal, wie fleißig du warst:""", [])
+                    ("""So sieht dein aktueller Stand aus:""", []),
+                    ("""Sieh mal, wie viel du gelernt hast:""", []),
+                    ("""Ich zeige dir mal, wie weit du bist:""", [])
                 ]),
                 (self._donut_chart("Kurs", percentage_done, "Wiederholte Quizze", percentage_repeated_quizzes), [])
             ]
