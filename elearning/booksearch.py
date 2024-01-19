@@ -68,7 +68,7 @@ def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTe
         return files, has_more_results
     except:
         print(traceback.format_exc())
-        return {f"{config.MOODLE_SERVER_URL}": "Fehler bei Suche"}
+        return {f"{config.MOODLE_SERVER_URL}": "Fehler bei Suche"}, False
 
 if __name__ == "__main__":
     # connect to database

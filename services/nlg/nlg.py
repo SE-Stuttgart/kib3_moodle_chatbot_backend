@@ -273,12 +273,12 @@ class ELearningNLG(Service):
     def inform_help(self):
         return[("""Hier ist eine Liste von Themen, wonach du mich fragen kannst:
                <ul>
-                <li>Was du als nächstes lernen kannst <br> (z.B. \"Was kann ich als nächstes lernen?\")</li>
-                <li>Weitermachen mit einem offenen Abschnitt <br> (z.B. \"Abschnitt fertig machen\")</li>
-                <li>Was du wiederholen kannst <br>(z.B. \"Ich will Quizze wiederholen\")</li>
-                <li>Welche Badges du als nächstes bekommen kannst <br>(z.B. \"Was sind die Voraussetzungen für den nächsten Badge?\")</li>
-                <li>Wie weit du im Kurs bist <br>(z.B. \"Wie viel fehlt noch im Kurs?\")</li>
-                <li>Nach Inhalten suchen <br>(z.B. \"Wo finde ich Informationen zu Regression?\")</li>
+                <li><b>Was du als nächstes lernen kannst </b><br> (z.B. \"Was kann ich als nächstes lernen?\")</li>
+                <li><b>Weitermachen mit einem offenen Abschnitt </b><br> (z.B. \"Abschnitt fertig machen\")</li>
+                <li><b>Was du wiederholen kannst </b><br>(z.B. \"Ich will Quizze wiederholen\")</li>
+                <li><b>Welche Badges du als nächstes bekommen kannst </b><br>(z.B. \"Was sind die Voraussetzungen für den nächsten Badge?\")</li>
+                <li><b>Wie weit du im Kurs bist </b><br>(z.B. \"Wie viel fehlt noch im Kurs?\")</li>
+                <li><b>Nach Inhalten suchen </b><br>(z.B. \"Wo finde ich Informationen zu Regression?\")</li>
                </ul>""", [])]
 
     def generate_welcomemsg(self, sys_act: SysAct):
@@ -428,6 +428,8 @@ class ELearningNLG(Service):
                 ])]
     
     def inform_next_options(self, next_available_sections):
+        if len(next_available_sections) == 0:
+            return [(f"""Du hast bereits alle Abschnitte abgeschlossen! 🎉🎉🎉""", [])]
         return [(f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
                 {self._enumeration(items=next_available_sections)}
                 
