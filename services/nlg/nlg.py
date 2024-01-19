@@ -58,6 +58,9 @@ class ELearningNLG(Service):
         Service.__init__(self, domain=domain, sub_topic_domains=sub_topic_domains)
         self.logger = logger
 
+    ###
+    ### Helper functions
+    ###
     def join_values(self, values: List[str], interior_join: str = ", ", final_join: str="oder"):
         return f"{interior_join.join(values[:-1])} {final_join} {values[-1]}"
     
@@ -66,16 +69,24 @@ class ELearningNLG(Service):
             return f"{name}'"
         else:
             return f"{name}s"
+        
+    def _enumeration(self, items: List[str]) -> str:
+        return f""" <ul>
+                    {" ".join(['<li>' + item + '</li>' for item in items])}
+                </ul>"""
 
+    ###
+    ### Templates
+    ###
 
     # TODO is insufficient = 'none' a string, or of type(None)?
     def request_repeat_quiz(self, quiz_link, module, insufficient):
         if insufficient == True:
             return [f"""Bei {module} hast du leider noch nicht ausreichend Punkte 🙁.
-                    Möchtest du die Quizzes dazu wiederholen?"""]
+                    Möchtest du die Quizze dazu wiederholen?"""]
         elif insufficient == False:
             return [f""""Du hast überall ausreichend Punkte erzielt, gut gemacht!
-                    Möchtest du einige Quizzes wiederholen, um die Inhalte aufzufrischen?"""]
+                    Möchtest du einige Quizze wiederholen, um die Inhalte aufzufrischen?"""]
         elif insufficient == "none":
             return ["""Frag mich nochmal, wenn du ein Quiz abgeschlossen hast 😁"""]
 
@@ -83,195 +94,29 @@ class ELearningNLG(Service):
         msgs = []
         if random.random() < 0.4:
             msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
-        msgs.append(("Willst du etwas Zeit nehmen um die Inhalte zu wiederholen?", ["Wiederholen", "Weitermachen"]))
+        msgs.append(random.choice([
+            ("Willst du dir etwas Zeit nehmen, um die Inhalte zu wiederholen?", ["Wiederholen", "Weitermachen"]),
+            ("Möchtest du dein Wissen nochmal testen?", ["Wiederholen", "Weitermachen"]),
+            ("Wie wäre eine kleine Quiz-Runde, um deine Erinnerung aufzufrischen?", ["Wiederholen", "Weitermachen"])
+        ]))
         return msgs
         
-    # TODO what should happen if moduleRequirements == False or moduleRequired == False?
-    # seems like that kind of logic should be moved to the policy, or we need to handle output for the other cases
-    def inform_new_module_matching_requirements(self, moduleRequirements: bool, moduleRequired: bool, moduleName: str):
-        if moduleRequirements == True and moduleRequired == True:
-            return [f"""Alles klar. 
-            Es gibt neues Material zu {moduleName}, für das du die Voraussetzungen erfüllst.
-            Erinnerst du dich noch an das vorherige Modul?"""]
-
-
-    def inform_repeat_content_finished(self, moduleName, repeatContent, link, contentType):
-        if contentType == "resource":
-            return [f"""Du hast {moduleName} seit einiger Zeit abgeschlossen. 
-                    Wie wäre es, wenn Du es nochmal durchgehst?
-                    {link}"""]
-        elif contentType == "book":
-            return [f"""Du hast das Buch {moduleName} seit einiger Zeit abgeschlossen.
-                    Hast Du Lust, es nochmal anzusehen?
-                    {link}"""]
-        elif contentType == "quiz":
-            return [f"""Du hast das Quiz {moduleName} seit einiger Zeit abgeschlossen.
-                    Wiederhole dann bitte die Quizzes:
-                    {link}"""]
-        elif contentType == "hvs":
-            return [f"""Du hast das Quiz {moduleName} seit einiger Zeit abgeschlossen.
-                    Wiederhole dann bitte die Quizzes:
-                    {link}"""]
-        else:
-            return [f"""Du hast {moduleName} seit einiger Zeit abgeschlossen. Schau es Dir nochmal an: {link}"""]
-
-    # TODO is 'hvs' the correct activity name? or should it be hvp?
-    # TODO repeatContent = 'noContent': we should suggest a few concrete alternatives here!
-    def inform_repeat_content(self, moduleName, repeatContent, link, contentType):
-        if repeatContent == "finished":
-            return self.inform_repeat_content_finished(moduleName, repeatContent, link, contentType)
-        elif repeatContent == "module":
-            return [f"""Du hast bei {moduleName} nicht alles richtig beantwortet 😬 .
-                    Es wäre bestimmt gut, wenn du das wiederholst, diesmal klappt es bestimmt besser!
-                    {link}"""]
-        elif repeatContent == "oldcontent":
-            return [f"""Du hast {moduleName} seit einiger Zeit nicht mehr angeklickt.
-                    Du könntest die Inhalte nochmal auffrischen, ansonsten vergiss du sie!
-                    {link}"""]
-        elif repeatContent == "noContent":
-            return [f"""Es gibt keine Inhalte, die du wiederholen solltest.
-                    Du könntest mit einem neuen Thema anfangen!"""]
-
-    # TODO: add links to all of these messages!
-    def inform_finish_module(self, moduleName, finishContent):
-        if finishContent == "video":
-            return [f"""Es gibt ein Video zu {moduleName}, das Du noch nicht gesehen hast.
-                    Das könntest du heute noch schnell abschließen :-) """]
-        elif finishContent == "frage":
-            return ["""Du hast die Fragen zu einem Video nicht zu Ende beantwortet.
-                    Das könntest du schnell noch erledigen!"""]
-        elif finishContent == "module":
-            return ["""Du solltest am besten das Modul von gestern abschließen, es fehlt dir nicht mehr viel!"""]
-        elif finishContent == "doku":
-            return ["""Letztes Mal hast du angefangen, die Dokumentation deines Projekts auszufüllen.
-                    Du solltest sie am besten heute fertig machen 🙂"""]
-
-    def inform_remind_subission_deadline(self, moduleName, submission):
-        if submission == "-":
-            return [f"""Es gibt im Moment keine Abgaben."""]
-        return [f"""Am {submission} für {moduleName}"""]
-
-    def inform_all_finished(self, all_finished):
-        return["""Du hast alle Module abgeschlossen, sehr gut! Vergiss nicht, jede Woche einige Quizzes zu wiederholen!"""]
-
-    def inform_first_module(self, moduleName):
-        return[f"""Das erste ist {moduleName}"""]
-
-    def request_learning_time(self, learningTime):
-        return["""Wie viel Zeit hast du heute, um etwas zu lernen (bitte gib die Zeit in Minuten an)?"""]
-
-    def inform_content(self, modulContent, link):
-        if link == 'None':
-            return["""Leider konnte ich keine Ergebnisse zu deiner Eingabe finden. Hast du noch eine andere Frage?"""]
-        elif link == 'End':
-            return["""Das war alles, was ich zu deiner Frage finden konnte. Hast du noch eine andere Frage?"""]
-
-    def request_content(self, modulContent):
-        return["""Könntest du mir bitte nochmal nur den Suchbegriff nennen?"""]
-
     def inform_not_implemented(self, notImplementedYet):
         return[(f"""Leider ist diese Funktionalität noch nicht implementiert, wir arbeiten dran!""", [])]
 
-    def inform_motivational(self, motivational, taskLeft):
-        return[f"""{taskLeft}, du hast schon {motivational} geschafft! Die restlichen Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"""]
-
-    def inform_no_motivational(self, NoMotivational, taskLeft):
-        return[f"""{taskLeft}, du hast leider {NoMotivational} geschafft 😩  Du könntest jetzt anfangen! Die Inhalte bauen aufeinander auf, und es wird dir leicht fallen, eines nach dem anderen zu bearbeiten ;-)"""]
-
-    def request_past_module(self, pastModule):
-        return["""Erinnerst du dich an das vorherige Thema?"""]
-
-    def inform_past_module_repeat(self, pastModule, repeatContent):
-        return[f"""Dann wiederhole am besten das vorherige Thema, bevor du mit dem neuen startest: {repeatContent}"""]
-
-    def inform_next_module(self, moduleName, nextModule):
-        return[f"""Dein nächstes Thema ist {moduleName}. Möchtest du damit beginnen?"""]
-
-    def inform_moduleName(self, moduleName, hasModule):
-        # this is about time constraints (should be in name of function)
-        if hasModule:
-            return[f"""Dann kannst du das hier lernen: {moduleName}"""]
-        return["""Leider habe ich kein Lernmaterial mit dieser Dauer gefunden :-( Versuche es bitte erneut, wenn du ein bisschen mehr Zeit hast"""]
-
-    def inform_fit_for_test(self, fitForTest, link):
-        if fitForTest:
-            return[f"""Dann zeig mal! {link}"""]
-        return[f"""Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist! {link}"""]
-
-    def inform_repeat_module_affirm(self, repeat_module_affirm, moduleLink):
-        # same as before? (without affirm) and changed module_link into moduleLink as scheme before
-        return[f"""Alles klar, du findest die Inhalte zum vorherigen Thema hier: {moduleLink}"""]
-
-    def inform_repeat_module_deny(self, repeat_module_deny):
-        return["""Alles klar, dann wenn du bereit bist, könntest du mit einem neuen Thema anfangen!"""]
-
-    def inform_new_module_deny(self, new_module_deny):
-        return["""Alles klar, dann würde ich dir empfehlen, einige der bereits abgeschlossenen Inhalte zu wiederholen!"""]
-
-    def inform_offer_help(self, offerHelp):
-        return["""Dann mach doch nochmal die Quizzes und sag mir, womit du Schwierigkeiten hast."""]
-
-    def inform_repeat_quiz(self, QuizWiederholen, completedModule):
-        # german variable QuizWiederholen
-        return[f"""Dann könntest du die Zeit nutzen, um die Quizzes zu {completedModule} zu wiederholen!"""]
-
-    def inform_complete_module_affirm(self, complete_Module_affirm):
-        return["""Sehr gut! Dann schau kurz nach, welche Aufgaben bei dem Modul noch offen sind, und schließe sie ab ;-)"""]
-
-    def inform_complete_module_deny(self, complete_Module_deny):
-        return["""Dann könntest du die Zeit nutzen, um dir die Quizzes dazu anzuschauen und die Inhalte zu wiederholen, bei denen du unsicher bist!"""]
-
-    def request_fit_for_submission(self, fitForSubmission, newTask):
-        # name doesnt fit to sentence
-        return["""Super! Willst du dann heute neue Einheiten lernen oder abgeschlossene Inhalte wiederholen?"""]
-
-    def request_offer_help(self, offerHelp, time):
-        return[f"""Du bist bereits seit {time} Minuten an diesem Quiz dran, brauchst du Hilfe?"""]
-
-    def reqmore(self, moduleContent):
-        return["""Brauchst du mehr Informationen zu dem Modul?"""]
-    
-    def reqmore(self, end):
-        # does this make sense (and what is reqmore)
-        return["""Super, du kannst mir einfach nochmal schreiben, falls du meine Hilfe brauchst!"""]
-
-    def inform_content_task_required(self, contentTaskRequired):
-        # sentence and name doesnt fit
-        return["""Ja, aber sie bauen sich aufeinander und es wird dir leicht fallen, ein Thema nach dem anderen zu bearbeiten ;-)"""]
-
-    def inform_offer_help_suggestion(self, suggestion, offerhelp):
-        # should the name be without suggestion and simply overload the other function with diff. args
-        if suggestion == 'quiz':
-            return["""Du solltest die Quizzes gleich nach dem Lernen der Einheit machen, solange die Inhalte bei dir noch frisch sind!"""]
-        elif suggestion == 'learningTime':
-            return["""Du solltest dir die Zeit fürs Lernen einer Einheit besser einplanen, damit du dich richtig konzentrieren kannst. Dann wirst du dich an die Inhalte besser erinnern und die Fragen richtig beantworten!"""]
-        elif suggestion == 'offerHelp':
-            return[""""Wenn etwas beim Lernen nicht klar ist, solltest du mir gleich Fragen stellen, dann helfe ich dir gerne! Mach am besten noch nicht die Quizzes, wenn du mit den Inhalten noch nicht komplett vertraut bist!"""]
-
-    def inform_quiz_link(self, link):
-        return[f"""Hier ist ein Link zum Quiz: {link}"""]
-
-    def inform_motivate_quiz(self, link):
-        return[f""""Wenn du kurz Zeit hast, würde ich dir empfehlen, die Quizzes trotzdem zu wiederholen: das dauert nur wenige Minuten, und du erhöhst die Chance, eine gute Note zu bekommen :-)!<br>{link}"""]
-
-    def inform_next_step(self, nextStep):
-        if nextStep == 'newModule':
-            return["""Sehr gut! Du kannst jetzt mit dem neuen Thema anfangen :-D!"""]
-        elif nextStep == 'repeatConcepts':
-            return["""Sehr gut! Willst du noch einige Inhalte wiederholen, bevor du mit dem neuen Thema anfängst?"""]
-        elif nextStep == 'repeatContents':
-            return["""Sehr gut! Sollen wir ein paar Begriffe durchgehen und du sagst mir, welche du wiederholen möchtest?"""]
-
     def request_search_term(self):
-        return [
-            ("""Entschuldige, aber ich habe deinen Suchbegriff leider nicht aus der Nachricht erkannt.
-                Kannst du ihn vielleicht direkt eingeben?
-             """,
-             [])
-        ]
+        return [random.choice([
+            ("""Entschuldige, aber ich habe deinen Suchbegriff leider nicht erkannt.
+                Kannst du ihn vielleicht direkt eingeben (ohne zusätzlichen Text)?
+            """, []),
+            ("""Leider habe ich nicht verstanden, wonach du suchst."
+                Könntest du bitte nur den Suchbegriff eingeben?""", []),
+            ("""Könntest du bitte nur den Suchbegriff nochmals eingeben?
+                Ich habe ihn leider nicht aus der Anfrage erkennen können.""", []),
+        ]) ]
 
     def inform_help(self):
-        return[("""Hier ist eine Liste von Themen, wonach du mich fragen kannst:
+        return[("""Hier ist eine Liste von Dingen, nach denen du mich fragen kannst:
                <ul>
                 <li><b>Was du als nächstes lernen kannst </b><br> (z.B. \"Was kann ich als nächstes lernen?\")</li>
                 <li><b>Weitermachen mit einem offenen Abschnitt </b><br> (z.B. \"Abschnitt fertig machen\")</li>
@@ -310,7 +155,7 @@ class ELearningNLG(Service):
         elif now.hour >= 17 and now.hour < 21:
             day_section = "Guten Abend 😊"
         else:
-            day_section = "Wow, du lernst ja noch spät, Respket 😱"
+            day_section = "Wow, du lernst ja noch spät, Respekt 😱"
 
         options = [
             "Schön dich wieder zu sehen 😊",
@@ -320,7 +165,6 @@ class ELearningNLG(Service):
             day_section
         ]
         return [(random.choice(options), [])]
-
 
 
     def inform_unread_messages(self):
@@ -334,7 +178,12 @@ class ELearningNLG(Service):
 
     def display_quiz(self, quiz_embed):
         if quiz_embed is None:
-            return [("Momentan gibt es keine Quizze die wiederholt werden können.", [])]
+            return [random.choice([
+                ("Momentan gibt es keine Quizze, die wiederholt werden können.", []),
+                ("""Du hast noch keine Quizze gemacht.
+                    Ich lasse dich gerne wiederholen, sobald sich das ändert!""", []),
+                ("Frage mich einfach nochmal, sobald du ein Quiz gemacht hast 🙂", []),
+            ])]
         return [(f"$$QUIZ;{json.dumps(quiz_embed)}", [])]
 
     def display_weekly_summary(self, best_weekly_days: List[str], weekly_completions: Dict[str , list], weekly_completions_prev: Dict[str, list]):
@@ -350,7 +199,7 @@ class ELearningNLG(Service):
                 (f"""$$LINECHART;Diese Woche;{json.dumps(weekly_completions)};Letzte Woche;{json.dumps(weekly_completions_prev)}""", [])]
 
         if (not isinstance(weekly_completions_prev, type(None))) and total_completions_this_week > total_completions_prev_week:
-            msgs.append(("Damit war diese Woche besser als die Vorherige, weiter so 🔥", []))
+            msgs.append(("Damit war diese Woche besser als die vorherige, weiter so 🔥", []))
         else:
             num_best_days = len(best_weekly_days)
             if num_best_days > 0:
@@ -367,35 +216,57 @@ class ELearningNLG(Service):
         inner = f""";{titleInner};{100*percentageInner}""" if not isinstance(titleInner, type(None)) else ""
         return f"""$$DONUT;{titleOuter};{100*percentageOuter}{inner}"""
 
-    def _enumeration(self, items: List[str]) -> str:
-        return f""" <ul>
-                    {" ".join(['<li>' + item + '</li>' for item in items])}
-                </ul>"""
-
     def display_progress(self, percentage_done: float, percentage_repeated_quizzes: float):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
-        return [("""In letzter Zeit hast du viel Neues gelernt:""", []),
-                (self._donut_chart("Kurs", percentage_done, "Wiederholte Quizze", percentage_repeated_quizzes), [])]
+        return [random.choice([
+                    ("""In letzter Zeit hast du viel Neues gelernt:""", []),
+                    ("""Sieh mal, wie viel du schon gelernt hast:""", []),
+                    ("""Ich zeige dir mal, wie fleißig du warst:""", [])
+                ]),
+                (self._donut_chart("Kurs", percentage_done, "Wiederholte Quizze", percentage_repeated_quizzes), [])
+            ]
 
     def display_quiz_improvements(self, improvements: List[bool]):
         percentage_improvements = sum(improvements)/len(improvements)
         msgs = []
         if percentage_improvements > 0.0:
-            msgs.append((f"Sehr gut, du hast dich in dieser Wiederholung bei {sum(improvements)} Quizzen verbessert!", []))
-            msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), ["Weitere Quizze Wiederholen", "Etwas neues lernen"]))
+            msgs.append(random.choice([
+                (f"Sehr gut, du hast dich in dieser Runde bei {sum(improvements)} Quizzen verbessert!", []),
+                (f"Wow, du hast dich diesmal bei {sum(improvements)} Quizzen verbessert!", []),
+                (f"Super, bei {sum(improvements)} Quizzen hast du dich gerade verbessert!", []),
+            ]))
+            msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), ["Weitere Quizze Wiederholen", "Etwas Neues lernen"]))
         else:
-            msgs.append((f"Toll dass du {len(improvements)} Quizze nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]))
+            msgs.append(random.choice([
+                (f"Toll, dass du {len(improvements)} Quizze nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]),
+                (f"Du hast {len(improvements)} Quizze wiederholt - du bist auf dem richtigen Weg.", ["Weitere Quizze Wiederholen"]),
+                (f"{len(improvements)} Quizze wiederholt - wenn du so weiter machst, bist du gut für die Prüfung vorbereitet!", ["Weitere Quizze wiederholen"])
+            ]))
         return msgs 
 
     def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[str]):
         if badge_name == None:
-            return [("""Du hast bereits alle gerade verfügbaren Auszeichnungen erhalten 🎉
-                     Wenn du neue Lerninhalte ansiehst, werden neue Badges verfügbar.""", [])]
+            return [random.choice([
+                        ("""Du hast bereits alle gerade verfügbaren Auszeichnungen erhalten 🎉
+                            Wenn du neue Lerninhalte ansiehst, werden neue Badges verfügbar.""", []),
+                        ("""Du hast so gut gearbeitet, dass du schon alle verfügbaren Auszeichnungen erhalten hast 🎉
+                        Sieh dir neue Themen an, um weitere freizuschalten.""", []),
+                        ("""Alle gerade verfügbaren Auszeichnungen hast du schon gesammelt 🎉
+                            Um mehr bekommen zu können, musst du nur mit einem neuen Thema beginnen.""", []),
+                ])]
         msgs = []
         if percentage_done >= 0.5:
-            msgs.append((f"""Du hast fast die Auszeichnung {badge_name} abgeschlossen!""", []))
+            msgs.append(random.choice([
+                (f"""Du hast fast die Auszeichnung {badge_name} abgeschlossen!""", []),
+                (f"""Du bist ganz nah dran, die Auszeichnung {badge_name} zu bekommen!""", []),
+                (f"""Mach noch ein kleines bisschen weiter, und du kannst den Badge {badge_name} bekommen!""", []),
+            ]))
         else:
-            msgs.append((f"""Als nächsten Badge könntest du {badge_name} erhalten!""", []))
+            msgs.append(random.choice([
+                (f"""Als nächsten Badge könntest du {badge_name} erhalten.""", []),
+                (f"""Als nächste Auszeichnung könntest du {badge_name} bekommen.""", []),
+                (f"""{badge_name} ist der nächste Erfolg für dich.""", []),
+            ]))
         msgs += [(self._donut_chart("Auszeichnungsfortschritt", percentage_done), []),
                 (f"""Wenn du noch
                 {self._enumeration(items=missing_activities)}
@@ -414,17 +285,25 @@ class ELearningNLG(Service):
         if branch:
             return [(f"Herzlichen Glückwunsch! Du hast alle Themen im Zweig {name.upper()} fertig gemacht! 🎉🎉🎉", [])]
         else:
-            return [(f"Super! Du hast den Abschnitt {name} abgeschlossen! 🎉", [])]
+            return [random.choice([
+                (f"Super, du hast den Abschnitt {name} abgeschlossen! 🎉", []),
+                (f"Tolle Leistung, du bist gerade mit Abschnitt '{name}' fertig geworden! 🎉", []),
+                (f"Herzlichen Glückwunsch, du hast den Abschnitt {name} abgeschlossen! 🎉", []),
+            ])]
     
     def inform_last_viewed_course_module(self, last_viewed_course_module):
-        return [(f"Letztes Mal hast du {last_viewed_course_module} abgeschlossen.", [])]
+        return [random.choice([
+                    (f"Letztes Mal hast du {last_viewed_course_module} angesehen.", []),
+                    (f"{last_viewed_course_module} war der letzte Inhalt, den du angeschaut hast.", []),
+                    (f"Beim letzten Mal hast du hier aufgehört: {last_viewed_course_module}.", []),
+                ])]
 
     def request_continue_or_next(self, next_available_modules):
-        return [(f"""Folgende Abschntitte hast du angefangen, aber noch nicht abgeschlossen:
+        return [(f"""Folgende Abschnitte hast du angefangen, aber noch nicht abgeschlossen:
                 {self._enumeration(next_available_modules)}
                 
-                Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
-                    "Weitermachen", "Was Anderes lernen" 
+                Klicke eine der Optionen, oder willst du lieber etwas Anderes lernen?""", [
+                    "Weitermachen", "Etwas Anderes lernen" 
                 ])]
     
     def inform_next_options(self, next_available_sections):
@@ -433,14 +312,13 @@ class ELearningNLG(Service):
         return [(f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
                 {self._enumeration(items=next_available_sections)}
                 
-                Klicke eine der Optionen, oder willst du lieber was Anderes lernen?""", [
-                    "Was Anderes lernen"
+                Klicke eine der Optionen, oder willst du lieber etwas Anderes lernen?""", [
+                    "Etwas Anderes lernen"
                 ])]
     
     def inform_starter_module(self, module_link: str):
-        return [(f"Klicke einfach {module_link} um mit einem Spiel einzusteigen!", [
+        return [(f"Klicke einfach {module_link}, um mit einem Spiel einzusteigen!", [
             "Einstellungen",
-            "Loslegen!"
         ])]
     
     def inform_search_results(self, search_results: Dict[str, List[str]], load_more: bool):
@@ -471,19 +349,34 @@ class ELearningNLG(Service):
         msgs = []
         if success_percentage >= 99:
             # all questions correct
-            msgs.append((f"Super gemacht, du scheinst dieses Thema echt gut zu verstehen 🤓", []))
+            msgs.append(random.choice([
+                (f"Super gemacht, du scheinst dieses Thema echt gut zu verstehen 🤓", []),
+                (f"Sehr gut! Dieses Quiz war ja fast zu leicht für dich 😉", []),
+                (f"Beeindruckend!", []),
+            ]))
         elif success_percentage >= 70:
-            msgs.append((f"Gut gemacht, du scheinst dieses Thema zu verstehen 🤓", []))
+            msgs.append(random.choice([
+                (f"Gut gemacht, du scheinst dieses Thema zu verstehen 🤓", []),
+                (f"Nicht schlecht!", []),
+                (f"{success_percentage}% - nicht übel!", []),
+            ]))
         else:
-            msgs.append((f"Toll dass du ein Quiz gemacht hast - bleib dran!", []))
+            msgs.append(random.choice([
+                (f"Toll, dass du ein Quiz gemacht hast - bleib dran!", []),
+                (f"Super, ein weiteres Quiz abgeschlossen! Jeder Versuch bereitet dich besser auf die Prüfung vor.", []),
+            ]))
             if random.random() < 0.5:
-                msgs.append((f"Denk dran dass du jederzeit Quizze wiederholen kannst, um dein Verständnis zu verbessern!", []))
+                msgs.append((f"Denk dran, dass du jederzeit Quizze wiederholen kannst, um dein Verständnis zu verbessern!", []))
         if next_quiz_link:
             msgs.append((f"Bereit für das {next_quiz_link}?", []))
         return msgs
     
     def bad_act(self, **kwargs):
-        return [("Das habe ich leider nicht verstanden. Kannst du es vielleicht nochmal anders formulieren?", ["Hilfe"])]
+        return [random.choice([
+            ("Das habe ich leider nicht verstanden. Kannst du es vielleicht nochmal anders formulieren?", ["Hilfe"]),
+            ("Leider habe ich das nicht verstanden. Willst du es mit einer anderen Formulierung probieren?", ["Hilfe"]),
+            ("Tut mir leid, das konnte ich nicht verstehen. Vielleicht kann ich dir besser helfen, wenn du deine Eingabe nochmal umformulierst.", ["Hilfe"]),
+        ])]
 
     def you_are_welcome(self):
         return [("Gerne 😊", [])]
