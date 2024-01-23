@@ -137,9 +137,23 @@ class ELearningNLU(Service):
             else:
                 if user_act_type in [UserActionType.Search, UserActionType.LoadMoreSearchResults]:
                     # if we have a search trigger, try to extract the search term(s) using rules
+                    #reg = (
+                    #    r"(Wo\s*(kann ich|finde ich|steht|ist)|Zeig mir|Welche|Ich *(suche|brauche|will))?\s*(mehr\s*)?(Material(ien)?|nach|Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|(die )?Grundlagen|Tutorials|eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|Info(s?( zum Thema)?|rmation(en|squellen)?)|Videos|(Lern)?material(ien)?|was)\s*(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*(bedeutet|geben|gemeint ist)?(\?|$)|Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*(?P<content3>.*?)\s*(gemeint)?(\?|$)"
+                    #)
                     reg = (
-                        r"(Wo\s*(kann ich|finde ich|steht|ist)|Zeig mir|Welche|Ich *(suche|brauche|will))?\s*(mehr\s*)?(Material(ien)?|nach|Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|(die )?Grundlagen|Tutorials|eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|Info(s?( zum Thema)?|rmation(en|squellen)?)|Videos|(Lern)?material(ien)?|was)\s*(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*(bedeutet|geben|gemeint ist)?(\?|$)|Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*(?P<content3>.*?)\s*(gemeint)?(\?|$)"
-                    )
+					r"(Wo\s*(kann ich|finde ich|steht)|Zeig mir|Welche)\s*"
+					r"(Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|mehr|(die )?Grundlagen|Tutorials|"
+					r"eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|"
+					r"Info(s( zum Thema)?|rmation(en|squellen))|Videos|Lernmaterialien|was)\s*"
+					r"(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*"
+					r"(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|"
+					r"(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*"
+					r"(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*"
+					r"(bedeutet|geben|gemeint ist)?(\?|$)|"
+					r"Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*"
+					r"(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*"
+					r"(?P<content3>.*?)\s*(gemeint)?(\?|$)"
+				    )
                     matches = re.match(reg, user_act.text, re.I)
                     if matches:
                         matches = matches.groupdict()
