@@ -128,7 +128,9 @@ def manual(embedder, corpus_train, train_labels, corpus_embeddings = None):
         print("\nTop 5 most similar sentences in corpus in ", time_end-time_start, "seconds, and on device: ", query_embedding.device)
 
         for score, idx in zip(top_results[0], top_results[1]):
-            print(corpus_train[idx], "(Score: {:.4f})".format(score))
+            # print sentecene score and label
+            print(corpus_train[idx], "(Score: {:.4f} ".format(score), train_labels[idx])
+
         """
 
         hits = util.semantic_search(query_embedding, corpus_embeddings, top_k=5, score_function=util.dot_score)
@@ -150,8 +152,11 @@ def automatic(embedder, corpus_train, train_labels, corpus_test, test_labels, co
     query_embeddings = embedder.encode(corpus_test, convert_to_tensor=True)
     pred_labels = []
     scores = []
-    all_labels = ['ContinueOpenModules', 'Hello', 'LoadMoreSearchResults', 'RequestBadgeProgress', 'RequestDeadlines', 'RequestForumPosts', 'RequestHelp', 'RequestNextSection', 'RequestProgress', 
-                  'RequestReview', 'RequestSectionSummary', 'RequestSettings', 'Search', 'Thanks', 'Bad']
+    all_labels = list(set(train_labels))
+    print("all_labels: ", all_labels)
+
+    
+    
     for idx, embedding in enumerate(query_embeddings):
         cos_scores = util.cos_sim(embedding, corpus_embeddings)[0]
         top_results = torch.max(cos_scores, dim=0)
@@ -255,7 +260,7 @@ def main():
                 print("Done making csv")
                 continue
             case '2':
-                corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./new_corpus/', 'new_corpus')              
+                corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./new_corpus/', 'test_corpus')              
                 corpus_embeddings = None
                 make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, "new_corpus_")
             case '3':
