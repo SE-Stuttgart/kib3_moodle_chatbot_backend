@@ -130,6 +130,14 @@ class ELearningPolicy(Service):
                     "control_event": "UI_OPEN",
                     "user_id": user_id
                 }
+    
+    @PublishSubscribe(pub_topics=['control_event'])
+    def open_settings(self, user_id: int):
+        """ Open settings modal in UI """
+        return {
+            "control_event": "UI_SETTINGS",
+            "user_id": user_id
+        }
         
     @PublishSubscribe(pub_topics=['control_event'])
     def resize_chatbot(self, user_id: int, size: ChatbotWindowSize):
@@ -530,6 +538,10 @@ class ELearningPolicy(Service):
                         # otherwise we want to search, but didn't recognize the user input from the first query - ask for search term only
                         sys_act = SysAct(act_type=SysActionType.RequestSearchTerm, slot_values={})
                         sys_acts.append(sys_act)
+            elif user_act.type == UserActionType.RequestSettings:
+                # open settings modal
+                self.open_settings(user_id=user_id)
+                return
             elif user_act.type == UserActionType.Bad:
                 sys_acts.append(SysAct(act_type=SysActionType.Bad))
             elif user_act.type == UserActionType.Hello:
