@@ -317,7 +317,7 @@ class ELearningNLG(Service):
                 ])]
     
     def inform_starter_module(self, module_link: str):
-        return [(f"Klicke einfach {module_link}, um mit einem Spiel einzusteigen!", [
+        return [(f"Klicke einfach {module_link}, um direkt einzusteigen!", [
             "Einstellungen",
         ])]
     

@@ -32,7 +32,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
 from utils import UserAct
-from elearning.moodledb import UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_icecreamgame_course_module_id, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 # from dotenv import load_dotenv
 import os
@@ -344,7 +344,13 @@ class ELearningPolicy(Service):
         return dict(percentage_done=user_stats.course_completion_percentage,
                     percentage_repeated_quizzes=user_stats.quiz_repetition_percentage)
 
-    
+    def get_first_section_link(self, user_id: int, courseid: int) -> str:
+        sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
+        # ignore section 0, return first section
+        for section in sections:
+            if section.section == 1:
+                return section.url
+
         
     def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
         self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.LOGIN)
@@ -354,11 +360,10 @@ class ELearningPolicy(Service):
 
         if last_weekly_summary.first_turn_ever:
             # user is seeing chatbot for the first time - show some introduction & ice cream game
-            icecreamgame_module_id = fetch_icecreamgame_course_module_id(wstoken=self.get_wstoken(user_id), courseid=courseid)
-            icecreamgame_module_link = fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=icecreamgame_module_id, alternative_display_text="hier")
+            first_section_link = self.get_first_section_link(user_id=user_id, courseid=courseid)
             return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                     SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                        module_link=icecreamgame_module_link
+                        module_link=first_section_link
                     ))]
         
         # Add greeting
@@ -509,7 +514,9 @@ class ELearningPolicy(Service):
                     sys_acts.append(SysAct(act_type=SysActionType.DisplayQuiz, slot_values={"quiz_embed": None}))
                 self.set_state(user_id, REVIEW_QUIZZES, review_candidates[1:])
             elif user_act.type == UserActionType.RequestNextSection:
-                available_new_course_sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
+                available_new_course_sections = [section for section in
+                    fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
+                    if section.section > 0]
                 sys_acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
                                 next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=section.firstcmid, alternative_display_text=section.name) for section in available_new_course_sections]
                         )))
@@ -581,22 +588,22 @@ class ELearningPolicy(Service):
                 # prioritize already viewed modules
                 last_started_course_modules = fetch_last_viewed_course_modules(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid, completed=False)
                 for unfinished_module in last_started_course_modules:
-                    if not unfinished_module.section in next_modules and unfinished_module.section != current_section_id:
-                        next_modules[unfinished_module.section] = unfinished_module
+                    if not unfinished_module.section in next_modules and unfinished_module.section != current_section_id and unfinished_module.section > 0:
+                        next_modules[unfinished_module.section] = unfinished_module.cmid
                 # fill with other started sections
                 for completed_module in last_completed_course_modules:
-                    if not completed_module.section in next_modules and completed_module.section != current_section_id:
+                    if not completed_module.section in next_modules and completed_module.section != current_section_id and completed_module.section > 0:
                         # get first open module from this section
                         next_module_id= fetch_first_available_course_module_id(wstoken=self.get_wstoken(userid), userid=userid, sectionid=completed_module.section,
-
+                                                                             courseid=courseid,
                                                                              includetypes=",".join(learning_material_types + assignment_material_types),
                                                                              allow_only_unfinished=True)
                         if not next_module_id is None:
                             next_modules[completed_module.section] = next_module_id
                 next_available_module_links = []
-                for module in next_modules.values():
-                    section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(userid), cmid=module.cmid)
-                    next_available_module_links.append(fetch_content_link(module.cmid, alternative_display_text=section_name))
+                for cmid in next_modules.values():
+                    section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(userid), cmid=cmid)
+                    next_available_module_links.append(fetch_content_link(wstoken=self.get_wstoken(userid), cmid=cmid, alternative_display_text=section_name))
 
                 # user has started, but not completed one or more sections
                 if add_last_viewed_course_module:
@@ -614,26 +621,27 @@ class ELearningPolicy(Service):
             # TODO: Deadline reminder
                 if all_sections_completed:
                     # user has completed all started sections, should get choice of next new and available sections
-                    available_new_course_section_ids = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
+                    available_new_course_section_ids = [section for section in 
+                                                        fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
+                                                        if section.section > 0]
                     acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
                                     next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(userid), cmid=section.firstcmid, alternative_display_text=section.name) for section in available_new_course_section_ids]
                             )))
             
             else:
                 # has seen modules, but none completed or really started
-                # return ice cream game
-                icecreamgame_module_id = fetch_icecreamgame_course_module_id(wstoken=self.get_wstoken(userid), courseid=courseid)
-                acts.append(SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                    module_link=fetch_content_link(wstoken=self.get_wstoken(userid), cmid=icecreamgame_module_id, alternative_display_text="hier")
-                )))
+                # return first module in course, e.g. ice cream game
+                first_section_link = self.get_first_section_link(user_id=userid, courseid=courseid)
+                return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
+                        SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
+                            module_link=first_section_link
+                        ))]
         else:
             # return ice cream game
-            icecreamgame_module_id = fetch_icecreamgame_course_module_id(wstoken=self.get_wstoken(userid), courseid=courseid)
-            acts.append(SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                module_link=fetch_content_link(wstoken=self.get_wstoken(userid), cmid=icecreamgame_module_id, alternative_display_text="hier")
-            )))
+            # return first module in course, e.g. ice cream game
+            first_section_link = self.get_first_section_link(user_id=userid, courseid=courseid)
+            return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
+                    SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
+                        module_link=first_section_link
+                    ))]
         return acts
-    
-    
-   
- 

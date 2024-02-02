@@ -43,7 +43,7 @@ class CourseModuleAccess:
 	cmid: int
 	section: int
 	timeaccess: datetime.datetime
-	comepletionstate: int
+	completionstate: int
 
 @dataclass
 class UserStatistics:
@@ -95,7 +95,8 @@ class QuizInfo:
 
 @dataclass
 class SectionInfo:
-	id: int
+	id: int # section id
+	section: int # index of section in course
 	url: str
 	name: str
 	firstcmid: int
@@ -155,7 +156,7 @@ def fetch_section_id_and_name(wstoken: str, cmid: int) -> Tuple[int, str]:
 	))
 	return response['id'], response['name']
 
-def fetch_section_completionstate(wstoken: str, userid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz") -> bool:
+def fetch_section_completionstate(wstoken: str, userid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame") -> bool:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_section_completionstate", params=dict(
 		userid=userid,
 		sectionid=sectionid,
@@ -184,9 +185,10 @@ def fetch_last_viewed_course_modules(wstoken: str, userid: int, courseid: int, c
 		))
 	return results
 
-def fetch_first_available_course_module_id(wstoken: str, userid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz", allow_only_unfinished: bool = False) -> Union[int, None]:
+def fetch_first_available_course_module_id(wstoken: str, userid: int, courseid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame", allow_only_unfinished: bool = False) -> Union[int, None]:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_first_available_course_module", params=dict(
 		userid=userid,
+		courseid=courseid,
 		sectionid=sectionid,
 		includetypes=includetypes,
 		allowonlyunfinished=int(allow_only_unfinished)
@@ -213,7 +215,7 @@ def fetch_icecreamgame_course_module_id(wstoken: str, courseid: int) -> int:
 	))
 	return response['id']
 
-def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmid: int, include_types: str = "url,book,resource,h5pactivity,quiz", allow_only_unfinished: bool = False, current_cm_completion: int = 0) -> int:
+def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmid: int, include_types: str = "url,book,resource,h5pactivity,quiz,icecreamgame", allow_only_unfinished: bool = False, current_cm_completion: int = 0) -> int:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_next_available_course_module_id", params=dict(
 		userid=userid,
 		cmid=current_cmid,
@@ -223,7 +225,7 @@ def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmi
 	))
 	return response['cmid']
 
-def fetch_viewed_course_modules_count(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity", starttime: int = 0, endtime: int = -1) -> int:
+def fetch_viewed_course_modules_count(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity,icecreamgame", starttime: int = 0, endtime: int = -1) -> int:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_count_viewed_course_modules", params=dict(
 		userid=userid,
 		courseid=courseid,
@@ -233,7 +235,7 @@ def fetch_viewed_course_modules_count(wstoken: str, userid: int, courseid: int, 
 	))
 	return response['count']
 
-def fetch_user_statistics(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity", update_db: bool = False) -> UserStatistics:
+def fetch_user_statistics(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity,icecreamgame", update_db: bool = False) -> UserStatistics:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_user_statistics", params=dict(
 		userid=userid,
 		courseid=courseid,
@@ -242,7 +244,7 @@ def fetch_user_statistics(wstoken: str, userid: int, courseid: int, include_type
 	))
 	return UserStatistics(**response)
 
-def fetch_last_user_weekly_summary(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity", update_db: bool = False) -> WeeklySummary:
+def fetch_last_user_weekly_summary(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity,icecreamgame", update_db: bool = False) -> WeeklySummary:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_last_user_weekly_summary", params=dict(
 		userid=userid,
 		courseid=courseid,
