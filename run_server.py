@@ -176,6 +176,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
 
                 ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid)
             elif topic == 'user_utterance':
+                gui_service.websockets[self.userid] = self # set active websocket to last interaction (user might have multiple tabs open)
                 gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])
     
     def on_close(self):
