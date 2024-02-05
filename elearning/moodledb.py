@@ -130,7 +130,7 @@ def api_call(wstoken: str, wsfunction: str, params: dict):
 		return data
 	except:
 		print(traceback.format_exc())
-		return {f"{MOODLE_SERVER_URL}": "Error while fetching user settings"}
+		return {f"{MOODLE_SERVER_URL}": f"Fehler beim ausführen der Funktion {wsfunction}"}
 	
 
 def fetch_user_settings(wstoken: str, userid: int) -> UserSettings:
