@@ -425,6 +425,10 @@ class ELearningNLG(Service):
         if moodle_event['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
             self.clear_memory(user_id)
 
+    def log_dialog_turn(self, msg: str):
+        if not isinstance(self.logger, type(None)):
+            self.logger.dialog_turn(msg)
+
     @PublishSubscribe(sub_topics=["sys_acts"], pub_topics=["sys_utterance"])
     def publish_system_utterance(self, user_id: str, sys_acts: List[SysAct] = None) -> dict(sys_utterance=List[str]):
         """Generates the system utterance and publishes it.
@@ -440,7 +444,7 @@ class ELearningNLG(Service):
             message_fn = self.get_message_fn(sys_act)
             messages += message_fn(**sys_act.slot_values)
         for message in messages:
-            self.logger.dialog_turn(f"# USER {user_id} # NLG - {message}")
+            self.log_dialog_turn(f"# USER {user_id} # NLG - {message}")
         
         if len(messages) == 0:
             messages += self.bad_act()

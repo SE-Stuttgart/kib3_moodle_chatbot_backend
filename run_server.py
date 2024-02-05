@@ -12,7 +12,7 @@ from utils.logger import DiasysLogger, LogLevel
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-logger = DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_lvl=LogLevel.DIALOGS)
+logger = None #DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_lvl=LogLevel.DIALOGS)
 
 def load_elearning_domain():
     print("LOADING ELEARNING DOMAIN")
@@ -43,6 +43,10 @@ class GUIServer(Service):
         self.logger = logger
         self.loopy_loop = asyncio.new_event_loop()
 
+    def log_dialog_turn(self, msg: str):
+        if not isinstance(self.logger, type(None)):
+            self.logger.dialog_turn(msg)
+
     @PublishSubscribe(sub_topics=['socket_opened'], pub_topics=['user_utterance', 'sys_state'])
     def on_socket_opened(self, user_id: str, socket_opened: bool = True):
         """ If page (re-)load/transition is registered (websocket (re-)connected),
@@ -72,7 +76,7 @@ class GUIServer(Service):
     @PublishSubscribe(pub_topics=['user_utterance', 'courseid'])
     def user_utterance(self, user_id, domain_idx = 0, courseid=0, message = ""):
         try:
-            self.logger.dialog_turn(f"# USER {user_id} # USR-UTTERANCE - {message}")
+            self.log_dialog_turn(f"# USER {user_id} # USR-UTTERANCE - {message}")
 
             # forward message from moodle frontend to dialog system backend
             return {f'user_utterance/{self.domains[domain_idx]}': message,
@@ -141,10 +145,14 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
         start=len("/ws?token=")
         return int(uri[start:])
 
+    def log_dialog_turn(self, msg: str):
+        if not isinstance(logger, type(None)):
+            logger.dialog_turn(msg)
+
     def open(self, *args):
         # print("openng connection")
         self.userid = self._extract_token(self.request.uri)
-        logger.dialog_turn(f"# USER {self.userid} # SERVER - Connecting")
+        self.log_dialog_turn(f"# USER {self.userid} # SERVER - Connecting")
         if self.userid:
             gui_service.websockets[self.userid] = self
  
@@ -157,7 +165,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
             domain_index = data['domain']
             courseid = int(data['courseid'])
             if topic == 'start_dialog':
-                logger.dialog_turn(f"# USER {self.userid} # DIALOG-START")
+                self.log_dialog_turn(f"# USER {self.userid} # DIALOG-START")
                 # Set webservice token for the POLICY state
                 slidefindertoken = data['slidefindertoken']
                 wsuserid = data['wsuserid']
@@ -178,7 +186,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
     
     def on_close(self):
         # find right connection to delete
-        logger.dialog_turn(f"# USER {self.userid} # SOCKET-CLOSE")
+        self.log_dialog_turn(f"# USER {self.userid} # SOCKET-CLOSE")
         if self.userid in gui_service.websockets:
            del gui_service.websockets[self.userid]
 

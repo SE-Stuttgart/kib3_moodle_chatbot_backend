@@ -111,6 +111,11 @@ class ELearningPolicy(Service):
         self.session_lock = threading.Lock()
         self.webservice_user_id = None
 
+    def log_dialog_turn(self, msg: str):
+        if not isinstance(self.logger, type(None)):
+            self.logger.dialog_turn(msg)
+
+
     def get_webservice_user_id(self, user_id: int):
         return self.get_state(user_id, "WSUSERID")
     
@@ -490,7 +495,7 @@ class ELearningPolicy(Service):
             sys_acts = self.choose_greeting(user_id, courseid)
             sys_state["last_act"] = sys_acts
             for sys_act in sys_acts:
-                self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
+                self.log_dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
             return {'sys_acts': sys_acts, "sys_state": sys_state}
         # after first turn
         self.reset_search_term(user_id=user_id, user_acts=user_acts)
@@ -564,7 +569,7 @@ class ELearningPolicy(Service):
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[]) 
             self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.DEFAULT)
         sys_state["last_act"] = sys_acts
-        self.logger.dialog_turn(f"# USER {user_id} # POLICY - {sys_acts}")
+        self.log_dialog_turn(f"# USER {user_id} # POLICY - {sys_acts}")
         return {'sys_acts':  sys_acts, "sys_state": sys_state}
 
     def get_user_next_module(self, userid: int, courseid: int, add_last_viewed_course_module: bool = False, current_section_id: int = None) -> List[SysAct]:
