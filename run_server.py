@@ -1,17 +1,17 @@
 import time
 from typing import List
-from passlib.context import CryptContext
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
 import json
+import asyncio
 
 from services.service import PublishSubscribe, Service, DialogSystem
-from utils.logger import DiasysLogger, LogLevel
+# from utils.logger import DiasysLogger, LogLevel
 
+io_loop = tornado.ioloop.IOLoop.current()
+asyncio.set_event_loop(io_loop.asyncio_loop)
 
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 logger = None #DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_lvl=LogLevel.DIALOGS)
 
 def load_elearning_domain():
@@ -41,7 +41,6 @@ class GUIServer(Service):
         self.websockets = {}
         self.domains = domains
         self.logger = logger
-        self.loopy_loop = asyncio.new_event_loop()
 
     def log_dialog_turn(self, msg: str):
         if not isinstance(self.logger, type(None)):
@@ -53,8 +52,6 @@ class GUIServer(Service):
             we check if the current session state contains chat history for the given user already.
             If not, we start a new dialog by publishing an empty user_utterance and sys_state message to the backend.
         """
-        asyncio.set_event_loop(self.loopy_loop)
-
         if not socket_opened:
             return
 
@@ -65,7 +62,7 @@ class GUIServer(Service):
             missed = self.get_state(user_id, "MISSED_MESSAGES")
             if missed is not None:
                 for msg in missed:
-                    self.websockets[user_id].write_message(json.dumps([{"content": msg, "format": "text", "party": "system"}]))
+                    io_loop.asyncio_loop.call_soon_threadsafe(self.websockets[user_id].write_message, json.dumps([{"content": msg, "format": "text", "party": "system"}]))
                 self.set_state(user_id, "MISSED_MESSAGES", None)
         else:
             # chat history not found, start new dialog in backend
@@ -90,7 +87,6 @@ class GUIServer(Service):
         
     @PublishSubscribe(pub_topics=['moodle_event'])
     def moodle_event(self, user_id, domain_idx=0, event_data: dict = None):
-        asyncio.set_event_loop(self.loopy_loop)
         if 'eventname' in event_data and event_data['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
             # clear chat history when user logs back in
             self.clear_memory(user_id)
@@ -104,9 +100,8 @@ class GUIServer(Service):
             # print("MISSED MSG", sys_utterance)
             pass
         else:
-            asyncio.set_event_loop(self.loopy_loop)
             # forward message to moodle frontend
-            self.websockets[user_id].write_message(json.dumps([{"content": control_event, "format": "text", "party": "control"}]))
+            io_loop.asyncio_loop.call_soon_threadsafe(self.websockets[user_id].write_message, json.dumps([{"content": control_event, "format": "text", "party": "control"}]))
 
     @PublishSubscribe(sub_topics=['sys_utterance'])
     def forward_message_to_websocket(self, user_id, sys_utterance: List[str] = None):
@@ -121,10 +116,9 @@ class GUIServer(Service):
                 missed.append(message)
                 self.set_state(user_id, "MISSED_MESSAGES", missed)
             else:
-                asyncio.set_event_loop(self.loopy_loop)
                 # forward message to moodle frontend
-                self.websockets[user_id].write_message(json.dumps([{"content": message, "format": "text", "party": "system"}]))
-    
+                io_loop.asyncio_loop.call_soon_threadsafe(self.websockets[user_id].write_message, json.dumps([{"content": message, "format": "text", "party": "system"}]))
+
 
 # setup dialog system
 domains = [domain_1]
