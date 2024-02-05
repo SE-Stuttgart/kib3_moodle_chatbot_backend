@@ -22,8 +22,6 @@
 import random
 from enum import Enum
 
-import numpy
-
 GLOBAL_SEED = None
 
 
@@ -45,14 +43,7 @@ def init_random(seed: int = None):
     if GLOBAL_SEED is not None:
         return
 
-    if seed is None:
-        tmp_random = numpy.random.RandomState(None)
-        GLOBAL_SEED = tmp_random.randint(2**32-1, dtype='uint32')
-    else:
-        GLOBAL_SEED = seed
-
     # initialize random generators
-    numpy.random.seed(GLOBAL_SEED)
     random.seed(GLOBAL_SEED)
 
     try:
@@ -60,13 +51,6 @@ def init_random(seed: int = None):
         import torch
         torch.cuda.manual_seed_all(GLOBAL_SEED)  # gpu
         torch.manual_seed(GLOBAL_SEED)  # cpu
-    except ImportError:
-        pass
-
-    try:
-        # try to load tensorflow and initialize random generator if available
-        import tensorflow
-        tensorflow.random.set_random_seed(GLOBAL_SEED)
     except ImportError:
         pass
 

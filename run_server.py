@@ -1,9 +1,6 @@
 import time
-import datetime
-from datetime import timedelta, datetime
 from typing import List
 from passlib.context import CryptContext
-import jwt
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
@@ -19,13 +16,12 @@ logger = DiasysLogger(name="userlog", console_log_lvl=LogLevel.ERRORS, file_log_
 
 def load_elearning_domain():
     print("LOADING ELEARNING DOMAIN")
-    from utils.domain.jsonlookupdomain import JSONLookupDomain
     from elearning.policy_ELearning import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
     from elearning.dbloggerhandler import DBLoggingHandler
     from services.nlg.nlg import ELearningNLG
     from services.nlu.nlu import ELearningNLU
-    domain = JSONLookupDomain('ELearning', display_name="ELearning")
+    domain = 'ELearning'
     e_learning_nlu = ELearningNLU(domain=domain, logger=logger)
     e_learning_policy = ELearningPolicy(domain=domain, logger=logger)
     e_learning_bst = ELearningBST(domain=domain)
@@ -70,7 +66,7 @@ class GUIServer(Service):
         else:
             # chat history not found, start new dialog in backend
             self.set_state(user_id, GUIServer.NOT_FIRST_TURN, True)
-            return {f'user_utterance/{self.domains[0].get_domain_name()}': '', f'sys_state/{self.domains[0].get_domain_name()}': {}}
+            return {f'user_utterance/{self.domains[0]}': '', f'sys_state/{self.domains[0]}': {}}
 
 
     @PublishSubscribe(pub_topics=['user_utterance', 'courseid'])
@@ -79,8 +75,8 @@ class GUIServer(Service):
             self.logger.dialog_turn(f"# USER {user_id} # USR-UTTERANCE - {message}")
 
             # forward message from moodle frontend to dialog system backend
-            return {f'user_utterance/{self.domains[domain_idx].get_domain_name()}': message,
-                    f'courseid/{self.domains[domain_idx].get_domain_name()}': courseid}
+            return {f'user_utterance/{self.domains[domain_idx]}': message,
+                    f'courseid/{self.domains[domain_idx]}': courseid}
         except:
             print("ERROR in GUIService - user_utterance: user=", user_id, "domain_idx=", domain_idx, "message=", message)
             import traceback
@@ -94,7 +90,7 @@ class GUIServer(Service):
         if 'eventname' in event_data and event_data['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
             # clear chat history when user logs back in
             self.clear_memory(user_id)
-        return {f'moodle_event/{self.domains[domain_idx].get_domain_name()}': event_data}
+        return {f'moodle_event/{self.domains[domain_idx]}': event_data}
 
     @PublishSubscribe(sub_topics=['control_event'])
     def forward_control_event_to_websocket(self, user_id, control_event: str = None):
@@ -176,7 +172,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
                 services_1[2].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
                 services_1[-1].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
 
-                ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index].get_domain_name()}': True, f'courseid/{domains[domain_index].get_domain_name()}': courseid}, user_id=self.userid)
+                ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid)
             elif topic == 'user_utterance':
                 gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])
     

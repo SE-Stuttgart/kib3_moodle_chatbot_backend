@@ -10,7 +10,6 @@ import os
 from sentence_transformers import SentenceTransformer, util
 import torch
 import pickle
-import random
 import time
 from corpus import Corpus
 from sklearn import metrics

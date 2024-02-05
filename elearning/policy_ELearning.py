@@ -18,7 +18,6 @@
 ###############################################################################
 from datetime import datetime, timedelta
 from enum import Enum
-import json
 import threading
 from typing import List, Tuple
 import time
@@ -106,7 +105,6 @@ class ELearningPolicy(Service):
 
         """
         Service.__init__(self, domain=domain)
-        self.domain_key = domain.get_primary_key()
         self.logger = logger
         self.max_turns = max_turns
         self.session = None

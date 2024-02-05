@@ -19,16 +19,12 @@
 
 """Handcrafted (i.e. template-based) Natural Language Generation Module"""
 
-import inspect
-import os
 import random
 import json
 from datetime import datetime
 
-from services.nlg.templates.templatefile import TemplateFile
 from services.service import PublishSubscribe
 from services.service import Service
-from utils.common import Language
 from utils.domain.domain import Domain
 from utils.logger import DiasysLogger
 from utils.sysact import SysAct, SysActionType

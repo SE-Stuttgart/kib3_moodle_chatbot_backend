@@ -17,8 +17,6 @@
 #
 ###############################################################################
 
-import json
-import os
 import re
 import time
 from typing import List
@@ -26,11 +24,10 @@ from utils.utterance_mapper import Utterance_Mapper
 from services.service import PublishSubscribe
 from services.service import Service
 from utils import UserAct, UserActionType
-from utils.beliefstate import BeliefState
 from utils.common import Language
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils.logger import DiasysLogger
-from utils.sysact import SysAct, SysActionType
+from utils.sysact import SysActionType
 
 class ELearningNLU(Service):
     """
@@ -71,12 +68,7 @@ class ELearningNLU(Service):
         self.logger = logger
 
         self.language = language if language else Language.ENGLISH
-
-        # Getting domain information
-        self.domain_name = domain.get_domain_name()
-        self.domain_key = domain.get_primary_key()
-
-
+       
         self.uttance_mapper = Utterance_Mapper('PM-AI/bi-encoder_msmarco_bert-base_german') # domain hinzugüfen
         
         # Getting lists of informable and requestable slots

@@ -7,7 +7,6 @@ import urllib
 import config
 
 
-
 def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Tuple[Dict[str, List[str]], bool]:
     """
     Args:
