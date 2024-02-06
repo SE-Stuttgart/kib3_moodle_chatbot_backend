@@ -91,6 +91,10 @@ class GUIServer(Service):
             # clear chat history when user logs back in
             self.clear_memory(user_id)
         return {f'moodle_event/{self.domains[domain_idx]}': event_data}
+    
+    @PublishSubscribe(pub_topics=['settings'])
+    def settings_changed(self, user_id, domain_idx=0, settings: dict = None):
+        return {f'settings/{self.domains[domain_idx]}': settings} 
 
     @PublishSubscribe(sub_topics=['control_event'])
     def forward_control_event_to_websocket(self, user_id, control_event: str = None):
@@ -172,7 +176,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
                 services_1[2].set_state(self.userid, "SERVERTIMESTAMP", moodle_timestamp)
                 services_1[2].set_state(self.userid, "WSUSERID", wsuserid)
                 services_1[2].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
-                services_1[-1].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
+                services_1[-1].set_state(self.userid, "SLIDEFINDERTOKEN", slidefindertoken)
 
                 ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid)
             elif topic == 'user_utterance':
@@ -208,9 +212,8 @@ class UserSettingsHandler(tornado.web.RequestHandler):
 
     def post(self):
         settings_data = json.loads(self.request.body)
-        user_id = int(settings_data["userid"])
-        settings_data['eventname'] = "\\block_chatbot\\event\\usersettings_changed"
-        gui_service.moodle_event(user_id=user_id, event_data=settings_data)
+        user_id = int(settings_data.pop("userid"))
+        gui_service.settings_changed(user_id=user_id, settings=settings_data)
 
 def make_app():
     return tornado.web.Application([

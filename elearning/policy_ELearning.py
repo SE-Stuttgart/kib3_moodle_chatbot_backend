@@ -181,6 +181,11 @@ class ELearningPolicy(Service):
             settings = fetch_user_settings(wstoken=self.get_wstoken(user_id), userid=user_id)
             self.set_state(user_id, SETTINGS, settings)
 
+    
+    @PublishSubscribe(sub_topics=["settings"])
+    def settings_changed(self, user_id: int, settings: dict):
+        self.set_state(user_id, SETTINGS, UserSettings(**settings))
+
     @PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state"])
     def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct):
         """ Responsible for reacting to events from mooodle.
@@ -281,11 +286,6 @@ class ELearningPolicy(Service):
                     next_quiz_link=next_quiz_link
                 ))]}             
             # only in review loop comment on improvements, otherwise absolute grade only
-        elif event_name == "\\block_chatbot\\event\\usersettings_changed":
-            moodle_event.pop("eventname")
-            moodle_event.pop("id")
-            self.set_state(user_id, SETTINGS, UserSettings(**moodle_event))
-
 
     def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: WeeklySummary):
         # calculate offet from beginning of day and current time
