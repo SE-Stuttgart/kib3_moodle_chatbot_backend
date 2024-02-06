@@ -15,6 +15,7 @@ This repository contains the code for the chatbot server backend.
 2. Change the line starting with `MOOLDE_SERVER_PROTOCOL` to 
 `MOOLDE_SERVER_PROTOCOL = "https"`, if your Moodle instance uses SSL.
 3.  Replace the value `webserver` in line `MOODLE_SERVER_WEB_HOST = 'webserver'` with the IP address (and port, if not on default `80` port) of your Moodle server, e.g. `"127.0.0.1"` or `"127.0.0.1:8081"`
+4. Make sure to open the port specified in the variable `DS_SERVER_PORT` (default: `44123`). This port should be enabled for tcp and websocket communication.
 
 ## Running the Server
 1. Activate your virtual environment, e.g.

@@ -6,6 +6,7 @@ import tornado.websocket
 import json
 import asyncio
 
+import config
 from services.service import PublishSubscribe, Service, DialogSystem
 # from utils.logger import DiasysLogger, LogLevel
 
@@ -224,6 +225,6 @@ def make_app():
 
 if __name__ == "__main__":
     app = make_app()
-    app.listen(44123)
+    app.listen(config.DS_SERVER_PORT)
     print("Starting tornado...")
     tornado.ioloop.IOLoop.current().start()
