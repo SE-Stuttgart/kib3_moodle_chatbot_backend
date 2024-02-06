@@ -412,7 +412,7 @@ class ELearningPolicy(Service):
             if closest_badge_info.completion_percentage >= min_progress:
                 # only display progress towards next closest batch if user is sufficiently close
                 return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
-                            badge_name=closest_badge_info.name, percentage_done=closest_badge_info,
+                            badge_name=closest_badge_info.name, percentage_done=closest_badge_info.completion_percentage,
                             missing_activities=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=cmid)
                                                 for cmid in closest_badge_info.open_modules]
                     ))
