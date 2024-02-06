@@ -12,9 +12,6 @@ def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTe
     Args:
         word_context_length: how many words before and after the search term should be included in search result
     """
-    print("course_id", course_id)
-    print("searchTerm", searchTerm)
-    print("Adress: ", f"{config.MOOLDE_SERVER_PROTOCOL}://{config.MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php")
     http_client = httplib2.Http(".cache")
     body={
             "wstoken": wstoken,

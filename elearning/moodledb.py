@@ -7,7 +7,7 @@ import json
 from typing import List, Tuple, Union
 import urllib
 
-from config import MOODLE_SERVER_URL, MOODLE_SERVER_WEB_HOST, MOOLDE_SERVER_PROTOCOL
+from config import MOODLE_SERVER_WEB_HOST, MOOLDE_SERVER_PROTOCOL
 
 
 @dataclass
@@ -130,7 +130,7 @@ def api_call(wstoken: str, wsfunction: str, params: dict):
 		return data
 	except:
 		print(traceback.format_exc())
-		return {f"{MOODLE_SERVER_URL}": f"Fehler beim ausführen der Funktion {wsfunction}"}
+		return {f"Fehler": f"Fehler beim ausführen der Funktion {wsfunction}"}
 	
 
 def fetch_user_settings(wstoken: str, userid: int) -> UserSettings:
