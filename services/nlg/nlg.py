@@ -298,8 +298,8 @@ class ELearningNLG(Service):
         return [(f"""Folgende Abschnitte hast du angefangen, aber noch nicht abgeschlossen:
                 {self._enumeration(next_available_modules)}
                 
-                Klicke eine der Optionen, oder willst du lieber etwas Anderes lernen?""", [
-                    "Weitermachen", "Etwas Anderes lernen" 
+                Klicke eine der Optionen, oder willst du lieber etwas anderes lernen?""", [
+                    "Weitermachen", "Etwas anderes lernen" 
                 ])]
     
     def inform_next_options(self, next_available_sections):
@@ -308,8 +308,8 @@ class ELearningNLG(Service):
         return [(f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
                 {self._enumeration(items=next_available_sections)}
                 
-                Klicke eine der Optionen, oder willst du lieber etwas Anderes lernen?""", [
-                    "Etwas Anderes lernen"
+                Klicke eine der Optionen, oder willst du lieber etwas anderes lernen?""", [
+                    "Etwas anderes lernen"
                 ])]
     
     def inform_starter_module(self, module_link: str):
