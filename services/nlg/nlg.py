@@ -388,7 +388,9 @@ class ELearningNLG(Service):
         elif sys_act.type == SysActionType.InformNextOptions:
             return self.inform_next_options
         elif sys_act.type == SysActionType.InformStarterModule:
-            return self.inform_starter_module
+            # skip message, if no more modules are available
+            if sys_act.slot_values['module_link'] != None:
+                return self.inform_starter_module
         elif sys_act.type == SysActionType.InformLastViewedCourseModule:
             return self.inform_last_viewed_course_module
         elif sys_act.type == SysActionType.InformSearchResults:

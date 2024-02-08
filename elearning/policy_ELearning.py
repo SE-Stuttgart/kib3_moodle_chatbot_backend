@@ -350,9 +350,18 @@ class ELearningPolicy(Service):
     def get_first_section_link(self, user_id: int, courseid: int) -> str:
         sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
         # ignore section 0, return first section
+        earliest_section = None
         for section in sections:
+            if section.section < 1:
+                # skip introduction section
+                continue 
             if section.section == 1:
                 return section.url
+            if earliest_section is None:
+                earliest_section = section
+            elif earliest_section.section > section.section:
+                earliest_section = section
+        return earliest_section.url
 
         
     def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
@@ -362,12 +371,24 @@ class ELearningPolicy(Service):
         last_weekly_summary = fetch_last_user_weekly_summary(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
 
         if last_weekly_summary.first_turn_ever:
-            # user is seeing chatbot for the first time - show some introduction & ice cream game
+            # user is seeing chatbot for the first time
             first_section_link = self.get_first_section_link(user_id=user_id, courseid=courseid)
-            return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
+            if last_weekly_summary.first_week:
+                # user has not yet completed any modules: show some introduction & ice cream game
+                return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
+                        SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
+                            module_link=first_section_link
+                        ))]
+            else:
+                # user has completed some modules: show course summary, and next course section
+                slot_values = self.get_stat_summary(user_id=user_id, courseid=courseid, update_db=True)
+                return [
+                    SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
+                    SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values),
                     SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                        module_link=first_section_link
-                    ))]
+                            module_link=first_section_link
+                ))]
+
         
         # Add greeting
         acts.append(SysAct(act_type=SysActionType.Welcome, slot_values={}))
