@@ -207,7 +207,7 @@ def fetch_available_new_course_section_ids(wstoken: str, userid: int, courseid: 
 		userid=userid,
 		courseid=courseid
 	))
-	return [SectionInfo(**res) for res in response]
+	return filter(lambda info: info.firstcmid is not None, [SectionInfo(**res) for res in response])
 
 def fetch_icecreamgame_course_module_id(wstoken: str, courseid: int) -> int:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_icecreamgame_course_module_id", params=dict(
