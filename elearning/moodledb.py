@@ -109,29 +109,25 @@ def api_call(wstoken: str, wsfunction: str, params: dict):
 			"moodlewsrestformat": "json",
 			**params
 	}
-	try:
-		response = http_client.request(f"{MOOLDE_SERVER_PROTOCOL}://{MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php",
-			method="POST",
-			headers={'Content-type': 'application/x-www-form-urlencoded'},
-			body=urllib.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode
-		response = response.strip()
-		# print("response: ", response)
-		start_pos = 0
-		end_pos = len(response)
-		if response.startswith(b"<script"):
-			# remove debugging console log from response
-			start_pos = response.rfind(b"</script>") + len(b"</script>")
-		
-		# Extracst the JSON part
-		json_part = response[start_pos:end_pos + 1]
-		# Decode the JSON part and parse it
-		data = json.loads(json_part.decode().strip('"').replace("\\/", "/").replace('\/', '/'))
-
-		return data
-	except:
-		print(traceback.format_exc())
-		return {f"Fehler": f"Fehler beim ausführen der Funktion {wsfunction}"}
+	response = http_client.request(f"{MOOLDE_SERVER_PROTOCOL}://{MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php",
+		method="POST",
+		headers={'Content-type': 'application/x-www-form-urlencoded'},
+		body=urllib.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode
+	response = response.strip()
+	# print("response: ", response)
+	start_pos = 0
+	end_pos = len(response)
+	if response.startswith(b"<script"):
+		# remove debugging console log from response
+		start_pos = response.rfind(b"</script>") + len(b"</script>")
 	
+	# Extracst the JSON part
+	json_part = response[start_pos:end_pos + 1]
+	# Decode the JSON part and parse it
+	data = json.loads(json_part.decode().strip('"').replace("\\/", "/").replace('\/', '/'))
+
+	return data
+
 
 def fetch_user_settings(wstoken: str, userid: int) -> UserSettings:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_usersettings", params=dict(userid=userid))

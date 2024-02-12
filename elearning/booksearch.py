@@ -1,5 +1,6 @@
 from collections import defaultdict
 import json
+import logging
 import traceback
 from typing import Dict, List, Tuple
 import httplib2
@@ -63,7 +64,7 @@ def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTe
             counter += 1
         return files, has_more_results
     except:
-        print(traceback.format_exc())
+        logging.getLogger("error_log").error(traceback.format_exc())
         return {"FEHLER": ["Fehler bei der Suche"]}, False
 
 if __name__ == "__main__":

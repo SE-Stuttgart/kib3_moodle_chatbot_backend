@@ -10,13 +10,17 @@ import asyncio
 
 import config
 from services.service import PublishSubscribe, Service, DialogSystem
-from utils.logger import DiasysLogger, LogLevel
+from utils.logger import configure_error_logger
 
 io_loop = tornado.ioloop.IOLoop.current()
 asyncio.set_event_loop(io_loop.asyncio_loop)
 
-error_logger = DiasysLogger(name="error_log", console_log_lvl=LogLevel.WARNING, file_log_lvl=LogLevel.WARNING,
-                            logfile_folder="./logs", logfile_basename="server_errors")
+configure_error_logger()
+
+
+logging.getLogger("error_log").warning("ARGH")
+logging.getLogger("error_log").error("ARGH")
+logging.getLogger("error_log").info("ARGH")
 
 def load_elearning_domain():
     print("LOADING ELEARNING DOMAIN")
