@@ -171,11 +171,12 @@ def fetch_has_seen_any_course_modules(wstoken: str, userid: int, courseid: int) 
 	))
 	return response['seen']
 
-def fetch_last_viewed_course_modules(wstoken: str, userid: int, courseid: int, completed: bool) -> List[CourseModuleAccess]:
+def fetch_last_viewed_course_modules(wstoken: str, userid: int, courseid: int, completed: bool, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame") -> List[CourseModuleAccess]:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_last_viewed_course_modules", params=dict(
 		userid=userid,
 		courseid=courseid,
-		completed=int(completed)
+		completed=int(completed),
+		includetypes=includetypes
 	))
 	results = []
 	for result in response:
