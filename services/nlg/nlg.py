@@ -296,7 +296,7 @@ class ELearningNLG(Service):
                 {self._enumeration(next_available_modules)}
                 
                 Klicke eine der Optionen, oder willst du lieber etwas anderes lernen?""", [
-                    "Weitermachen", "Etwas anderes lernen" 
+                    "Etwas anderes lernen" 
                 ])]
     
     def inform_next_options(self, next_available_sections):
