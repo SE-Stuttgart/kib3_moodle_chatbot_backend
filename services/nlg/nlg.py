@@ -26,7 +26,6 @@ from datetime import datetime
 from services.service import PublishSubscribe
 from services.service import Service
 from utils.domain.domain import Domain
-from utils.logger import DiasysLogger
 from utils.sysact import SysAct, SysActionType
 from typing import Dict, List, Union
 
@@ -48,11 +47,9 @@ class ELearningNLG(Service):
         template_german (str): the name of the German NLG template file
         language (Language): the language of the dialogue
     """
-    def __init__(self, domain: Domain, template_file: str = None, sub_topic_domains: Dict[str, str] = {},
-                 logger: DiasysLogger = DiasysLogger()):
+    def __init__(self, domain: Domain, template_file: str = None, sub_topic_domains: Dict[str, str] = {}):
         """Constructor mainly extracts methods and rules from the template file"""
         Service.__init__(self, domain=domain, sub_topic_domains=sub_topic_domains)
-        self.logger = logger
 
     ###
     ### Helper functions
@@ -427,10 +424,6 @@ class ELearningNLG(Service):
         if moodle_event['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
             self.clear_memory(user_id)
 
-    def log_dialog_turn(self, msg: str):
-        if not isinstance(self.logger, type(None)):
-            self.logger.dialog_turn(msg)
-
     @PublishSubscribe(sub_topics=["sys_acts"], pub_topics=["sys_utterance"])
     def publish_system_utterance(self, user_id: str, sys_acts: List[SysAct] = None) -> dict(sys_utterance=List[str]):
         """Generates the system utterance and publishes it.
@@ -445,8 +438,6 @@ class ELearningNLG(Service):
         for sys_act in sys_acts:
             message_fn = self.get_message_fn(sys_act)
             messages += message_fn(**sys_act.slot_values)
-        for message in messages:
-            self.log_dialog_turn(f"# USER {user_id} # NLG - {message}")
         
         if len(messages) == 0:
             messages += self.bad_act()

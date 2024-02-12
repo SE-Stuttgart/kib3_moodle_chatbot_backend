@@ -30,6 +30,7 @@ class LogLevel(IntEnum):
     DIALOGS = 18
     RESULTS = 19
     INFO = 20
+    WARNING = 30
     ERRORS = 40
     NONE = 100
 
@@ -37,6 +38,7 @@ class LogLevel(IntEnum):
 # register log levels
 logging.addLevelName(int(LogLevel.DIALOGS), 'DIALOGS')
 logging.addLevelName(int(LogLevel.RESULTS), 'RESULTS')
+logging.addLevelName(int(LogLevel.WARNING), "WARNING")
 logging.addLevelName(int(LogLevel.NONE), 'NONE')
 
 

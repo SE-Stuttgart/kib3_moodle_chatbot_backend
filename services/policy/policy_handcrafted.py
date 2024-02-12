@@ -149,8 +149,6 @@ class HandcraftedPolicy(Service):
         # handle domain specific actions
         else:
             sys_act, sys_state = self._next_action(beliefstate)
-        if self.logger:
-            self.logger.dialog_turn("System Action: " + str(sys_act))
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
         return {'sys_acts': [sys_act], "sys_state": sys_state}

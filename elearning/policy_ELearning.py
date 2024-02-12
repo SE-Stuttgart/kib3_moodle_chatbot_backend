@@ -29,7 +29,6 @@ from services.service import PublishSubscribe
 from services.service import Service
 from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
-from utils.logger import DiasysLogger
 from utils import UserAct
 from elearning.moodledb import UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
@@ -95,8 +94,7 @@ class ELearningPolicy(Service):
 
     """
 
-    def __init__(self, domain: JSONLookupDomain, logger: DiasysLogger = DiasysLogger(),
-                 max_turns: int = 25):
+    def __init__(self, domain: JSONLookupDomain, max_turns: int = 25):
         """
         Initializes the policy
 
@@ -105,16 +103,10 @@ class ELearningPolicy(Service):
 
         """
         Service.__init__(self, domain=domain)
-        self.logger = logger
         self.max_turns = max_turns
         self.session = None
         self.session_lock = threading.Lock()
         self.webservice_user_id = None
-
-    def log_dialog_turn(self, msg: str):
-        if not isinstance(self.logger, type(None)):
-            self.logger.dialog_turn(msg)
-
 
     def get_webservice_user_id(self, user_id: int):
         return self.get_state(user_id, "WSUSERID")
@@ -515,8 +507,6 @@ class ELearningPolicy(Service):
             # print first turn message
             sys_acts = self.choose_greeting(user_id, courseid)
             sys_state["last_act"] = sys_acts
-            for sys_act in sys_acts:
-                self.log_dialog_turn(f"# USER {user_id} # POLICY - {sys_act}")
             return {'sys_acts': sys_acts, "sys_state": sys_state}
         # after first turn
         self.reset_search_term(user_id=user_id, user_acts=user_acts)
@@ -590,7 +580,6 @@ class ELearningPolicy(Service):
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[]) 
             self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.DEFAULT)
         sys_state["last_act"] = sys_acts
-        self.log_dialog_turn(f"# USER {user_id} # POLICY - {sys_acts}")
         return {'sys_acts':  sys_acts, "sys_state": sys_state}
 
     def get_user_next_module(self, userid: int, courseid: int, add_last_viewed_course_module: bool = False, current_section_id: int = None) -> List[SysAct]:
