@@ -51,6 +51,7 @@ REVIEW_QUIZZES = "review_quizzes"
 CURRENT_REVIEW_QUIZ = "current_review_quiz"
 REVIEW_QUIZ_IMPROVEMENTS = "review_quiz_improvements"
 LAST_FINISHED_SECTION_ID = 'last_finished_section'
+NEXT_MODULE_SUGGESTIONS = 'next_module_suggestions'
 SETTINGS = 'settings'
 
 learning_material_types = ["url", "book", "resource"]
@@ -168,6 +169,7 @@ class ELearningPolicy(Service):
             self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
             self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
+            self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
 
             # get user settings
             settings = fetch_user_settings(wstoken=self.get_wstoken(user_id), userid=user_id)
@@ -208,9 +210,12 @@ class ELearningPolicy(Service):
         elif event_name == "\\core\\event\\course_module_completion_updated":
             # check if we finished a whole branch
             # TODO if so, offer congratulations, the review, and then next possibilities?
+            cmid = moodle_event['contextinstanceid']
+
+            # remove completed module from next module suggestion list s.t. user doesn't get the completed module as new suggestion
+            self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, filter(lambda sec_info: sec_info.firstcmid != cmid, self.get_state(user_id, NEXT_MODULE_SUGGESTIONS)))
 
             # find current section id from course module
-            cmid = moodle_event['contextinstanceid']
             section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(user_id), cmid=cmid)
             branch_review_info = fetch_branch_review_quizzes(wstoken=self.get_wstoken(user_id), userid=user_id, sectionid=section_id)
             self.set_state(user_id, REVIEW_QUIZZES, branch_review_info.candidates)
@@ -225,6 +230,9 @@ class ELearningPolicy(Service):
                 # did we complete a full section?
                 section_completed = fetch_section_completionstate(wstoken=self.get_wstoken(user_id), userid=user_id, sectionid=section_id)
                 if section_completed:
+                    # reset current list of next module suggestions, because we will unlock new ones here
+                    self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
+
                     # we get this event for each of the modules in a section with different materials (i.e., once for video, once for pdf, once for book):
                     # check that we didn't already offer congratulations, otherwise the autocomplete plugin will trigger this event for each material type
                     last_completed_section_id = self.get_state(user_id, LAST_FINISHED_SECTION_ID)
@@ -263,13 +271,10 @@ class ELearningPolicy(Service):
                                                                  include_types='h5pactivity', allow_only_unfinished=True, current_cm_completion=True)
             if next_quiz_id is None:
                 # there are no more quizzes in the current section - suggest to move on to new section
-                available_new_course_sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid=user_id), userid=user_id, courseid=moodle_event['courseid'])
                 sys_acts = [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
                             success_percentage=success_percentage,
                             next_quiz_link=None))]
-                sys_acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=section.firstcmid, alternative_display_text=section.name) for section in available_new_course_sections]
-                        )))
+                sys_acts.append(self.fetch_n_next_available_course_sections(userid=user_id, courseid=moodle_event['courseid']))
                 return {"sys_acts": sys_acts}
             else:
                 next_quiz_link = fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=next_quiz_id, alternative_display_text="nächste Quiz") if next_quiz_id else None
@@ -478,6 +483,28 @@ class ELearningPolicy(Service):
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH, attribute_value=search_term)
         return book_links, has_more_results
     
+    def fetch_n_next_available_course_sections(self, userid: int, courseid: int, max_display_options: int = 5) -> SysAct:
+        # see if we currently have a list of next course id's that we can cycle through
+        available_new_course_section_ids = self.get_state(userid, NEXT_MODULE_SUGGESTIONS)
+        if len(available_new_course_section_ids) == 0:
+            # we don't have any suggestions -> fetch all possible next sections
+            available_new_course_section_ids = [section for section in 
+                                                fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
+                                                if section.section > 0]
+        # extract n next suggestions. if we have none, the NLG will handle it.
+        next_suggestions = available_new_course_section_ids[:max_display_options]
+        remaining_suggestions = available_new_course_section_ids[max_display_options:]
+        act = SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
+                    has_more=len(remaining_suggestions) > 0,
+                    next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(userid),
+                                                                cmid=section.firstcmid, alternative_display_text=section.name) 
+                                                for section in next_suggestions])
+        )
+        # truncate list of next suggestions
+        self.set_state(userid, NEXT_MODULE_SUGGESTIONS, remaining_suggestions)
+        return act
+        
+    
     @PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state"])
     def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct):
         """
@@ -528,12 +555,7 @@ class ELearningPolicy(Service):
                     sys_acts.append(SysAct(act_type=SysActionType.DisplayQuiz, slot_values={"quiz_embed": None}))
                 self.set_state(user_id, REVIEW_QUIZZES, review_candidates[1:])
             elif user_act.type == UserActionType.RequestNextSection:
-                available_new_course_sections = [section for section in
-                    fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
-                    if section.section > 0]
-                sys_acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=section.firstcmid, alternative_display_text=section.name) for section in available_new_course_sections]
-                        )))
+                sys_acts.append(self.fetch_n_next_available_course_sections(userid=user_id, courseid=courseid))
             elif user_act.type == UserActionType.RequestProgress:
                 slot_values = self.get_stat_summary(user_id=user_id, courseid=courseid)
                 sys_acts.append(SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values))
@@ -634,13 +656,7 @@ class ELearningPolicy(Service):
             # TODO: Deadline reminder
                 if all_sections_completed:
                     # user has completed all started sections, should get choice of next new and available sections
-                    available_new_course_section_ids = [section for section in 
-                                                        fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
-                                                        if section.section > 0]
-                    acts.append(SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
-                                    next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(userid), cmid=section.firstcmid, alternative_display_text=section.name) for section in available_new_course_section_ids]
-                            )))
-            
+                    acts.append(self.fetch_n_next_available_course_sections(userid=userid, courseid=courseid))
             else:
                 # has seen modules, but none completed or really started
                 # return first module in course, e.g. ice cream game

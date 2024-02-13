@@ -299,15 +299,22 @@ class ELearningNLG(Service):
                     "Etwas anderes lernen" 
                 ])]
     
-    def inform_next_options(self, next_available_sections):
+    def inform_next_options(self, next_available_sections, has_more: bool):
         if len(next_available_sections) == 0:
             return [(f"""Du hast bereits alle Abschnitte abgeschlossen! 🎉🎉🎉""", [])]
-        return [(f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
-                {self._enumeration(items=next_available_sections)}
-                
-                Klicke eine der Optionen, oder willst du lieber etwas anderes lernen?""", [
-                    "Etwas anderes lernen"
-                ])]
+        
+        text = f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
+                {self._enumeration(items=next_available_sections)}"""
+        if has_more:
+            text += "\nKlicke eine der Optionen, oder willst du lieber etwas anderes lernen?"
+        else:
+            text += "\nWähle einfach eine der Optionen aus."
+
+        answer_options = []
+        if has_more:
+            answer_options.append("Etwas anderes lernen")
+
+        return [(text, answer_options)]
     
     def inform_starter_module(self, module_link: str):
         return [(f"Klicke einfach {module_link}, um direkt einzusteigen!", [

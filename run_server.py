@@ -18,10 +18,6 @@ asyncio.set_event_loop(io_loop.asyncio_loop)
 configure_error_logger()
 
 
-logging.getLogger("error_log").warning("ARGH")
-logging.getLogger("error_log").error("ARGH")
-logging.getLogger("error_log").info("ARGH")
-
 def load_elearning_domain():
     print("LOADING ELEARNING DOMAIN")
     from elearning.policy_ELearning import ELearningPolicy
