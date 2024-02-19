@@ -7,8 +7,8 @@ DS_SERVER_PORT = 44123 # Port under which the chatbot should accept websocket co
 
 # SSL OPTIONS
 if MOOLDE_SERVER_PROTOCOL == "https":
-    SSL_CERT_FILE = "/etc/ssl/certs/" + os.environ['MOODLE_SERVER_SSL_CERTIFICATE_FILE'] # Full path to SSL certificate file, e.g. "/etc/ssl/certs/mycertificate.crt"
-    SSL_PRIVATE_KEY_FILE = "/etc/ssl/private/" + os.environ['MOODLE_SERVER_SSL_PRIVATE_KEY_FILE'] # Full path to SSL key file, e.g. "/etc/ssl/private/mykey.key"
+    SSL_CERT_FILE = "/etc/ssl/certs/moodle_certificate.crt" # Full path to SSL certificate file, e.g. "/etc/ssl/certs/mycertificate.crt"
+    SSL_PRIVATE_KEY_FILE = "/etc/ssl/private/moodle.key" # Full path to SSL key file, e.g. "/etc/ssl/private/mykey.key"
 
 ##
 ## INTERNAL CONFIGURATION
