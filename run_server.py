@@ -237,7 +237,7 @@ if __name__ == "__main__":
     ssl_options = {
         "certfile": config.SSL_CERT_FILE,
         "keyfile": config.SSL_PRIVATE_KEY_FILE,
-    } if config.MOOLDE_SERVER_PROTOCOL == "https" else {}
+    } if config.MOOLDE_SERVER_PROTOCOL == "https" else None
     http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
     http_server.listen(config.DS_SERVER_PORT)
     print("Starting tornado...")
