@@ -213,7 +213,7 @@ class ELearningPolicy(Service):
             cmid = moodle_event['contextinstanceid']
 
             # remove completed module from next module suggestion list s.t. user doesn't get the completed module as new suggestion
-            self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, filter(lambda sec_info: sec_info.firstcmid != cmid, self.get_state(user_id, NEXT_MODULE_SUGGESTIONS)))
+            self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, list(filter(lambda sec_info: sec_info.firstcmid != cmid, self.get_state(user_id, NEXT_MODULE_SUGGESTIONS))))
 
             # find current section id from course module
             section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(user_id), cmid=cmid)
