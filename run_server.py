@@ -234,6 +234,11 @@ def make_app():
 
 if __name__ == "__main__":
     app = make_app()
-    app.listen(config.DS_SERVER_PORT)
+    ssl_options = {
+        "certfile": "/etc/ssl/certs/moodle_certificate.crt",
+        "keyfile": "/etc/ssl/private/moodle.key",
+    } if config.MOOLDE_SERVER_PROTOCOL == "https" else {}
+    http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
+    http_server.listen(config.DS_SERVER_PORT)
     print("Starting tornado...")
     tornado.ioloop.IOLoop.current().start()

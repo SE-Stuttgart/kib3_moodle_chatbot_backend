@@ -1,6 +1,5 @@
 # coding: utf-8
 import datetime
-import traceback
 import httplib2
 from dataclasses import dataclass
 import json
@@ -102,7 +101,7 @@ class SectionInfo:
 	firstcmid: int
 
 def api_call(wstoken: str, wsfunction: str, params: dict):
-	http_client = httplib2.Http(".cache")
+	http_client = httplib2.Http(".cache", disable_ssl_certificate_validation=True)
 	body={
 			"wstoken": wstoken,
 			"wsfunction": wsfunction,
