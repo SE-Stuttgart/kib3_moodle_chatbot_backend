@@ -54,7 +54,7 @@ LAST_FINISHED_SECTION_ID = 'last_finished_section'
 NEXT_MODULE_SUGGESTIONS = 'next_module_suggestions'
 SETTINGS = 'settings'
 
-learning_material_types = ["url", "book", "resource"]
+learning_material_types = ["url", "book", "resource", "icecreamgame"]
 assignment_material_types = ['h5pactivity']# query day-wise completions
 
 
@@ -307,18 +307,26 @@ class ELearningPolicy(Service):
 
             # add module completions and quiz completions together.
             # module completions are divided by 3, because the autocomplete plugin always ensures 3 completions per module
+            # completed = fetch_viewed_course_modules_count(wstoken=self.get_wstoken(user_id),
+            #                                               userid=user_id,
+            #                                               courseid=courseid,
+            #                                               include_types=",".join(learning_material_types),
+            #                                               starttime=start_time,
+            #                                               endtime=end_time) / 3
+            # completed += fetch_viewed_course_modules_count(wstoken=self.get_wstoken(user_id),
+            #                                               userid=user_id,
+            #                                               courseid=courseid,
+            #                                               include_types=",".join(assignment_material_types),
+            #                                               starttime=start_time,
+            #                                               endtime=end_time)
+            
+            # We decided not to divide contents by 3, because this doesn't work consistently across later sections in ZQ as well as DQR.
             completed = fetch_viewed_course_modules_count(wstoken=self.get_wstoken(user_id),
-                                                          userid=user_id,
-                                                          courseid=courseid,
-                                                          include_types=",".join(learning_material_types),
-                                                          starttime=start_time,
-                                                          endtime=end_time) / 3
-            completed += fetch_viewed_course_modules_count(wstoken=self.get_wstoken(user_id),
-                                                          userid=user_id,
-                                                          courseid=courseid,
-                                                          include_types=",".join(assignment_material_types),
-                                                          starttime=start_time,
-                                                          endtime=end_time)
+                                                    userid=user_id,
+                                                    courseid=courseid,
+                                                    include_types=",".join(learning_material_types + assignment_material_types),
+                                                    starttime=start_time,
+                                                    endtime=end_time)
             if day < 7:
                 last_week_data.append(completed)
                 last_week_days.append(day_name)
