@@ -219,7 +219,8 @@ class UserSettingsHandler(tornado.web.RequestHandler):
     def post(self):
         try:
             settings_data = json.loads(self.request.body)
-            user_id = int(settings_data.pop("userid"))
+            settings_id = int(settings_data.pop("id"))
+            user_id = int(settings_data["userid"])
             gui_service.settings_changed(user_id=user_id, settings=settings_data)
         except:
             # Log error
