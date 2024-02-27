@@ -222,7 +222,7 @@ def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmi
 	return response['cmid']
 
 def fetch_viewed_course_modules_count(wstoken: str, userid: int, courseid: int, include_types: str, starttime: datetime.datetime, endtime: datetime.datetime) -> int:
-	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_count_viewed_course_modules", params=dict(
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_count_completed_course_modules", params=dict(
 		userid=userid,
 		courseid=courseid,
 		includetypes=include_types,
