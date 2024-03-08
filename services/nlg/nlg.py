@@ -126,7 +126,7 @@ class ELearningNLG(Service):
             return self.welcomemsg
 
     def welcomemsg_first_turn_ever(self, first_turn: bool):
-        return  [("""Hallo, ich bin der Moodle Assistent!
+        return  [("""Hallo, ich bin Kibi, der Moodle Assistent!
         Ich kann dir helfen bei:
         <ul>
             <li>Suche nach Inhalten</li>
