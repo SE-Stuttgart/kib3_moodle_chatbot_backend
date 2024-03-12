@@ -117,10 +117,10 @@ class ELearningPolicy(Service):
         return datetime.fromtimestamp(int(time.time()) + difference)
 
     @PublishSubscribe(pub_topics=['control_event'])
-    def open_chatbot(self, user_id: int, context: ChatbotOpeningContext):
+    def open_chatbot(self, user_id: int, context: ChatbotOpeningContext, force: bool = False):
         """ Triggers the UI chatwindow to open, respecting the opening context and the user settings """
         if self.check_setting(user_id, 'enabled'):
-            if context == ChatbotOpeningContext.DEFAULT or self.check_setting(user_id=user_id, setting_key=context.value):
+            if force or (context == ChatbotOpeningContext.DEFAULT or self.check_setting(user_id=user_id, setting_key=context.value)):
                 return {
                     "control_event": "UI_OPEN",
                     "user_id": user_id
@@ -377,6 +377,7 @@ class ELearningPolicy(Service):
 
         if last_weekly_summary.first_turn_ever:
             # user is seeing chatbot for the first time
+            self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.LOGIN, force=True)
             first_section_link = self.get_first_section_link(user_id=user_id, courseid=courseid)
             if last_weekly_summary.first_week:
                 # user has not yet completed any modules: show some introduction & ice cream game
@@ -394,7 +395,6 @@ class ELearningPolicy(Service):
                             module_link=first_section_link
                 ))]
 
-        
         # Add greeting
         acts.append(SysAct(act_type=SysActionType.Welcome, slot_values={}))
 

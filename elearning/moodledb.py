@@ -16,6 +16,7 @@ class UserSettings:
 	preferedcontenttypeid: int
 
 	enabled: bool
+	firstturn: bool
 	logging: bool
 	numsearchresults: int
 	numreviewquizzes: int
