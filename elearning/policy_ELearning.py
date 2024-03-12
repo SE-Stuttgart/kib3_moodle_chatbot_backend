@@ -30,7 +30,7 @@ from services.service import Service
 from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils import UserAct
-from elearning.moodledb import UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 # from dotenv import load_dotenv
 import os
@@ -59,7 +59,6 @@ assignment_material_types = ['h5pactivity']# query day-wise completions
 
 
 COURSE_PROGRESS_DISPLAY_PERCENTAGE_INCREMENT = 0.1
-
 
 
 class ChatbotWindowSize(Enum):
@@ -273,16 +272,17 @@ class ELearningPolicy(Service):
                 # there are no more quizzes in the current section - suggest to move on to new section
                 sys_acts = [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
                             success_percentage=success_percentage,
-                            next_quiz_link=None))]
+                            url=None, displaytext=None, typename=None))]
                 sys_acts.append(self.fetch_n_next_available_course_sections(userid=user_id, courseid=moodle_event['courseid']))
                 return {"sys_acts": sys_acts}
             else:
-                next_quiz_link = fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=next_quiz_id, alternative_display_text="nächste Quiz") if next_quiz_id else None
+                next_quiz_link = fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=next_quiz_id) if next_quiz_id else None
                 return {"sys_acts": [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
                     success_percentage=success_percentage,
-                    next_quiz_link=next_quiz_link
+                    **next_quiz_link.to_dict("nächste Quiz")
                 ))]}             
             # only in review loop comment on improvements, otherwise absolute grade only
+
 
     def get_weekly_progress(self, user_id: int, courseid: int, last_weekly_summary: WeeklySummary):
         # calculate offet from beginning of day and current time
@@ -439,7 +439,7 @@ class ELearningPolicy(Service):
                 # only display progress towards next closest batch if user is sufficiently close
                 return SysAct(act_type=SysActionType.DisplayBadgeProgress, slot_values=dict(
                             badge_name=closest_badge_info.name, percentage_done=closest_badge_info.completion_percentage,
-                            missing_activities=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=cmid)
+                            missing_activities=[fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=cmid).to_dict()
                                                 for cmid in closest_badge_info.open_modules]
                     ))
             else:
@@ -505,7 +505,7 @@ class ELearningPolicy(Service):
         act = SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
                     has_more=len(remaining_suggestions) > 0,
                     next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(userid),
-                                                                cmid=section.firstcmid, alternative_display_text=section.name) 
+                                                                cmid=section.firstcmid).to_dict(section.name) 
                                                 for section in next_suggestions])
         )
         # truncate list of next suggestions
@@ -646,12 +646,12 @@ class ELearningPolicy(Service):
                 next_available_module_links = []
                 for cmid in next_modules.values():
                     section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(userid), cmid=cmid)
-                    next_available_module_links.append(fetch_content_link(wstoken=self.get_wstoken(userid), cmid=cmid, alternative_display_text=section_name))
+                    next_available_module_links.append(fetch_content_link(wstoken=self.get_wstoken(userid), cmid=cmid).to_dict(section_name))
 
                 # user has started, but not completed one or more sections
                 if add_last_viewed_course_module:
                     acts.append(SysAct(act_type=SysActionType.InformLastViewedCourseModule, slot_values=dict(
-                        last_viewed_course_module=fetch_content_link(wstoken=self.get_wstoken(userid), cmid=last_completed_course_module.cmid)
+                        last_viewed_course_module=fetch_content_link(wstoken=self.get_wstoken(userid), cmid=last_completed_course_module.cmid).to_dict()
                     )))
                 if len(next_available_module_links) > 0:
                     acts.append(

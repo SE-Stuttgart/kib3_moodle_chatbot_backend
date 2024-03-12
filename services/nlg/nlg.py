@@ -21,6 +21,7 @@
 
 import random
 import json
+import re
 from datetime import datetime
 
 from services.service import PublishSubscribe
@@ -67,6 +68,18 @@ class ELearningNLG(Service):
         return f""" <ul>
                     {" ".join(['<li>' + item + '</li>' for item in items])}
                 </ul>"""
+
+    def to_href(self, url: str, displaytext: str) -> str:
+        return f"""<a href="{url}">{displaytext}</a>"""
+    
+    def to_pdf_popup(self, url: str, displaytext: str) -> str:
+        return f'<button class="block-chatbot-content-link" data-toggle="modal" data-target="#block_chatbot_coursemoduleview" data-src="{url}" data-displaytext="{displaytext}">{displaytext}</button>'
+
+    def to_content_link(self, url: str, displaytext: str, typename: str) -> str:
+        if typename == "resource":
+            return self.to_pdf_popup(url=url, displaytext=displaytext)
+        else:
+            return self.to_href(url=url, displaytext=displaytext)
 
     ###
     ### Templates
@@ -237,7 +250,7 @@ class ELearningNLG(Service):
             ]))
         return msgs 
 
-    def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[str]):
+    def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[Dict[str, str]]):
         if badge_name == None:
             return [random.choice([
                         ("""Du hast bereits alle gerade verfügbaren Auszeichnungen erhalten 🎉
@@ -262,7 +275,7 @@ class ELearningNLG(Service):
             ]))
         msgs += [(self._donut_chart("Auszeichnungsfortschritt", percentage_done), []),
                 (f"""Wenn du noch
-                {self._enumeration(items=missing_activities)}
+                {self._enumeration(items=[self.to_content_link(**activtity_link_info) for activtity_link_info in missing_activities])}
 
                 fertig machst, kriegst du sie 😊""", [])]
         return msgs
@@ -284,25 +297,33 @@ class ELearningNLG(Service):
                 (f"Herzlichen Glückwunsch, du hast den Abschnitt {name} abgeschlossen! 🎉", []),
             ])]
     
-    def inform_last_viewed_course_module(self, last_viewed_course_module):
+    def inform_last_viewed_course_module(self, last_viewed_course_module: Dict[str, str]):
+        last_viewed_course_module_link = self.to_content_link(**last_viewed_course_module)
         return [random.choice([
-                    (f"Letztes Mal hast du {last_viewed_course_module} angesehen.", []),
-                    (f"{last_viewed_course_module} war der letzte Inhalt, den du angeschaut hast.", []),
-                    (f"Beim letzten Mal hast du hier aufgehört: {last_viewed_course_module}.", []),
+                    (f"Letztes Mal hast du {last_viewed_course_module_link} angesehen.", []),
+                    (f"{last_viewed_course_module_link} war der letzte Inhalt, den du angeschaut hast.", []),
+                    (f"Beim letzten Mal hast du hier aufgehört: {last_viewed_course_module_link}.", []),
                 ])]
 
-    def request_continue_or_next(self, next_available_modules):
+    def request_continue_or_next(self, next_available_modules: List[Dict[str, str]]):
         return [(f"""Folgende Abschnitte hast du angefangen, aber noch nicht abgeschlossen:
-                {self._enumeration(next_available_modules)}
+                {self._enumeration([self.to_content_link(**link_info) for link_info in next_available_modules])}
                 
                 Klicke eine der Optionen, oder willst du lieber etwas anderes lernen?""", [
                     "Etwas anderes lernen" 
                 ])]
     
+    def _get_url(self, html_link_element: str):
+        url_pattern = re.compile(r'<a\s+.*?href=["\'](.*?)["\'].*?>')
+        match = url_pattern.search(html_link_element)
+        url = match.group(1)
+        return url
+
     def inform_next_options(self, next_available_sections, has_more: bool):
         if len(next_available_sections) == 0:
             return [(f"""Du hast bereits alle Abschnitte abgeschlossen! 🎉🎉🎉""", [])]
         
+        next_available_sections = [self.to_content_link(**link_info) for link_info in next_available_sections]
         text = f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
                 {self._enumeration(items=next_available_sections)}"""
         if has_more:
@@ -345,7 +366,8 @@ class ELearningNLG(Service):
             ] if load_more else []
         )]
    
-    def feedback_to_quiz(self, success_percentage: float, next_quiz_link: str):
+
+    def feedback_to_quiz(self, success_percentage: float, url: str, displaytext: str, typename: str):
         msgs = []
         if success_percentage >= 99:
             # all questions correct
@@ -367,8 +389,8 @@ class ELearningNLG(Service):
             ]))
             if random.random() < 0.5:
                 msgs.append((f"Denk dran, dass du jederzeit Quizze wiederholen kannst, um dein Verständnis zu verbessern!", []))
-        if next_quiz_link:
-            msgs.append((f"Bereit für das {next_quiz_link}?", []))
+        if url:
+            msgs.append((f"Bereit für das {self.to_href(url=url, displaytext=displaytext)}?", []))
         return msgs
     
     def bad_act(self, **kwargs):

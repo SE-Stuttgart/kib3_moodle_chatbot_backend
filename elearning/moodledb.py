@@ -3,7 +3,7 @@ import datetime
 import httplib2
 from dataclasses import dataclass
 import json
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 import urllib
 
 from config import MOODLE_SERVER_WEB_HOST, MOOLDE_SERVER_PROTOCOL
@@ -100,6 +100,19 @@ class SectionInfo:
 	name: str
 	firstcmid: int
 
+@dataclass
+class ContentLinkInfo:
+	url: str
+	name: str
+	typename : str
+
+	def to_dict(self, alternative_displayname: str = None) -> Dict[str, str]:
+		return {
+			"url": self.url,
+			"displaytext": self.name if alternative_displayname is None else alternative_displayname,
+			"typename": self.typename
+		}
+
 def api_call(wstoken: str, wsfunction: str, params: dict):
 	http_client = httplib2.Http(".cache", disable_ssl_certificate_validation=True)
 	body={
@@ -191,12 +204,11 @@ def fetch_first_available_course_module_id(wstoken: str, userid: int, courseid: 
 	))
 	return response['cmid']
 
-def fetch_content_link(wstoken: str, cmid: int, alternative_display_text: str = "") -> str:
+def fetch_content_link(wstoken: str, cmid: int) -> ContentLinkInfo:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_course_module_content_link", params=dict(
 		cmid=cmid,
-		alternativedisplaytext=alternative_display_text
 	))
-	return response['url']
+	return ContentLinkInfo(**response)
 
 def fetch_available_new_course_section_ids(wstoken: str, userid: int, courseid: int) -> List[SectionInfo]:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_available_new_course_sections", params=dict(
