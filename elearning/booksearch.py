@@ -7,13 +7,18 @@ import httplib2
 import urllib
 import config
 
+http_client = httplib2.Http(".cache",
+                            disable_ssl_certificate_validation=True)
+
+# if config.MOOLDE_SERVER_PROTOCOL == "https":
+    # TODO add certificate
+    # http_client.add_certificate(key=config.SSL_PRIVATE_KEY_FILE, cert=config.SSL_CERT_FILE, domain=#TODO)
 
 def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTerm: str, word_context_length: int = 3, start=-1, end=-1) -> Tuple[Dict[str, List[str]], bool]:
     """
     Args:
         word_context_length: how many words before and after the search term should be included in search result
     """
-    http_client = httplib2.Http(".cache")
     body={
             "wstoken": wstoken,
             "wsfunction": "block_slidefinder_get_searched_locations",
