@@ -114,6 +114,14 @@ class ContentLinkInfo:
 			"typename": self.typename
 		}
 
+@dataclass
+class GlossaryItem:
+	id: int # id of glossary entry
+	glossaryid: int # id of glossary
+	concept: str # glossary entry concept name
+	definition: str # definition of concept
+
+
 def api_call(wstoken: str, wsfunction: str, params: dict):
 	http_client = httplib2.Http(".cache", disable_ssl_certificate_validation=True)
 	body={
@@ -293,3 +301,20 @@ def fetch_oldest_worst_grade_course_ids(wstoken: str, userid: int, courseid: int
 	))
 	return [QuizInfo(**res) for res in response]
 
+def fetch_glossary_search(wstoken: str, userid: int, courseid: int, searchterm: str, fullsearch: bool = True, startidx: int = 0, limit: int = 0) -> List[GlossaryItem]:
+	"""
+	Args:
+		fullsearch: whether to perform full search (including definition)
+		startidx: pagination start
+		limit: max. number of results to return, i.e. end index = startidx + limit for pagination.
+			   if startidx = 0 and limit = 0, this function will return all results
+	""" 
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_search_glossary", params=dict(
+		userid=userid,
+		courseid=courseid,
+		searchterm=searchterm,
+		fullsearch=int(fullsearch),
+		startidx=startidx,
+		limit=limit
+	))
+	return [GlossaryItem(**res) for res in response]
