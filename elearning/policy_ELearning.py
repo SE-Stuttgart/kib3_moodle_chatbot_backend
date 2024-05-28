@@ -152,7 +152,7 @@ class ELearningPolicy(Service):
         return getattr(self.get_state(user_id, SETTINGS), setting_key)
 
     def get_wstoken(self, userid: int):
-        return self.get_state(userid, 'SLIDEFINDERTOKEN')
+        return self.get_state(userid, 'BOOKSEARCHTOKEN')
 
     def dialog_start(self, user_id: str):
         """
@@ -485,7 +485,7 @@ class ELearningPolicy(Service):
             List of search results
             Boolean: if there are more search results
         """
-        book_links, has_more_results = get_book_links(webserviceuserid=self.get_webservice_user_id(user_id), wstoken=self.get_state(user_id, 'SLIDEFINDERTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=search_idx, end=search_idx+num_results)
+        book_links, has_more_results = get_book_links(webserviceuserid=self.get_webservice_user_id(user_id), wstoken=self.get_state(user_id, 'BOOKSEARCHTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=search_idx, end=search_idx+num_results)
         
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH_INDEX, attribute_value=search_idx + num_results)
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH, attribute_value=search_term)

@@ -21,7 +21,7 @@ def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTe
     """
     body={
             "wstoken": wstoken,
-            "wsfunction": "block_slidefinder_get_searched_locations",
+            "wsfunction": "block_booksearch_get_searched_locations",
             "moodlewsrestformat": "json",
             "searchstring": searchTerm,
             "courseid": course_id,
