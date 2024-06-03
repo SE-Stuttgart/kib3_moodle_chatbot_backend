@@ -9,6 +9,7 @@ import json
 import asyncio
 
 import config
+from elearning.moodledb import fetch_user_settings
 from services.service import PublishSubscribe, Service, DialogSystem
 from utils.logger import configure_error_logger
 
@@ -179,20 +180,28 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
                     print(" - booksearchtoken", booksearchtoken)
                     print(" - moodle timestamp", moodle_timestamp)
                     print(" - time difference moodle-chatbot", time_diff_chatbot_moodle)
-                    services_1[2].set_state(self.userid, "BOOKSEARCHTOKEN", booksearchtoken)
-                    services_1[2].set_state(self.userid, "SERVERTIMESTAMP", moodle_timestamp)
-                    services_1[2].set_state(self.userid, "WSUSERID", wsuserid)
-                    services_1[2].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
-                    services_1[-1].set_state(self.userid, "BOOKSEARCHTOKEN", booksearchtoken)
 
-                    ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid)
+                    # check if we can connect to the webservice.
+                    # If so, start the dialog - if not, close the connection.
+                    try:
+                        # this function call will fail if we can't connect to the webservice
+                        fetch_user_settings(wstoken=booksearchtoken, userid=self.userid)
+                    
+                        services_1[2].set_state(self.userid, "BOOKSEARCHTOKEN", booksearchtoken)
+                        services_1[2].set_state(self.userid, "SERVERTIMESTAMP", moodle_timestamp)
+                        services_1[2].set_state(self.userid, "WSUSERID", wsuserid)
+                        services_1[2].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
+                        services_1[-1].set_state(self.userid, "BOOKSEARCHTOKEN", booksearchtoken)
+
+                        ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid)
+                    except:
+                        # close the connection since we can't reach the webservice (yet).
+                        # UI should retry after waiting interval.
+                        self.close()
+                        logging.getLogger("error_log").error("MOODLE WEB SERVICE COULD NOT BE REACHED: " + traceback.format_exc()) 
                 elif topic == 'user_utterance':
-                    if services_1[2].dialog_started(self.userid):
-                        gui_service.websockets[self.userid] = self # set active websocket to last interaction (user might have multiple tabs open)
-                        gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])
-                    else:
-                        # dialog_start was not successfully called for the given user (can happen for admin after fresh install when web page is still open from old instance)
-                        ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid) 
+                    gui_service.websockets[self.userid] = self # set active websocket to last interaction (user might have multiple tabs open)
+                    gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])
         except:
             # Log error
             logging.getLogger("error_log").error(traceback.format_exc()) 
