@@ -268,12 +268,17 @@ class Service:
 
                 if topic == self._start_topic:
                     # initialize dialog state
-                    self.dialog_start(user_id=user_id)
-                    # set all listeners of this service to listening mode (block until they are listening)
-                    for internal_start_topic in self._internal_start_topics:
-                        _send_msg(self._control_channel_pub, internal_start_topic, True, user_id)
-                        _recv_ack(self._internal_control_channel_sub, internal_start_topic, True, user_id)
-                    _send_ack(self._control_channel_pub, self._start_topic, True, user_id)
+                    try:
+                        self.dialog_start(user_id=user_id)
+                        # set all listeners of this service to listening mode (block until they are listening)
+                        # only start listening if dialog start was executed successful.
+                        # if it throws an exception, wait for the next try of start_dialog 
+                        for internal_start_topic in self._internal_start_topics:
+                            _send_msg(self._control_channel_pub, internal_start_topic, True, user_id)
+                            _recv_ack(self._internal_control_channel_sub, internal_start_topic, True, user_id)
+                        _send_ack(self._control_channel_pub, self._start_topic, True, user_id)
+                    except:
+                        logging.getLogger("error_log").error("DIALOG_START: " + traceback.format_exc())
                 elif topic == self._end_topic:
                     # stop all listeners of this service (block until they stopped)
                     for internal_end_topic in self._internal_end_topics:
