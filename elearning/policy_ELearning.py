@@ -18,7 +18,9 @@
 ###############################################################################
 from datetime import datetime, timedelta
 from enum import Enum
+import logging
 import threading
+import traceback
 from typing import List, Tuple
 import time
 import locale
@@ -160,19 +162,23 @@ class ELearningPolicy(Service):
         """
         # set user dialog state
         if not self.get_state(user_id, TURNS):
-            self.set_state(user_id, TURNS, 0)
-            self.set_state(user_id, LAST_SEARCH, {})
-            self.set_state(user_id, LAST_SEARCH, None)
-            self.set_state(user_id, LAST_SEARCH_INDEX, 0)
-            self.set_state(user_id, REVIEW_QUIZZES, [])
-            self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
-            self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
-            self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
-            self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
+            try:
+                # get user settings
+                settings = fetch_user_settings(wstoken=self.get_wstoken(user_id), userid=user_id)
+                self.set_state(user_id, SETTINGS, settings)
+                self.set_state(user_id, TURNS, 0)
+                self.set_state(user_id, LAST_SEARCH, {})
+                self.set_state(user_id, LAST_SEARCH, None)
+                self.set_state(user_id, LAST_SEARCH_INDEX, 0)
+                self.set_state(user_id, REVIEW_QUIZZES, [])
+                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
+                self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
+                self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
+                self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
+            except:
+                # Log error
+                logging.getLogger("error_log").error(traceback.format_exc())
 
-            # get user settings
-            settings = fetch_user_settings(wstoken=self.get_wstoken(user_id), userid=user_id)
-            self.set_state(user_id, SETTINGS, settings)
 
     
     @PublishSubscribe(sub_topics=["settings"])
@@ -189,12 +195,12 @@ class ELearningPolicy(Service):
         """
         event_name = moodle_event['eventname'].lower().strip()
 
-        print("=================")
-        print("EVENT")
-        print(event_name)
-        print(moodle_event)
-        print("COMPLETION UPDATED?", moodle_event == "\\core\\event\\course_module_completion_updated")
-        print("=================")
+        # print("=================")
+        # print("EVENT")
+        # print(event_name)
+        # print(moodle_event)
+        # print("COMPLETION UPDATED?", moodle_event == "\\core\\event\\course_module_completion_updated")
+        # print("=================")
 
 
         # \mod_h5pactivity\event\statement_received
