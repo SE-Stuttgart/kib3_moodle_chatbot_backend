@@ -178,6 +178,7 @@ class ELearningPolicy(Service):
             except:
                 # Log error
                 logging.getLogger("error_log").error(traceback.format_exc())
+                self.dialog_end(user_id)
 
 
     
