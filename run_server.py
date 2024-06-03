@@ -194,9 +194,13 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
             logging.getLogger("error_log").error(traceback.format_exc()) 
     
     def on_close(self):
-        # find right connection to delete
-        if self.userid in gui_service.websockets:
-           del gui_service.websockets[self.userid]
+        try:
+            # find right connection to delete
+            if self.userid in gui_service.websockets:
+                del gui_service.websockets[self.userid]
+        except:
+            # Log error
+            logging.getLogger("error_log").error(traceback.format_exc()) 
 
     def check_origin(self, *args, **kwargs):
         # allow cross-origin
