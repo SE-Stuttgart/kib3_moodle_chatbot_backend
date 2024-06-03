@@ -187,8 +187,12 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
 
                     ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid)
                 elif topic == 'user_utterance':
-                    gui_service.websockets[self.userid] = self # set active websocket to last interaction (user might have multiple tabs open)
-                    gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])
+                    if services_1[2].dialog_started(self.userid):
+                        gui_service.websockets[self.userid] = self # set active websocket to last interaction (user might have multiple tabs open)
+                        gui_service.user_utterance(user_id=self.userid, domain_idx=domain_index, courseid=courseid, message=data['msg'])
+                    else:
+                        # dialog_start was not successfully called for the given user (can happen for admin after fresh install when web page is still open from old instance)
+                        ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid) 
         except:
             # Log error
             logging.getLogger("error_log").error(traceback.format_exc()) 

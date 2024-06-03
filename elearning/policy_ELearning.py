@@ -161,21 +161,28 @@ class ELearningPolicy(Service):
             resets the policy after each dialog
         """
         # set user dialog state
-        if not self.get_state(user_id, TURNS):
-            # get user settings
-            settings = fetch_user_settings(wstoken=self.get_wstoken(user_id), userid=user_id)
-            self.set_state(user_id, SETTINGS, settings)
-            self.set_state(user_id, TURNS, 0)
-            self.set_state(user_id, LAST_SEARCH, {})
-            self.set_state(user_id, LAST_SEARCH, None)
-            self.set_state(user_id, LAST_SEARCH_INDEX, 0)
-            self.set_state(user_id, REVIEW_QUIZZES, [])
-            self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
-            self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
-            self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
-            self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
+        try:
+            if not self.get_state(user_id, TURNS):
+                # get user settings
+                settings = fetch_user_settings(wstoken=self.get_wstoken(user_id), userid=user_id)
+                self.set_state(user_id, SETTINGS, settings)
+                self.set_state(user_id, TURNS, 0)
+                self.set_state(user_id, LAST_SEARCH, {})
+                self.set_state(user_id, LAST_SEARCH, None)
+                self.set_state(user_id, LAST_SEARCH_INDEX, 0)
+                self.set_state(user_id, REVIEW_QUIZZES, [])
+                self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
+                self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
+                self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
+                self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
+        except:
+            # Log error
+            logging.getLogger("error_log").error("DIALOG_START: " + traceback.format_exc())
 
-    
+    def dialog_started(self, user_id: str) -> bool:
+        """Returns true, if the dialog start was called successfully for the specified user"""
+        return not self.get_state(user_id, TURNS) is None # Turn is only set in successful dialog_start call
+
     @PublishSubscribe(sub_topics=["settings"])
     def settings_changed(self, user_id: int, settings: dict):
         self.set_state(user_id, SETTINGS, UserSettings(**settings))
