@@ -1,0 +1,723 @@
+"Gibt es noch weitere relevante Informationen zu diesem Thema, die ich übersehen habe?",; LoadMoreSearchResults
+"Zeig mir bitte alle verfügbaren Resultate, die meiner Suche entsprechen.",; LoadMoreSearchResults
+"Ich brauche noch mehr Ergebnisse, um meine Suche zu vervollständigen.",; LoadMoreSearchResults
+"Zeige mir bitte noch mehr Suchergebnisse, die meiner vorherigen Suche entsprechen.",; LoadMoreSearchResults
+"Gibt es noch andere relevante Suchergebnisse?",; LoadMoreSearchResults
+"Kannst du mir weitere Ergebnisse zeigen?",; LoadMoreSearchResults
+"Kannst du mir bitte alle weiteren Resultate anzeigen?",; LoadMoreSearchResults
+"Könntest du mir bitte alle weiteren relevanten Ergebnisse zeigen, die zu meiner Suche passen?",; LoadMoreSearchResults
+"Gibt es noch weitere Ergebnisse, die ich überprüfen sollte?",; LoadMoreSearchResults
+"Ich bin noch nicht zufrieden mit den Suchergebnissen. Könntest du mir weitere zeigen?",; LoadMoreSearchResults
+"weitere"; LoadMoreSearchResults
+"Zeig mir bitte alle weiteren verfügbaren Ergebnisse.",; LoadMoreSearchResults
+"Könntest du mir bitte alle weiteren verfügbaren Ergebnisse anzeigen?",; LoadMoreSearchResults
+"Ich benötige noch mehr Ergebnisse.",; LoadMoreSearchResults
+"Könntest du bitte alle weiteren verfügbaren Ergebnisse anzeigen?",; LoadMoreSearchResults
+"Gibt es noch mehr Resultate, die meiner Suche entsprechen?",; LoadMoreSearchResults
+"Ich brauche weitere Resultate.",; LoadMoreSearchResults
+"Zeige mir bitte alle verfügbaren Ergebnisse.",; LoadMoreSearchResults
+"Zeige mir bitte alle weiteren passenden Ergebnisse.",; LoadMoreSearchResults
+"Kannst du mir bitte alle weiteren relevanten Suchergebnisse zeigen?",; LoadMoreSearchResults
+"Ich benötige mehr Suchergebnisse.",; LoadMoreSearchResults
+"Könntest du bitte alle weiteren Ergebnisse zu diesem Thema anzeigen?",; LoadMoreSearchResults
+"Könntest du mir bitte weitere Ergebnisse anzeigen, die meiner Suche entsprechen?",; LoadMoreSearchResults
+"Zeig mir bitte alle Resultate.",; LoadMoreSearchResults
+"Könntest du mir bitte weitere relevante Suchergebnisse präsentieren?",; LoadMoreSearchResults
+"Kannst du mir bitte alle weiteren relevanten Suchergebnisse anzeigen?",; LoadMoreSearchResults
+"Ich möchte gerne weitere relevante Ergebnisse sehen.",; LoadMoreSearchResults
+"Könntest du mir bitte weitere Informationen zu diesem Thema zur Verfügung stellen, die ich noch nicht gesehen habe?",; LoadMoreSearchResults
+"Kannst du mir bitte noch mehr relevante Suchergebnisse zeigen?",; LoadMoreSearchResults
+"Mehr Ergebnisse",; LoadMoreSearchResults
+"Kannst du mir bitte weitere relevante Ergebnisse zeigen?",; LoadMoreSearchResults
+"Könntest du mir bitte weitere passende Suchergebnisse präsentieren?",; LoadMoreSearchResults
+"Könntest du mir bitte mehr Suchergebnisse präsentieren?",; LoadMoreSearchResults
+"Zeige mir bitte alle weiteren Resultate, die meiner Suche entsprechen.",; LoadMoreSearchResults
+"Kannst du mir weitere relevante Suchergebnisse anzeigen, die ich übersehen habe?",; LoadMoreSearchResults
+"Weitere anzeigen",; LoadMoreSearchResults
+"Kannst du mir bitte weitere relevante Informationen zu diesem Thema anzeigen?",; LoadMoreSearchResults
+"Könntest du mir bitte noch mehr relevante Ergebnisse zeigen?",; LoadMoreSearchResults
+"Kannst du mir weitere Resultate zeigen?",; LoadMoreSearchResults
+"Gibt es noch andere passende Suchergebnisse, die ich übersehen habe?",; LoadMoreSearchResults
+"Gibt es noch weitere relevante Resultate, die du mir präsentieren kannst?",; LoadMoreSearchResults
+"Könntest du mir bitte weitere relevante Ergebnisse anzeigen?",; LoadMoreSearchResults
+"Ich möchte gerne alle weiteren passenden Ergebnisse angezeigt bekommen.",; LoadMoreSearchResults
+"Könntest du mir bitte weitere Suchergebnisse zeigen, die meiner Suche entsprechen?",; LoadMoreSearchResults
+"Ich benötige mehr Suchergebnisse, um meine Recherche zu vervollständigen. Kannst du mir bitte weiterhelfen?",; LoadMoreSearchResults
+"Könntest du mir bitte noch weitere relevante Suchergebnisse anzeigen?",; LoadMoreSearchResults
+"Kannst du mir bitte alle verfügbaren Ergebnisse anzeigen, die meiner Suche entsprechen?",; LoadMoreSearchResults
+"Ich benötige weitere Suchergebnisse, um meine Recherche zu vervollständigen.",; LoadMoreSearchResults
+"Könntest du mir bitte weitere relevante Suchergebnisse anzeigen?",; LoadMoreSearchResults
+"Könntest du mir bitte weitere passende Ergebnisse präsentieren?",; LoadMoreSearchResults
+"Zeige mir weitere Ergebnisse.",; LoadMoreSearchResults
+"Könntest du mir bitte zusätzliche Suchergebnisse zeigen?",; LoadMoreSearchResults
+"Was kann ich als nächstes erwarten?",; RequestNextSection
+"Was sind meine Alternativen?",; RequestNextSection
+"Was ist die nächste Lektion auf meiner Lernliste?",; RequestNextSection
+"Welche Inhalte sind als nächstes geplant?",; RequestNextSection
+"Was ist der nächste Abschnitt in meinem Lernprozess?",; RequestNextSection
+"Welche anderen Themen stehen zur Verfügung?",; RequestNextSection
+"Was kann ich sonst noch lernen, um meine Fähigkeiten zu verbessern?",; RequestNextSection
+"Welche Themen warten auf mich als nächstes?",; RequestNextSection
+"Gibt es noch andere Themen?",; RequestNextSection
+"Welche Module kommen als nächstes?",; RequestNextSection
+"Welche Themenbereiche kommen als nächstes?",; RequestNextSection
+"Gibt es noch andere Module, die ich absolvieren kann?",; RequestNextSection
+"Welches Thema sollte ich als Nächstes vertiefen?",; RequestNextSection
+"Woanders weitermachen",; RequestNextSection
+"Welche anderen Themen sind in meinem Lernprogramm enthalten?",; RequestNextSection
+"Was sollte ich als Nächstes studieren?",; RequestNextSection
+"Welches Thema ist als Nächstes dran?",; RequestNextSection
+"Kann ich weitere Lernmöglichkeiten nutzen?",; RequestNextSection
+"Was gibt es noch, was ich lernen kann?",; RequestNextSection
+"Welche Inhalte warten als nächstes auf mich?",; RequestNextSection
+"Was kann ich als nächstes lernen?",; RequestNextSection
+"Welche anderen Themen gibt es noch?",; RequestNextSection
+"Welche Lektionen warten als nächstes auf mich?",; RequestNextSection
+"Welche anderen Kapitel kann ich studieren?",; RequestNextSection
+"Was gibt es noch anderes zu lernen?",; RequestNextSection
+"Welches Thema sollte ich als Nächstes bearbeiten?",; RequestNextSection
+"Was ist das nächste Modul in meiner Ausbildung?",; RequestNextSection
+"Welche Themen sind für mich als nächstes relevant?",; RequestNextSection
+"Wo geht es als nächstes weiter im Kurs?",; RequestNextSection
+"Was sind meine weiteren Lernmöglichkeiten?",; RequestNextSection
+"Was ist das nächste Kapitel?",; RequestNextSection
+"Kannst du mir weitere Lerninhalte zur Verfügung stellen?",; RequestNextSection
+"Was Neues lernen",; RequestNextSection
+"Welche weiteren Lernquellen stehen zur Verfügung?",; RequestNextSection
+"Welches Kapitel sollte ich als Nächstes lesen?",; RequestNextSection
+"Welches Modul folgt als nächstes?",; RequestNextSection
+"Welche weiteren Lektionen stehen zur Verfügung?",; RequestNextSection
+"Nächte Lektion",; RequestNextSection
+"Was sollte ich als Nächstes erforschen?",; RequestNextSection
+"Welche Themen folgen auf dieses Modul?",; RequestNextSection
+"Gibt es weitere Themen, die ich erkunden kann?",; RequestNextSection
+"Mit dem nächsten Thema beginnen",; RequestNextSection
+"Gibt es noch weitere Lerneinheiten?",; RequestNextSection
+"Gibt es andere Module, die mich herausfordern könnten?",; RequestNextSection
+"Welches Thema sollte ich als Nächstes untersuchen?",; RequestNextSection
+"Wo geht es als nächstes weiter?",; RequestNextSection
+"Welche anderen Themenbereiche kann ich erkunden?",; RequestNextSection
+"Was sind die nächsten Kapitel?",; RequestNextSection
+"Welches Thema soll ich als nächstes angehen?",; RequestNextSection
+"Gibt es noch andere Themen, die für mich relevant sind?",; RequestNextSection
+"Was sind die nächsten Lernmodule?",; RequestNextSection
+"Was sind die anderen verfügbaren Lernressourcen?",; RequestNextSection
+"Was sind meine nächsten Lernschritte?",; RequestNextSection
+"Andere Inhalte",; RequestNextSection
+"Neues anfangen",; RequestNextSection
+"Was kann ich sonst noch anderes machen?",; RequestNextSection
+"Was wird als nächstes behandelt?",; RequestNextSection
+"Was ist der nächste Kursinhalt?",; RequestNextSection
+"Welches Thema kommt als Nächstes in meinem Studium?",; RequestNextSection
+"Wo kann ich weitere Lektionen finden?",; RequestNextSection
+"Welches Wissen ist als nächstes dran?",; RequestNextSection
+"Welche anderen Einheiten gibt es noch?",; RequestNextSection
+"Was wäre als Nächstes auf meiner Lernliste?",; RequestNextSection
+"Welche Themenbereiche sind als nächstes dran?",; RequestNextSection
+"Nächstes Modul",; RequestNextSection
+"Was ist das nächste Modul auf der Agenda?",; RequestNextSection
+"Gibt es andere Module, die für mich geeignet sind?",; RequestNextSection
+"Welche weiteren Möglichkeiten stehen mir zur Verfügung?",; RequestNextSection
+"Was kann ich tun?",; RequestNextSection
+"nächste",; RequestNextSection
+"Was sind meine anderen Möglichkeiten, um mehr zu lernen?",; RequestNextSection
+"Was sind meine nächsten Lernziele?",; RequestNextSection
+"Welche weiteren Lernmaterialien gibt es?",; RequestNextSection
+"Was sollte ich als Nächstes in Angriff nehmen?",; RequestNextSection
+"Was ist das nächste Modul, das ich bearbeiten kann?",; RequestNextSection
+"Welches Thema ist als nächstes fällig?",; RequestNextSection
+"Welche anderen Themen können mir helfen, meine Ziele zu erreichen?",; RequestNextSection
+"Welches Thema steht als nächstes an der Reihe?",; RequestNextSection
+"Was ist das nächste Lernziel?",; RequestNextSection
+"Welche Lektion kommt nach dieser?",; RequestNextSection
+"andere",; RequestNextSection
+"Welche anderen Themen sind noch relevant?",; RequestNextSection
+"Welche weiteren Themen stehen zur Verfügung?",; RequestNextSection
+"neues"; RequestNextSection
+"Welche anderen Themen sind noch relevant für meine Ausbildung?",; RequestNextSection
+"Was sind meine alternativen Lernmöglichkeiten?",; RequestNextSection
+"Was sind die nächsten Schritte im Lernprozess?",; RequestNextSection
+"Was sind die nächsten Themen?",; RequestNextSection
+"Welche Lektion sollte ich als Nächstes angehen?",; RequestNextSection
+"Was sind meine nächsten Lernschritte?",; RequestNextSection
+"Gibt es andere Module, die mich interessieren könnten?",; RequestNextSection
+"Welches Thema kommt als nächstes dran?",; RequestNextSection
+"Welche Optionen habe ich für mein Lernprogramm?",; RequestNextSection
+"Was ist das nächste Modul auf dem Programm?",; RequestNextSection
+"Kannst du mir andere Lerninhalte empfehlen?",; RequestNextSection
+"Was kann ich als nächstes in Angriff nehmen?",; RequestNextSection
+"Was kommt als nächstes dran?",; RequestNextSection
+"Was kommt als nächstes in meinem Lernplan?",; RequestNextSection
+"Welches Thema kommt als Nächstes dran?",; RequestNextSection
+"Welche anderen Themenbereiche gibt es?",; RequestNextSection
+"Gibt es Module, die ich noch einmal durchgehen sollte?",; RequestReview
+"In welchem Bereich kann ich noch einmal üben?",; RequestReview
+"Was sind die Module, die ich noch einmal durchgehen sollte?",; RequestReview
+"Welches Thema kann ich noch einmal durchgehen?",; RequestReview
+"bereits"; RequestReview
+"Wo kann ich die Themen finden, die ich bereits behandelt habe?",; RequestReview
+"Welches Modul könnte ich noch einmal durcharbeiten?",; RequestReview
+"Was sind meine Optionen zum Wiederholen?",; RequestReview
+"In welchen Bereichen sollte ich nochmal üben?",; RequestReview
+"Welche Einheiten müssen noch einmal betrachtet werden?",; RequestReview
+"Gibt es Einheiten, die ich wiederholen sollte?",; RequestReview
+"Welche Module sollten nochmals bearbeitet werden?",; RequestReview
+"Welche Themen sollte ich nochmal durchgehen?",; RequestReview
+"noch einmal",; RequestReview
+"Kann ich noch einmal durch einen bestimmten Abschnitt gehen?",; RequestReview
+"Welche Lektionen sollte ich noch einmal ansehen?",; RequestReview
+"Was sind die Themen, die ich noch einmal durchgehen sollte?",; RequestReview
+"Welche Lektionen sollten noch einmal durchgegangen werden?",; RequestReview
+"Gibt es ein bestimmtes Modul, das ich noch einmal durcharbeiten sollte?",; RequestReview
+"erneut",; RequestReview
+"Wo sollte ich nochmals mehr Zeit investieren?",; RequestReview
+"In welchen Bereichen benötige ich nochmal Übung?",; RequestReview
+"In welchen Bereichen benötige ich nochmal Unterstützung und Übung?",; RequestReview
+"Was sind die Lernmodule, die ich wiederholen kann?",; RequestReview
+"Welche Module sollten noch einmal bearbeitet werden?",; RequestReview
+"Welche Themenbereiche sollte ich nochmal angehen?",; RequestReview
+"Was sollte ich nochmal anschauen?",; RequestReview
+"Welches Kapitel sollte ich noch einmal ansehen?",; RequestReview
+"Welches Thema braucht noch einmal Aufmerksamkeit?",; RequestReview
+"Was ist das nächste, was ich noch einmal wiederholen sollte?",; RequestReview
+"Welche Lernmodule sollten noch einmal durchgegangen werden?",; RequestReview
+"Welche Themen benötigen noch einmal Aufmerksamkeit?",; RequestReview
+"Wo finde ich die Themen, die ich bereits behandelt habe?",; RequestReview
+"Kann ich mich noch einmal in ein Thema vertiefen?",; RequestReview
+"Welche Bereiche benötigen noch einmal Aufmerksamkeit?",; RequestReview
+"Welches Thema sollte ich noch einmal betrachten?",; RequestReview
+"Welche Lektionen sollten nochmal durchgegangen werden?",; RequestReview
+"Was ist das nächste Thema, das ich noch einmal betrachten sollte?",; RequestReview
+"Welche Module kann ich noch einmal durchgehen?",; RequestReview
+"Welche Lektionen sollte ich mir erneut anschauen?",; RequestReview
+"Welche Themen sollten nochmals vertieft werden?",; RequestReview
+"Welche Themen sollten noch einmal geübt werden, um meine Kenntnisse zu verbessern?",; RequestReview
+"Welches Modul kann ich noch einmal durchgehen, um mich zu verbessern?",; RequestReview
+"Was kann ich noch einmal wiederholen?",; RequestReview
+"nochmal",; RequestReview
+"In welchem Bereich sollte ich noch einmal meine Fähigkeiten verbessern?",; RequestReview
+"In welchem Bereich muss ich noch einmal üben, um mich zu verbessern?",; RequestReview
+"Welches Thema sollte ich noch einmal angehen?",; RequestReview
+"Welches Thema soll ich noch einmal durchgehen?",; RequestReview
+"Welche Themen sollten nochmals behandelt werden?",; RequestReview
+"Was kann ich wiederholen?",; RequestReview
+"Welche Einheiten sollten noch einmal wiederholt werden?",; RequestReview
+"Wo finde ich die Themen, die ich bereits bearbeitet habe?",; RequestReview
+"Gibt es Module, die ich nochmal durchgehen sollte?",; RequestReview
+"Kann ich noch einmal eine bestimmte Einheit üben?",; RequestReview
+"Kann ich noch einmal durch eine bestimmte Lektion gehen?",; RequestReview
+"In welchen Bereichen habe ich Schwierigkeiten und sollte diese nochmal üben?",; RequestReview
+"Wo kann ich die Lektionen erneut anschauen?",; RequestReview
+"Wo finde ich die Einheiten, die ich bereits abgeschlossen habe?",; RequestReview
+"Wo kann ich die Einheiten finden, die ich bereits bearbeitet habe?",; RequestReview
+"Kann ich die Inhalte eines bestimmten Moduls noch einmal durchgehen?",; RequestReview
+"verbessern",; RequestReview
+"Welche Themen sollte ich nochmals vertiefen?",; RequestReview
+"Alte wiederholen",; RequestReview
+"Welche Themen sollte ich noch einmal üben?",; RequestReview
+"Könnten wir meine Einstellungen anpassen?",; RequestSettings
+"Bearbeite bitte meine Einstellungen",; RequestSettings
+"Einstellungen ändern",; RequestSettings
+"Einstellungen nach meinen Anforderungen ändern",; RequestSettings
+"Pass meine Voreinstellungen an",; RequestSettings
+"Einstellungen verändern, bitte",; RequestSettings
+"Verwalte meine Einstellungen, bitte",; RequestSettings
+"Pass meine Einstellungen an",; RequestSettings
+"Könntest du meine Konfiguration ändern?",; RequestSettings
+"Kann ich meine Optionen anpassen?",; RequestSettings
+"Einstellungen bearbeiten",; RequestSettings
+"Einstellungen aktualisieren, bitte",; RequestSettings
+"Einstellungen anpassen",; RequestSettings
+"Einstellungen an meine Bedürfnisse anpassen",; RequestSettings
+"Einstellungen aktualisieren",; RequestSettings
+"Einstellungen nach meinen Präferenzen gestalten",; RequestSettings
+"Ändere bitte meine Einstellungen entsprechend",; RequestSettings
+"Ich möchte meine Einstellungen überarbeiten",; RequestSettings
+"Ändere meine Einstellungen",; RequestSettings
+"Einstellungen modifizieren, falls nötig",; RequestSettings
+"Verwalte meine Einstellungen",; RequestSettings
+"verwalten"; RequestSettings
+"Kannst du meine Voreinstellungen ändern?",; RequestSettings
+"Verwalte meine Optionen",; RequestSettings
+"Kannst du meine Optionen aktualisieren?",; RequestSettings
+"Ich will die Einstellungen editieren",; RequestSettings
+"Bearbeite meine Einstellungen",; RequestSettings
+"Ändere bitte meine Einstellungen",; RequestSettings
+"Ich würde gerne meine Einstellungen anpassen",; RequestSettings
+"Ich will meine Einstellungen anpassen",; RequestSettings
+"Ich würde gerne meine Optionen überprüfen",; RequestSettings
+"Pass meine Optionen nach meinen Wünschen an",; RequestSettings
+"Verändere meine Einstellungen nach Bedarf",; RequestSettings
+"Ändere meine Konfiguration",; RequestSettings
+"Verwalte bitte meine Konfiguration",; RequestSettings
+"Modifiziere meine Voreinstellungen",; RequestSettings
+"Einstellungen verwalten"; RequestSettings
+"Modifiziere meine Einstellungen",; RequestSettings
+"Hallo, wie geht es dir heute?",; Hello
+"Wie läuft's?",; Hello
+"Hallo, wie war dein Tag?",; Hello
+"Schön, dich wiederzusehen!",; Hello
+"Hallo da!",; Hello
+"Guten Tag, wie geht es dir?",; Hello
+"Hiho!",; Hello
+"Guten Abend!",; Hello
+"Hallo",; Hello
+"Was gibt es zu berichten?",; Hello
+"Hallo!",; Hello
+"Schön, dich kennenzulernen!",; Hello
+"Hallo",; Hello
+"Hallo und schön, dass du da bist!",; Hello
+"Na, alles klar?",; Hello
+"Hey, wie geht's?",; Hello
+"Grüße!",; Hello
+"Willkommen!",; Hello
+"Servus!",; Hello
+"Wie geht's dir?",; Hello
+"Hallo, wie geht's dir?",; Hello
+"Hey, schön dich zu treffen!",; Hello
+"Tag!",; Hello
+"Hey!",; Hello
+"Hey, was hast du heute gemacht?",; Hello
+"Wie geht's dir heute?",; Hello
+"Hi da!",; Hello
+"Schön, dass du da bist!",; Hello
+"Guten Tag!",; Hello
+"Schön dich zu sehen!",; Hello
+"Guten Tag und herzlich willkommen!",; Hello
+"Freut mich, mit dir zu sprechen!",; Hello
+"Schön, dich zu sehen!",; Hello
+"Grüß Gott!",; Hello
+"Hi",; Hello
+"Wie läuft es heute?",; Hello
+"Aloha!",; Hello
+"Servus",; Hello
+"Wie geht's, wie steht's?",; Hello
+"Huhu!",; Hello
+"Gibt es eine Übersicht der Lerneinheiten?",; RequestProgress
+"Wie viele Einheiten sind noch übrig?",; RequestProgress
+"Wie viele Module gibt es insgesamt?",; RequestProgress
+"Wie viele Teile muss ich noch absolvieren?",; RequestProgress
+"Kannst du mir sagen, wie viele Lernmodule noch vor mir liegen?",; RequestProgress
+"Gibt es noch weitere Themen, die ich durchgehen muss?",; RequestProgress
+"Wie viele Unterrichtseinheiten sind noch übrig?",; RequestProgress
+"Gibt es noch weitere Teile des Kurses, die ich durchlaufen muss?",; RequestProgress
+"Wie viele Einheiten gibt es noch zu bearbeiten?",; RequestProgress
+"Wie viele Kapitel muss ich noch durchgehen?",; RequestProgress
+"Wie viele Themen muss ich noch lernen, bevor der Kurs beendet ist?",; RequestProgress
+"Wie viele Unterrichtseinheiten sind noch zu absolvieren?",; RequestProgress
+"Wie viele Teile hat der Kurs?",; RequestProgress
+"Wie viele Module habe ich bereits absolviert und wie viele sind noch übrig?",; RequestProgress
+"Wie viele Lerninhalte muss ich noch durchgehen?",; RequestProgress
+"Wie viele Module gibt es insgesamt in diesem Kurs?",; RequestProgress
+"Wie viele Abschnitte habe ich bereits abgeschlossen?",; RequestProgress
+"Wie viele Lerninhalte warten noch auf mich?",; RequestProgress
+"Wie viele Kapitel sind noch zu absolvieren?",; RequestProgress
+"Wie viele Module gibt es noch zu durchlaufen?",; RequestProgress
+"Wie viele Abschnitte muss ich noch absolvieren?",; RequestProgress
+"Wie weit bin ich schon?",; RequestProgress
+"Wie viele Lerninhalte gibt es insgesamt in diesem Kurs?",; RequestProgress
+"Wie viele Lernmodule habe ich noch vor mir?",; RequestProgress
+"Wie viele Einheiten habe ich noch nicht abgeschlossen?",; RequestProgress
+"Wie viele Lektionen müssen noch gelernt werden?",; RequestProgress
+"Wie viele Lernstufen gibt es noch?",; RequestProgress
+"Wie viele Lernabschnitte muss ich noch durchgehen?",; RequestProgress
+"Wie viele Kapitel gibt es insgesamt?",; RequestProgress
+"Wie viele?"; RequestProgress
+"Wie viele Lerninhalte sind noch zu bearbeiten?",; RequestProgress
+"Wie viele Einheiten muss ich noch absolvieren, bevor der Kurs abgeschlossen ist?",; RequestProgress
+"Wo bin ich im Kurs?"; RequestProgress
+"Wie viele Lernmodule sind noch übrig?",; RequestProgress
+"Wie weit bin ich in dem Kurs fortgeschritten?",; RequestProgress
+"Wie viele Kapitel muss ich noch lernen?",; RequestProgress
+"Wie viele Schritte fehlen noch bis zum Ende?",; RequestProgress
+"Kannst du mir sagen, wie viele Module ich noch durchgehen muss?",; RequestProgress
+"Wie viele Kurseinheiten muss ich noch bearbeiten?",; RequestProgress
+"Wie viele Themen habe ich bereits gelernt?",; RequestProgress
+"In wie viele Bereiche ist der Kurs unterteilt?",; RequestProgress
+"Kannst du mir sagen, wie viele Abschnitte noch vor mir liegen?",; RequestProgress
+"Wie viele Lektionen beinhaltet der Kurs?",; RequestProgress
+"Wie viele Themen gibt es noch zu bewältigen?",; RequestProgress
+"Wie viele Kurseinheiten muss ich noch absolvieren?",; RequestProgress
+"Wie viele Abschnitte gibt es in diesem Kurs?",; RequestProgress
+"Wie weit bin ich im Kurs?"; RequestProgress
+"Wie viele Lektionen habe ich noch zu absolvieren?",; RequestProgress
+"Wie viele Module sind noch übrig?",; RequestProgress
+"Wie viel hab ich schon erledigt?",; RequestProgress
+"Wie viele Lerneinheiten stehen noch aus?",; RequestProgress
+"Wie viele Module gibt es?",; RequestProgress
+"Wie viele Abschnitte beinhaltet das Programm?",; RequestProgress
+"Wie viel fehlt noch im Kurs?",; RequestProgress
+"Wie viele Abschnitte sind noch übrig?",; RequestProgress
+"Wie viele Themenbereiche gibt es insgesamt?",; RequestProgress
+"Wie viele Lernschritte fehlen noch bis zum Abschluss?",; RequestProgress
+"Gibt es noch weitere Module, die ich durchlaufen muss?",; RequestProgress
+"Wie viele Themen muss ich noch durchgehen?",; RequestProgress
+"Wie viele Einheiten sind noch zu absolvieren?",; RequestProgress
+"Wie viele Kapitel muss ich noch bewältigen?",; RequestProgress
+"Gibt es noch weitere Einheiten, die ich durchlaufen muss?",; RequestProgress
+"Wie viele Schritte sind noch zu durchlaufen?",; RequestProgress
+"Du hast mir sehr geholfen, danke!",; Thanks
+"Das ist sehr großzügig von dir, vielen Dank!",; Thanks
+"Das ist sehr großzügig von dir, danke!",; Thanks
+"Ich bin froh, dass du da bist!",; Thanks
+"Dankeschön",; Thanks
+"Ich schätze deine Zeit und Mühe!",; Thanks
+"Das ist sehr nett von dir!",; Thanks
+"Ich bin dankbar für deine Geduld!",; Thanks
+"Tausend Dank!",; Thanks
+"Ich bin sehr erleichtert, danke!",; Thanks
+"Das ist sehr nett von dir, danke!",; Thanks
+"Ich bin dir sehr dankbar für deine Hilfe!",; Thanks
+"Danke für alles, was du getan hast!"; Thanks
+"Ich weiß deine Hilfe wirklich zu schätzen, danke!",; Thanks
+"Ich danke dir für deine Zeit!",; Thanks
+"Ich danke dir von Herzen!",; Thanks
+"Vielen Dank!",; Thanks
+"Danke für deine Mühe!",; Thanks
+"Ich bin froh, dass es dich gibt, danke!",; Thanks
+"Ich danke dir für deine Freundlichkeit und Hilfe!",; Thanks
+"Danke!",; Thanks
+"Ich bin so dankbar für deine wertvolle Unterstützung!",; Thanks
+"Ich danke dir aufrichtig!",; Thanks
+"Ich kann dir gar nicht genug danken!",; Thanks
+"Ich bin dir wirklich dankbar für deine Hilfe!",; Thanks
+"Danke!",; Thanks
+"Das hat geholfen",; Thanks
+"Super, vielen Dank",; Thanks
+"Ich danke dir für deine Geduld!",; Thanks
+"Deine Hilfe hat den Unterschied gemacht, danke!",; Thanks
+"Großartig, danke!",; Thanks
+"Danke für deine wertvolle Zeit und Mühe!",; Thanks
+"Ich bin dir dankbar!",; Thanks
+"Ich bin so froh, dass du da bist, danke!",; Thanks
+"Ich danke dir für deine Unterstützung!",; Thanks
+"Ich danke dir für deine unendliche Geduld!",; Thanks
+"Ich bin so dankbar für deine Unterstützung!",; Thanks
+"Ich schätze deine Hilfe!",; Thanks
+"Ich danke dir für deine Hilfe!",; Thanks
+"Ich bin wirklich dankbar für deine Zeit!",; Thanks
+"Danke, dass du mir geholfen hast!",; Thanks
+"Deine Hilfe bedeutet mir sehr viel, danke!",; Thanks
+"Danke, das ist sehr nett!",; Thanks
+"Vielen, vielen Dank!",; Thanks
+"Das ist sehr aufmerksam von dir, danke!",; Thanks
+"Du bist großartig, danke!",; Thanks
+"Herzlichen Dank!",; Thanks
+"Das ist sehr hilfreich, danke!",; Thanks
+"Das war sehr hilfreich, vielen Dank!",; Thanks
+"Ich bin wirklich erleichtert, danke!",; Thanks
+"Ich danke dir vielmals!",; Thanks
+"Was kann ich weiter lernen?",; ContinueOpenModules
+"Lass uns da weitermachen, wo wir stehen geblieben sind",; ContinueOpenModules
+"Können wir mit dem vorherigen Abschnitt weiterlernen?",; ContinueOpenModules
+"Die vorherige Einheit ist noch offen, können wir sie abschließen?",; ContinueOpenModules
+"Die vorherige Einheit ist noch nicht abgeschlossen, können wir sie fertig machen?",; ContinueOpenModules
+"Lasst uns dort anschließen, wo wir aufgehört haben",; ContinueOpenModules
+"Lass uns die vorherige Sektion noch einmal durchgehen",; ContinueOpenModules
+"fortsetzen",; ContinueOpenModules
+"Lass uns dort weitermachen, wo wir stehen geblieben sind",; ContinueOpenModules
+"Können wir dort weitermachen, wo wir aufgehört haben?",; ContinueOpenModules
+"fertig machen"; ContinueOpenModules
+"Ich will weitermachen",; ContinueOpenModules
+"Ich würde gerne an der letzten Stelle weiterarbeiten",; ContinueOpenModules
+"Gibt es noch offene Einheiten?",; ContinueOpenModules
+"Ich schlage vor, die letzte Lektion abzuschließen",; ContinueOpenModules
+"offene",; ContinueOpenModules
+"Weiter lernen",; ContinueOpenModules
+"Die vorherige Thematik ist noch nicht vollständig, können wir sie abschließen?",; ContinueOpenModules
+"Ich will weiter lernen",; ContinueOpenModules
+"Wir könnten da weitermachen, wo wir zuletzt aufgehört haben",; ContinueOpenModules
+"Was kann ich fertig machen?",; ContinueOpenModules
+"Ich würde gerne dort weitermachen, wo wir das letzte Mal waren",; ContinueOpenModules
+"Abschnitt fertig machen",; ContinueOpenModules
+"Die letzte Sektion ist noch offen, können wir sie weiter bearbeiten?",; ContinueOpenModules
+"Die vorangegangene Einheit ist noch offen, können wir sie klären?",; ContinueOpenModules
+"Ich will den letzen Abschnitt fertig machen",; ContinueOpenModules
+"Lass uns das vorherige Thema wieder aufgreifen",; ContinueOpenModules
+"Ich würde gerne an der letzten Einheit anknüpfen",; ContinueOpenModules
+"weiter lernen",; ContinueOpenModules
+"Welche Abschnitte kann ich fertig machen?",; ContinueOpenModules
+"Was kann ich weitermachen?",; ContinueOpenModules
+"Können wir mit dem vorherigen Thema weitermachen?",; ContinueOpenModules
+"Gibt es demnächst etwas, das abgegeben werden muss?",; RequestDeadlines
+"Wann muss die nächste Aufgabe abgegeben werden?",; RequestDeadlines
+"Wann muss ich das nächste Projekt einreichen?",; RequestDeadlines
+"Gibt es in absehbarer Zeit Hausaufgaben?",; RequestDeadlines
+"Gibt es bald anstehende Abgaben?",; RequestDeadlines
+"Hast du Informationen über kommende Aufgaben?",; RequestDeadlines
+"Gibt es bald anstehende Aufgaben?",; RequestDeadlines
+"Kannst du mir sagen, wann die nächste Abgabe fällig ist?",; RequestDeadlines
+"Wann ist der Abgabetermin für die nächste Aufgabe?",; RequestDeadlines
+"Kannst du mir sagen, wann die nächste Abgabe ansteht?",; RequestDeadlines
+"Hast du Details zur nächsten Abgabefrist?",; RequestDeadlines
+"Wann muss ich die nächste Aufgabe erledigen?",; RequestDeadlines
+"Gibt es demnächst Termine für Abgaben?",; RequestDeadlines
+"Gibt es demnächst eine Aufgabenabgabe?",; RequestDeadlines
+"Wann muss ich die nächste Arbeit abgeben?",; RequestDeadlines
+"Hast du Infos über anstehende Abgabetermine?",; RequestDeadlines
+"Gibt es in naher Zukunft abzugebende Aufgaben?",; RequestDeadlines
+"Hast du Informationen zu anstehenden Abgaben?",; RequestDeadlines
+"Gibt es demnächst zu erledigende Hausaufgaben?",; RequestDeadlines
+"Wann ist die nächste Abgabe?",; RequestDeadlines
+"Wann ist die Deadline für die nächste Arbeit?",; RequestDeadlines
+"Wann ist die nächste Aufgabe zu erledigen?",; RequestDeadlines
+"Wann steht die nächste Abgabefrist bevor?",; RequestDeadlines
+"Wann steht die nächste Abgabe bevor?",; RequestDeadlines
+"Wann ist die nächste Abgabedeadline?",; RequestDeadlines
+"Wann ist die nächste Abgabe fällig?",; RequestDeadlines
+"Wann muss ich die nächste Aufgabe einreichen?",; RequestDeadlines
+"Gibt es in Kürze abzugebende Arbeiten?",; RequestDeadlines
+"Gibt es demnächst Abgaben?",; RequestDeadlines
+"Gibt es demnächst Fristen für Abgaben?",; RequestDeadlines
+"Hast du den Zeitpunkt für die nächste Aufgabe?",; RequestDeadlines
+"Kannst du mir sagen, wann die nächste Aufgabe zu tun ist?",; RequestDeadlines
+"Hast du Informationen über anstehende Aufgaben?",; RequestDeadlines
+"Wann"; RequestDeadlines
+"Kannst du mir sagen, wann die nächste Abgabe notwendig ist?",; RequestDeadlines
+"Was sollte ich dringend fertig machen?",; RequestDeadlines
+"erklären"; Search
+"Was bezeichnet man als [MASK]?",; Search
+"Wo finde ich Videos, die [MASK] erklären?",; Search
+"Wo finde ich Lernmaterialien zu [MASK]?",; Search
+"Ich suche nach [MASK]",; Search
+"Kannst du mir eine Definition von [MASK] geben?",; Search
+"Ich suche nach einer Erklärung von [MASK]",; Search
+"Wo kann ich eine einfache Erklärung für den Begriff [MASK] finden?",; Search
+"Was sind die grundlegenden Konzepte hinter der [MASK]?",; Search
+"Wo finde ich Artikel über [MASK]?",; Search
+"Wo finde ich Infos zu [MASK]?",; Search
+"Wo kann ich erfahren, wie man [MASK] durchführt?",; Search
+"Wo steht was zu [MASK]?",; Search
+"Wo kann ich Tutorials zu [MASK] finden?",; Search
+"Könntest du mir eine einfache Erklärung von [MASK] geben?",; Search
+"Wo kann ich Beispiele für [MASK] finden?",; Search
+"Wo finde ich Informationen über [MASK]?",; Search
+"Wo kann ich Beispiele für [MASK] finden?",; Search
+"Könntest du mir eine kurze Erklärung für den Begriff [MASK] geben?",; Search
+"Wo kann ich Ressourcen über [MASK] finden?",; Search
+"Ich suche nach Infos zu [MASK]",; Search
+"Wie führt man [MASK] durch?",; Search
+"Kannst du mir eine kurze Beschreibung von [MASK] geben?",; Search
+"Was ist die Bedeutung von [MASK]?",; Search
+"Wo kann ich Bücher über [MASK] finden?",; Search
+"Wo kann ich spezifische Anwendungen von [MASK] finden?",; Search
+"Bedeutung",; Search
+"Was ist die Definition von [MASK]?",; Search
+"Was ist das Ziel der [MASK] und wie wird es erreicht?",; Search
+"Ich suche nach einer Beschreibung von [MASK]",; Search
+"Zeig mir Inhalte zu [MASK]",; Search
+"Wo kann ich mehr über [MASK] lernen?",; Search
+"Ich verstehe den Begriff [MASK] nicht. Kannst du ihn erklären?",; Search
+"Wo finde ich was über [MASK]?"; Search
+"Könntest du mir erklären, was der Begriff [MASK] bedeutet?",; Search
+"Wo finde ich [MASK]?"; Search
+"Wo kann ich eine Einführung in [MASK] finden?",; Search
+"Wo finde ich Bücher oder Artikel über [MASK]?",; Search
+"Wo kann ich Infos zum Thema [MASK] finden?",; Search
+"Welche Informationsquellen gibt es zur [MASK]?"; Search
+"Was ist [MASK]?",; Search
+"Wo kann ich Grundlagen von [MASK] finden?",; Search
+"Hast du Infos über die jüngsten Forenbeiträge?",; RequestForumPosts
+"Sind neue Beiträge verfügbar?",; RequestForumPosts
+"Gibt es kürzlich veröffentlichte Nachrichten im Forum?",; RequestForumPosts
+"Welche Themen sind kürzlich im Forum aufgekommen?",; RequestForumPosts
+"Zeige mir aktuelle Themen im Forum",; RequestForumPosts
+"Was ist kürzlich im Forum passiert?",; RequestForumPosts
+"Zeige mir die aktuellsten Forenupdates",; RequestForumPosts
+"Was gibt es Neues in den Forendiskussionen?",; RequestForumPosts
+"Was habe ich verpasst?",; RequestForumPosts
+"Hast du Informationen über aktuelle Diskussionen?",; RequestForumPosts
+"Posts"; RequestForumPosts
+"Zeige mir die aktuellsten Forenbeiträge, bitte",; RequestForumPosts
+"Gibt es neue Entwicklungen im Forum?",; RequestForumPosts
+"Forum",; RequestForumPosts
+"Gibt es frische Informationen in den Forenbeiträgen?",; RequestForumPosts
+"Nachrichten",; RequestForumPosts
+"Zeige mir bitte die neuesten Themen im Forum",; RequestForumPosts
+"Welche Neuigkeiten gibt es im Forum?",; RequestForumPosts
+"Was hat sich im Forum getan?",; RequestForumPosts
+"Gibt es Neuigkeiten von den Forenmitgliedern?",; RequestForumPosts
+"Zeig mir die jüngsten Forenupdates",; RequestForumPosts
+"Gibt es kürzlich aktualisierte Forenthemen?",; RequestForumPosts
+"Gibt es aktuelle Forenaktivitäten?",; RequestForumPosts
+"Sind neue Beiträge in den Diskussionen aufgetaucht?",; RequestForumPosts
+"Gibt es Neuigkeiten in den Forenbeiträgen?",; RequestForumPosts
+"Gibt es kürzlich eingestellte Nachrichten im Forum?",; RequestForumPosts
+"Hast du Infos über die letzten Forennachrichten?",; RequestForumPosts
+"Zeig mir die letzten Forumseinträge",; RequestForumPosts
+"Was gibt es Neues in den Diskussionen?",; RequestForumPosts
+"Gibt es neue Nachrichten?",; RequestForumPosts
+"Sollte ich mal wieder ins Forum schauen?",; RequestForumPosts
+"Hast du Informationen über neu gestartete Diskussionen?",; RequestForumPosts
+"Was gibt es Neues in den Foren?",; RequestForumPosts
+"Gibt es Aktualisierungen in den Foren?",; RequestForumPosts
+"Gibt es frische Beiträge in den Foren?",; RequestForumPosts
+"Gibt es frische Beiträge im Forum?",; RequestForumPosts
+"Gibt es aktuelle Diskussionen im Forum?",; RequestForumPosts
+"Was sind die zentralen Punkte im Modul ...?",; RequestSectionSummary
+"Kannst du mir die Kernthemen des Abschnitts ... skizzieren?",; RequestSectionSummary
+"Was sind die zentralen Ideen im Modul ...?",; RequestSectionSummary
+"Was erwartet die Teilnehmer im Modul ...?",; RequestSectionSummary
+"Fasse den Inhalt von ... zusammen",; RequestSectionSummary
+"Was sind die Kernthemen im Modul ...?",; RequestSectionSummary
+"Worum geht es im Abschnitt ...?",; RequestSectionSummary
+"Was erwartet mich im Modul ...?",; RequestSectionSummary
+"Könntest du mir eine kurze Beschreibung geben, was im Abschnitt ... vorkommt?",; RequestSectionSummary
+"Kannst du mir zusammenfassen, worum es im Abschnitt ... geht?",; RequestSectionSummary
+"Könntest du mir kurz erläutern, worum es im Abschnitt ... geht?",; RequestSectionSummary
+"Was sind die Hauptthemen des Moduls ...?",; RequestSectionSummary
+"Was erfährt man im Modul ...?",; RequestSectionSummary
+"Kannst du mir eine Zusammenfassung darüber geben, was im Abschnitt ... diskutiert wird?",; RequestSectionSummary
+"Was sind die Hauptpunkte im Modul ...?",; RequestSectionSummary
+"Kannst du mir sagen, was man im Abschnitt ... lernt?",; RequestSectionSummary
+"Welche Konzepte werden im Modul ... vermittelt?",; RequestSectionSummary
+"Kannst du mir kurz skizzieren, was im Abschnitt ... besprochen wird?",; RequestSectionSummary
+"Welche Inhalte werden im Modul ... abgedeckt?",; RequestSectionSummary
+"Modul",; RequestSectionSummary
+"Was steht im Modul ... auf dem Lehrplan?",; RequestSectionSummary
+"Abschnitt",; RequestSectionSummary
+"Kannst du mir die Schlüsselideen des Abschnitts ... zusammenfassen?",; RequestSectionSummary
+"Inhalt von ...?",; RequestSectionSummary
+"Was lernt man im Modul ... genau?",; RequestSectionSummary
+"Könntest du mir kurz erklären, worum es im Abschnitt ... geht?",; RequestSectionSummary
+"Kannst du mir kurz erzählen, was im Abschnitt ... abgehandelt wird?",; RequestSectionSummary
+"Was sind die wichtigsten Lektionen im Modul ...?",; RequestSectionSummary
+"Könntest du mir einen Überblick über den Inhalt des Abschnitts ... geben?",; RequestSectionSummary
+"Was lernt man in Abschnitt ...?",; RequestSectionSummary
+"Welche Lektionen werden im Modul ... vermittelt?",; RequestSectionSummary
+"Kannst du mir eine Zusammenfassung darüber geben, worum es im Abschnitt ... geht?",; RequestSectionSummary
+"Kannst du mir zusammenfassen, was im Abschnitt ... vermittelt wird?",; RequestSectionSummary
+"Was ist der Fokus im Modul ...?",; RequestSectionSummary
+"Um welche Themen geht es im Modul ...?",; RequestSectionSummary
+"Was ist der Schwerpunkt im Modul ...?",; RequestSectionSummary
+"Könntest du mir kurz darlegen, worum es im Abschnitt ... geht?",; RequestSectionSummary
+"Was sind die Hauptinhalte des Moduls ...?",; RequestSectionSummary
+"Wie kann ich dich einsetzen?",; RequestHelp
+"Welche Funktionen hast du?",; RequestHelp
+"Wäre dankbar für deine Hilfe.",; RequestHelp
+"Kannst du mich beraten und unterstützen?",; RequestHelp
+"Kannst du mir eine Lösung präsentieren?",; RequestHelp
+"Welche Funktionen stehen mir zur Verfügung?",; RequestHelp
+"Wie kann ich dich anweisen?",; RequestHelp
+"Benötige Hilfe bei meinem Problem.",; RequestHelp
+"Kannst du mir Tipps geben?",; RequestHelp
+"Was sind deine Grenzen?",; RequestHelp
+"Was kann ich mit dir machen?",; RequestHelp
+"Kannst du mir helfen, eine bestimmte Aufgabe zu erledigen?",; RequestHelp
+"Wie kann ich deine Fähigkeiten nutzen?",; RequestHelp
+"Kannst du mir beistehen?",; RequestHelp
+"Welche Aufgaben sind für dich geeignet?",; RequestHelp
+"Wie kann ich dich steuern?"; RequestHelp
+"Was kann ich sagen?",; RequestHelp
+"Kannst du mich beraten?",; RequestHelp
+"Wäre dankbar für deine Ratschläge.",; RequestHelp
+"helfen"; RequestHelp
+"Was sind deine Möglichkeiten?",; RequestHelp
+"Welche Aufgaben kannst du erledigen?",; RequestHelp
+"Brauche Rat und Beistand.",; RequestHelp
+"Wie kann ich dich bedienen?",; RequestHelp
+"Habe Schwierigkeiten, kannst du mich unterstützen?",; RequestHelp
+"Kannst du mir dabei helfen, etwas zu tun?",; RequestHelp
+"Was für Funktionen hast du?",; RequestHelp
+"Wäre toll, wenn du mir helfen könntest.",; RequestHelp
+"Was kannst du mir bieten?",; RequestHelp
+"Wie kann ich dich verbessern?",; RequestHelp
+"Benötige Hilfe hier!",; RequestHelp
+"Wie benutze ich dich?",; RequestHelp
+"Wäre nett, wenn du mir helfen könntest.",; RequestHelp
+"Was sind deine Fähigkeiten?",; RequestHelp
+"Hilfe",; RequestHelp
+"Wäre dankbar für deine Hilfe und Unterstützung.",; RequestHelp
+"Kannst du mich unterstützen?",; RequestHelp
+"Was sind deine besonderen Fähigkeiten?",; RequestHelp
+"Wie kann ich dich benutzen?",; RequestHelp
+"Kannst du mir helfen?",; RequestHelp
+"Wie kann ich dich verwenden?",; RequestHelp
+"Wie kann ich dich optimieren?",; RequestHelp
+"Wäre toll, wenn du mich unterstützen könntest.",; RequestHelp
+"Brauche Hilfe bei dieser Aufgabe.",; RequestHelp
+"Kannst du mich aufklären und unterstützen?",; RequestHelp
+"Was für eine Art von Aufgaben kannst du bewältigen?",; RequestHelp
+"Anleitung",; RequestHelp
+"Brauche Unterstützung!",; RequestHelp
+"Habe Fragen, kannst du helfen?",; RequestHelp
+"Wie kann ich dich programmieren?",; RequestHelp
+"Kannst du mir zur Seite stehen?",; RequestHelp
+"steuern",; RequestHelp
+"Kannst du mir Orientierung geben?",; RequestHelp
+"Was kannst du eigentlich?",; RequestHelp
+"Kannst du mir Lösungen bieten?",; RequestHelp
+"Hilfe",; RequestHelp
+"Kannst du mich begleiten?",; RequestHelp
+"Welche Maßnahmen kann ich ergreifen, um meinen Badge-Status zu verbessern?",; RequestBadgeProgress
+"Welche Schritte sollte ich unternehmen, um den nächsten Badge zu erreichen?",; RequestBadgeProgress
+"Kannst du mir Informationen über die Fortschritt meiner Auszeichnungen geben?",; RequestBadgeProgress
+"Welche Anforderungen sind für den nächsten Badge festgelegt?",; RequestBadgeProgress
+"Wie steht es um meinen Fortschritt für die Auszeichnungen?",; RequestBadgeProgress
+"Welche Anforderungen gibt es für die nächste Auszeichnung?",; RequestBadgeProgress
+"Welche Aktivitäten sind erforderlich, um die nächste Auszeichnung zu verdienen?",; RequestBadgeProgress
+"Könntest du mir mitteilen, was ich tun muss, um den nächsten Badge zu erhalten?",; RequestBadgeProgress
+"Wie stehen die Chancen, meinen nächste Auszeichnung zu erhalten?",; RequestBadgeProgress
+"Welche Leistungen sind notwendig, um die nächste Auszeichnung zu erhalten?",; RequestBadgeProgress
+"Kannst du mir Details zu meinen Badge-Aktivitäten geben?",; RequestBadgeProgress
+"Wie kriege ich den nächsten Badge?",; RequestBadgeProgress
+"Wie kann ich meinen Badge-Status überprüfen?",; RequestBadgeProgress
+"Welche Aktionen sind notwendig, um meine Auszeichnungen zu verbessern?",; RequestBadgeProgress
+"Wie sieht es mit meinem Fortschritt bei den Badges aus?",; RequestBadgeProgress
+"Kannst du mir sagen, was ich tun muss, um die nächste Auszeichnung zu bekommen?",; RequestBadgeProgress
+"Was sind die Kriterien für die nächste Auszeichnung?",; RequestBadgeProgress
+"Wie kriege ich die nächste Auszeichnung?",; RequestBadgeProgress
+"Wie sieht mein Fortschritt für den nächsten Badge aus?",; RequestBadgeProgress
+"Was sind die nächsten Schritte für meinen Badge-Fortschritt?",; RequestBadgeProgress
+"Was sind die Schritte, um meinen Badge zu verbessern?",; RequestBadgeProgress
+"Welche Leistungen sind notwendig, um den nächsten Badge zu erhalten?",; RequestBadgeProgress
+"Kannst du mir sagen, welche Schritte ich unternehmen muss, um meinen Badge zu verbessern?",; RequestBadgeProgress
+"Welche Maßnahmen kann ich ergreifen, um meinen Auszeichnungs-Status zu verbessern?",; RequestBadgeProgress
+"Was sind die nächste Schritte für meinen Auszeichnungs-Fortschritt?",; RequestBadgeProgress
+"Wie ist mein aktueller Stand in Bezug auf die Auszeichnungen?",; RequestBadgeProgress
+"Welche Leistungen benötige ich für den nächsten Badge?",; RequestBadgeProgress
+"Badge"; RequestBadgeProgress
+"Welche Anforderungen gibt es für den nächsten Badge?",; RequestBadgeProgress
+"Wie ist mein Auszeichnungs Fortschritt?",; RequestBadgeProgress
+"Kannst du mir sagen, wie ich meinen Fortschritt für die Auszeichnungen überprüfen kann?",; RequestBadgeProgress
+"Was sind die Kriterien für den nächsten Badge?",; RequestBadgeProgress
+"Welche Handlungen sind notwendig, um meinen Badge zu erhöhen?",; RequestBadgeProgress
+"Welche Erfolge sind erforderlich, um den nächsten Badge zu bekommen?",; RequestBadgeProgress
+"Wie steht es um meinen aktuellen Badge-Status?",; RequestBadgeProgress
+"Wie kann ich meinen Auszeichnungs-Status überprüfen?",; RequestBadgeProgress
+"Wie sieht es mit meinem Auszeichnungs-Fortschritt aus?",; RequestBadgeProgress
+"Welche Maßnahmen sind notwendig, um die nächste Auszeichnung zu erreichen?",; RequestBadgeProgress
+"Auszeichnung"; RequestBadgeProgress
+"Welche Aktivitäten sind erforderlich, um den nächsten Badge zu verdienen?",; RequestBadgeProgress
+"Gibt es bestimmte Aufgaben, die ich für die nächste Auszeichnung erledigen muss?",; RequestBadgeProgress
+"Was sind die Voraussetzungen für die nächste Auszeichnung?",; RequestBadgeProgress
+"Welche Aktionen sind notwendig, um meinen Badge zu verbessern?",; RequestBadgeProgress
+"Welche Aufgaben stehen an, um den nächsten Badge zu erreichen?",; RequestBadgeProgress
+"Was fehlt noch bis zur nächsten Auszeichnung?",; RequestBadgeProgress
+"Welche Aktivitäten bringen mich der nächsten Auszeichnung näher?",; RequestBadgeProgress
+"Was muss ich tun, um den nächsten Badge zu verdienen?",; RequestBadgeProgress
+"Was muss ich tun, um meinen Fortschritt für die Auszeichnungen zu steigern?",; RequestBadgeProgress
+"Welche Schritte sind erforderlich, um die nächste Auszeichnung zu erhalten?",; RequestBadgeProgress
+"Wie sieht es mit meinem Badge-Fortschritt aus?",; RequestBadgeProgress
+"Wie kann ich meinen Fortschritt für die nächste Auszeichnung überprüfen?",; RequestBadgeProgress
+"Was sind die Schritte, um meinen Badge-Status zu verbessern?",; RequestBadgeProgress
+"Was muss ich erledigen, um die nächste Auszeichnung zu sichern?",; RequestBadgeProgress
+"Was muss ich machen um die nächste Auszeichnung zu bekommen?",; RequestBadgeProgress
+"Welche Maßnahmen sind notwendig, um den nächsten Badge zu erreichen?",; RequestBadgeProgress
+"Kannst du mir eine Zusammenfassung meines Auszeichnungs-Fortschritts geben?",; RequestBadgeProgress
+"Kannst du mir Details zu meinen Auszeichnung-Aktivitäten geben?",; RequestBadgeProgress
+"Kannst du mir Informationen über den Fortschritt meiner Badges geben?",; RequestBadgeProgress
+"Wie ist mein aktueller Stand in Bezug auf die Badges?",; RequestBadgeProgress
+"Wie steht es um meinen aktuellen Auszeichnungs-Status?",; RequestBadgeProgress
+"Was sind die Schritte, um meinen Auszeichnungs-Status zu verbessern?",; RequestBadgeProgress
+"Welche Handlungen sind notwendig, um meine Auszeichnungen zu erhöhen?",; RequestBadgeProgress
+"Was muss ich machen um den nächsten Badge zu bekommen?",; RequestBadgeProgress
+"Was muss ich erledigen, um den nächsten Badge zu sichern?",; RequestBadgeProgress
+"Welche Leistungen benötige ich für die nächste Auszeichnung?",; RequestBadgeProgress
+"Wie stehen die Chancen, meinen nächsten Badge zu erhalten?",; RequestBadgeProgress
+"Welche Aufgaben stehen an, um die nächste Auszeichnung zu erreichen?",; RequestBadgeProgress
+"Kannst du mir sagen, wie ich meinen Fortschritt zu den Badges überprüfen kann?",; RequestBadgeProgress
+"Welche Schritte sollte ich unternehmen, um die nächste Auszeichnung zu erreichen?",; RequestBadgeProgress
+"Was sind die Anforderungen, um meinen nächsten Badge zu verdienen?",; RequestBadgeProgress
+"Was muss ich tun, um die nächste Auszeichnung zu verdienen?",; RequestBadgeProgress
+"Wie kann ich meinen Fortschritt für den nächsten Badge überprüfen?",; RequestBadgeProgress
