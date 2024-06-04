@@ -1,13 +1,12 @@
 # coding: utf-8
 import datetime
-import httplib2
 from dataclasses import dataclass
-import json
 from typing import Dict, List, Tuple, Union
-import urllib
-
 from config import MOODLE_SERVER_WEB_HOST, MOOLDE_SERVER_PROTOCOL
+import requests
 
+sess = requests.Session()
+API_ENDPOINT = f"{MOOLDE_SERVER_PROTOCOL}://{MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php"
 
 @dataclass
 class UserSettings:
@@ -123,30 +122,14 @@ class GlossaryItem:
 
 
 def api_call(wstoken: str, wsfunction: str, params: dict):
-	http_client = httplib2.Http(".cache", disable_ssl_certificate_validation=True)
 	body={
-			"wstoken": wstoken,
-			"wsfunction": wsfunction,
-			"moodlewsrestformat": "json",
-			**params
+		"wstoken": wstoken,
+		"wsfunction": wsfunction,
+		"moodlewsrestformat": "json",
+		**params
 	}
-	response = http_client.request(f"{MOOLDE_SERVER_PROTOCOL}://{MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php",
-		method="POST",
-		headers={'Content-type': 'application/x-www-form-urlencoded'},
-		body=urllib.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode
-	response = response.strip()
-	# print("response: ", response)
-	start_pos = 0
-	end_pos = len(response)
-	if response.startswith(b"<script"):
-		# remove debugging console log from response
-		start_pos = response.rfind(b"</script>") + len(b"</script>")
-	
-	# Extracst the JSON part
-	json_part = response[start_pos:end_pos + 1]
-	# Decode the JSON part and parse it
-	data = json.loads(json_part.decode().strip('"').replace("\\/", "/").replace('\/', '/'))
-
+	response = sess.post(url=API_ENDPOINT, data=body, verify=False)
+	data = response.json()
 	return data
 
 
