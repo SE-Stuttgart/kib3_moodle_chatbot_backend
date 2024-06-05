@@ -236,17 +236,21 @@ class ELearningNLG(Service):
         percentage_improvements = sum(improvements)/len(improvements)
         msgs = []
         if percentage_improvements > 0.0:
+            num_quizzes = sum(improvements)
+            counter = "einem Quiz" if num_quizzes == 1 else f"{sum(improvements)} Quizzen"
             msgs.append(random.choice([
-                (f"Sehr gut, du hast dich in dieser Runde bei {sum(improvements)} Quizzen verbessert!", []),
-                (f"Wow, du hast dich diesmal bei {sum(improvements)} Quizzen verbessert!", []),
-                (f"Super, bei {sum(improvements)} Quizzen hast du dich gerade verbessert!", []),
+                (f"Sehr gut, du hast dich in dieser Runde bei {counter} verbessert!", []),
+                (f"Wow, du hast dich diesmal bei {counter} verbessert!", []),
+                (f"Super, bei {counter} hast du dich gerade verbessert!", []),
             ]))
             msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), ["Weitere Quizze Wiederholen", "Etwas Neues lernen"]))
         else:
+            num_quizzes = len(improvements)
+            counter = "ein weiteres Quiz" if num_quizzes == 1 else f"{len(improvements)} Quizze"
             msgs.append(random.choice([
-                (f"Toll, dass du {len(improvements)} Quizze nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]),
-                (f"Du hast {len(improvements)} Quizze wiederholt - du bist auf dem richtigen Weg.", ["Weitere Quizze Wiederholen"]),
-                (f"{len(improvements)} Quizze wiederholt - wenn du so weiter machst, bist du gut für die Prüfung vorbereitet!", ["Weitere Quizze wiederholen"])
+                (f"Toll, dass du {counter} nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]),
+                (f"Du hast {counter} wiederholt - du bist auf dem richtigen Weg.", ["Weitere Quizze Wiederholen"]),
+                (f"{counter} wiederholt - wenn du so weiter machst, bist du gut für die Prüfung vorbereitet!", ["Weitere Quizze wiederholen"])
             ]))
         return msgs 
 
@@ -273,11 +277,12 @@ class ELearningNLG(Service):
                 (f"""Als nächste Auszeichnung könntest du {badge_name} bekommen.""", []),
                 (f"""{badge_name} ist der nächste Erfolg für dich.""", []),
             ]))
+        noun = "die Auszeichnung" if "Auszeichnung" in msgs[0][0] else "den Badge"
         msgs += [(self._donut_chart("Auszeichnungsfortschritt", percentage_done), []),
                 (f"""Wenn du noch
                 {self._enumeration(items=[self.to_content_link(**activtity_link_info) for activtity_link_info in missing_activities])}
 
-                fertig machst, kriegst du sie 😊""", [])]
+                fertig machst, kriegst du {noun} 😊""", [])]
         return msgs
     
     def congratulate_badge(self, badge_name: str, badge_img_url: str):
