@@ -1,7 +1,7 @@
+requests==2.31.0
 passlib==1.7.4
 tornado==6.2
 pyzmq==24.0.1
-httplib2==0.20.4
 torch==2.2.0
 sentence-transformers==2.2.2
 matplotlib==3.8.2

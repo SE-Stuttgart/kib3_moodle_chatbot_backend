@@ -13,7 +13,7 @@ class DBLoggingHandler(Service):
 
     def _log(self, userid: int, courseid: int, speaker: str, message: str, act: str):
         # don't bother waiting for response (is only ACK=true)
-        api_call(wstoken=self.get_state(userid, "SLIDEFINDERTOKEN"), wsfunction="block_chatbot_log_interaction", params=dict(
+        api_call(wstoken=self.get_state(userid, "BOOKSEARCHTOKEN"), wsfunction="block_chatbot_log_interaction", params=dict(
             userid=userid,
             courseid=courseid,
             speaker=speaker,
@@ -22,7 +22,7 @@ class DBLoggingHandler(Service):
         ))
 
     def get_wstoken(self, userid: int):
-        return self.get_state(userid, 'SLIDEFINDERTOKEN')
+        return self.get_state(userid, 'BOOKSEARCHTOKEN')
 
     @PublishSubscribe(sub_topics=["settings"])
     def settings_changed(self, user_id: int, settings: dict):

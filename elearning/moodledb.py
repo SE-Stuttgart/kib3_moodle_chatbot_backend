@@ -1,14 +1,12 @@
 # coding: utf-8
 import datetime
-import traceback
-import httplib2
 from dataclasses import dataclass
-import json
-from typing import List, Tuple, Union
-import urllib
-
+from typing import Dict, List, Tuple, Union
 from config import MOODLE_SERVER_WEB_HOST, MOOLDE_SERVER_PROTOCOL
+import requests
 
+sess = requests.Session()
+API_ENDPOINT = f"{MOOLDE_SERVER_PROTOCOL}://{MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php"
 
 @dataclass
 class UserSettings:
@@ -17,6 +15,7 @@ class UserSettings:
 	preferedcontenttypeid: int
 
 	enabled: bool
+	firstturn: bool
 	logging: bool
 	numsearchresults: int
 	numreviewquizzes: int
@@ -101,37 +100,38 @@ class SectionInfo:
 	name: str
 	firstcmid: int
 
-def api_call(wstoken: str, wsfunction: str, params: dict):
-	http_client = httplib2.Http(".cache")
-	body={
-			"wstoken": wstoken,
-			"wsfunction": wsfunction,
-			"moodlewsrestformat": "json",
-			**params
-	}
-	try:
-		response = http_client.request(f"{MOOLDE_SERVER_PROTOCOL}://{MOODLE_SERVER_WEB_HOST}/webservice/rest/server.php",
-			method="POST",
-			headers={'Content-type': 'application/x-www-form-urlencoded'},
-			body=urllib.parse.urlencode(body))[1] # result is binary string with escaped quotes -> decode
-		response = response.strip()
-		# print("response: ", response)
-		start_pos = 0
-		end_pos = len(response)
-		if response.startswith(b"<script"):
-			# remove debugging console log from response
-			start_pos = response.rfind(b"</script>") + len(b"</script>")
-		
-		# Extracst the JSON part
-		json_part = response[start_pos:end_pos + 1]
-		# Decode the JSON part and parse it
-		data = json.loads(json_part.decode().strip('"').replace("\\/", "/").replace('\/', '/'))
+@dataclass
+class ContentLinkInfo:
+	url: str
+	name: str
+	typename : str
 
-		return data
-	except:
-		print(traceback.format_exc())
-		return {f"Fehler": f"Fehler beim ausführen der Funktion {wsfunction}"}
-	
+	def to_dict(self, alternative_displayname: str = None) -> Dict[str, str]:
+		return {
+			"url": self.url,
+			"displaytext": self.name if alternative_displayname is None else alternative_displayname,
+			"typename": self.typename
+		}
+
+@dataclass
+class GlossaryItem:
+	id: int # id of glossary entry
+	glossaryid: int # id of glossary
+	concept: str # glossary entry concept name
+	definition: str # definition of concept
+
+
+def api_call(wstoken: str, wsfunction: str, params: dict):
+	body={
+		"wstoken": wstoken,
+		"wsfunction": wsfunction,
+		"moodlewsrestformat": "json",
+		**params
+	}
+	response = sess.post(url=API_ENDPOINT, data=body, verify=False)
+	data = response.json()
+	return data
+
 
 def fetch_user_settings(wstoken: str, userid: int) -> UserSettings:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_usersettings", params=dict(userid=userid))
@@ -171,11 +171,12 @@ def fetch_has_seen_any_course_modules(wstoken: str, userid: int, courseid: int) 
 	))
 	return response['seen']
 
-def fetch_last_viewed_course_modules(wstoken: str, userid: int, courseid: int, completed: bool) -> List[CourseModuleAccess]:
+def fetch_last_viewed_course_modules(wstoken: str, userid: int, courseid: int, completed: bool, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame") -> List[CourseModuleAccess]:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_last_viewed_course_modules", params=dict(
 		userid=userid,
 		courseid=courseid,
-		completed=int(completed)
+		completed=int(completed),
+		includetypes=includetypes
 	))
 	results = []
 	for result in response:
@@ -195,19 +196,18 @@ def fetch_first_available_course_module_id(wstoken: str, userid: int, courseid: 
 	))
 	return response['cmid']
 
-def fetch_content_link(wstoken: str, cmid: int, alternative_display_text: str = "") -> str:
+def fetch_content_link(wstoken: str, cmid: int) -> ContentLinkInfo:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_course_module_content_link", params=dict(
 		cmid=cmid,
-		alternativedisplaytext=alternative_display_text
 	))
-	return response['url']
+	return ContentLinkInfo(**response)
 
 def fetch_available_new_course_section_ids(wstoken: str, userid: int, courseid: int) -> List[SectionInfo]:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_available_new_course_sections", params=dict(
 		userid=userid,
 		courseid=courseid
 	))
-	return [SectionInfo(**res) for res in response]
+	return filter(lambda info: info.firstcmid is not None, [SectionInfo(**res) for res in response])
 
 def fetch_icecreamgame_course_module_id(wstoken: str, courseid: int) -> int:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_icecreamgame_course_module_id", params=dict(
@@ -225,13 +225,13 @@ def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmi
 	))
 	return response['cmid']
 
-def fetch_viewed_course_modules_count(wstoken: str, userid: int, courseid: int, include_types: str = "url,book,resource,h5pactivity,icecreamgame", starttime: int = 0, endtime: int = -1) -> int:
-	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_count_viewed_course_modules", params=dict(
+def fetch_viewed_course_modules_count(wstoken: str, userid: int, courseid: int, include_types: str, starttime: datetime.datetime, endtime: datetime.datetime) -> int:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_count_completed_course_modules", params=dict(
 		userid=userid,
 		courseid=courseid,
 		includetypes=include_types,
-		starttime=starttime,
-		endtime=endtime
+		starttime='{:.0f}'.format(starttime.timestamp()),
+		endtime='{:.0f}'.format(endtime.timestamp())
 	))
 	return response['count']
 
@@ -284,3 +284,20 @@ def fetch_oldest_worst_grade_course_ids(wstoken: str, userid: int, courseid: int
 	))
 	return [QuizInfo(**res) for res in response]
 
+def fetch_glossary_search(wstoken: str, userid: int, courseid: int, searchterm: str, fullsearch: bool = True, startidx: int = 0, limit: int = 0) -> List[GlossaryItem]:
+	"""
+	Args:
+		fullsearch: whether to perform full search (including definition)
+		startidx: pagination start
+		limit: max. number of results to return, i.e. end index = startidx + limit for pagination.
+			   if startidx = 0 and limit = 0, this function will return all results
+	""" 
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_search_glossary", params=dict(
+		userid=userid,
+		courseid=courseid,
+		searchterm=searchterm,
+		fullsearch=int(fullsearch),
+		startidx=startidx,
+		limit=limit
+	))
+	return [GlossaryItem(**res) for res in response]

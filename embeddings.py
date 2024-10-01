@@ -259,21 +259,21 @@ def main():
                 print("Done making csv")
                 continue
             case '2':
-                corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./new_corpus/', 'test_corpus')              
+                corpus_train, train_labels, corpus_test, test_labels = corpus.load_stratisfied('./resources/new_corpus/', './resources/test_corpus')              
                 corpus_embeddings = None
-                make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, "new_corpus_")
+                make_pickeld_corpus(corpus_train, train_labels, corpus_test, test_labels, "./resources/new_corpus_")
             case '3':
-                corpus_informs = corpus.load_corpus_per_inform('./new_corpus/')
+                corpus_informs = corpus.load_corpus_per_inform('./resources/new_corpus/')
                 cross_validation(corpus_informs)
             case '4':
-                corpus_informs = corpus.load_corpus_per_inform('./new_corpus/')
-                corpus_train, _ = corpus.load_corpus('new_corpus_train.csv')
-                corpus_test, _ = corpus.load_corpus('new_corpus_test.csv')
+                corpus_informs = corpus.load_corpus_per_inform('./resources/new_corpus/')
+                corpus_train, _ = corpus.load_corpus('./resources/new_corpus_train.csv')
+                corpus_test, _ = corpus.load_corpus('./resources/new_corpus_test.csv')
                 corpus_full = corpus_train + corpus_test
                 cross_validation_across_informs(corpus_informs, corpus_full)
             case '5':
-                corpus_train, train_labels = corpus.load_corpus('new_corpus_train.csv')
-                corpus_test, test_labels = corpus.load_corpus('new_corpus_test.csv')
+                corpus_train, train_labels = corpus.load_corpus('./resources/new_corpus_train.csv')
+                corpus_test, test_labels = corpus.load_corpus('./resources/new_corpus_test.csv')
                 corpus_embeddings = None
                 print("corpus_train: ", len(corpus_train))
                 print("corpus_test: ", len(corpus_test))
@@ -281,14 +281,14 @@ def main():
                 print("test_labels: ", len(test_labels))
 
             case '6':
-                with open('new_corpus_embeddings.pkl', "rb") as fIn:
+                with open('./resources/new_corpus_embeddings.pkl', "rb") as fIn:
                     stored_data = pickle.load(fIn)
                     corpus_train = stored_data['sentences']
                     corpus_embeddings = stored_data['embeddings']
                     train_labels = stored_data['labels']
-                corpus_test, test_labels = corpus.load_corpus('new_corpus_test.csv')
+                corpus_test, test_labels = corpus.load_corpus('./resources/new_corpus_test.csv')
             case '7':
-                transform_csv('./short_corpus/', './short_corpus_paranthesis/')
+                transform_csv('./resources/short_corpus/', './resources/short_corpus_paranthesis/')
             case '8':
                 exit()
             case _:

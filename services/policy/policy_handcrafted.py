@@ -25,7 +25,6 @@ from services.service import Service
 from utils import SysAct, SysActionType
 from utils.beliefstate import BeliefState
 from utils.domain.jsonlookupdomain import JSONLookupDomain
-from utils.logger import DiasysLogger
 from utils.useract import UserActionType
 
 
@@ -48,7 +47,7 @@ class HandcraftedPolicy(Service):
 
     """
 
-    def __init__(self, domain: JSONLookupDomain, logger: DiasysLogger = DiasysLogger(),
+    def __init__(self, domain: JSONLookupDomain, logger: str,
                  max_turns: int = 25):
         """
         Initializes the policy
@@ -149,8 +148,6 @@ class HandcraftedPolicy(Service):
         # handle domain specific actions
         else:
             sys_act, sys_state = self._next_action(beliefstate)
-        if self.logger:
-            self.logger.dialog_turn("System Action: " + str(sys_act))
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
         return {'sys_acts': [sys_act], "sys_state": sys_state}

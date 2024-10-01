@@ -26,7 +26,6 @@ from services.service import Service
 from utils import UserAct, UserActionType
 from utils.common import Language
 from utils.domain.jsonlookupdomain import JSONLookupDomain
-from utils.logger import DiasysLogger
 from utils.sysact import SysActionType
 
 class ELearningNLU(Service):
@@ -49,7 +48,7 @@ class ELearningNLU(Service):
     SEARCH_COUNTER = 'search_counter'
 
 
-    def __init__(self, domain: JSONLookupDomain, logger: DiasysLogger = DiasysLogger(),
+    def __init__(self, domain: JSONLookupDomain, 
                  language: Language = Language.GERMAN):
         """
         Loads
@@ -65,7 +64,6 @@ class ELearningNLU(Service):
             domain {domain.jsonlookupdomain.JSONLookupDomain} -- Domain
         """
         Service.__init__(self, domain=domain)
-        self.logger = logger
 
         self.language = language if language else Language.ENGLISH
        

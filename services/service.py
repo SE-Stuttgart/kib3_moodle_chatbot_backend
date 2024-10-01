@@ -1,10 +1,12 @@
 import copy
 import inspect
+import logging
 import pickle
 import threading
 import time
 import json
 from threading import Thread, RLock
+import traceback
 from typing import List, Dict, Union, Iterable, Any
 from datetime import datetime, timedelta
 import importlib
@@ -15,7 +17,6 @@ from zmq import Context
 from zmq.devices import ThreadProxy, ProcessProxy
 
 from utils.domain.domain import Domain
-from utils.logger import DiasysLogger
 from utils.topics import Topic
 from utils.transmittable import Transmittable
 
@@ -104,7 +105,7 @@ class Service:
 
     def __init__(self, domain: Union[str, Domain] = "", sub_topic_domains: Dict[str, str] = {}, pub_topic_domains: Dict[str, str] = {},
                  ds_host_addr: str = DS_SERVER_IP_ADDR, sub_port: int = 65533, pub_port: int = 65534, protocol: str = "tcp",
-                 debug_logger: DiasysLogger = None, identifier: str = None):
+                 debug_logger: str = None, identifier: str = None):
 
         self.is_training = False
         self.domain = domain
@@ -269,6 +270,8 @@ class Service:
                     # initialize dialog state
                     self.dialog_start(user_id=user_id)
                     # set all listeners of this service to listening mode (block until they are listening)
+                    # only start listening if dialog start was executed successful.
+                    # if it throws an exception, wait for the next try of start_dialog 
                     for internal_start_topic in self._internal_start_topics:
                         _send_msg(self._control_channel_pub, internal_start_topic, True, user_id)
                         _recv_ack(self._internal_control_channel_sub, internal_start_topic, True, user_id)
@@ -300,9 +303,7 @@ class Service:
             except KeyboardInterrupt:
                 break
             except:
-                import traceback
-                print("ERROR in Service: _control_channel_listener")
-                traceback.print_exc()
+                logging.getLogger("error_log").error(traceback.format_exc())
 
     def dialog_start(self, user_id: str):
         """ This function is called before the first message to a new dialog is published.
@@ -467,9 +468,7 @@ class Service:
             except KeyboardInterrupt:
                 break
             except:
-                print("THREAD ERROR")
-                import traceback
-                traceback.print_exc()
+                logging.getLogger("error_log").error(traceback.format_exc())
         # shutdown
         subscriber.close()
 
@@ -571,7 +570,7 @@ class DialogSystem:
     """
 
     def __init__(self, services: List[Union[Service, RemoteService]], sub_port: int = 65533, pub_port: int = 65534,
-                 reg_port: int = 65535, protocol: str = 'tcp', debug_logger: DiasysLogger = None):
+                 reg_port: int = 65535, protocol: str = 'tcp', debug_logger: str = None):
         """
         Args:
             sub_port(int): subscriber port
@@ -579,7 +578,7 @@ class DialogSystem:
             pub_port(str): publisher port
             pub_addr(str): IP-address or domain name of proxy publisher interface (e.g. 193.196.53.252 for your local machine) 
             protocol(str): either 'inproc' or 'tcp'
-            debug_logger (DiasysLogger): if not None, all message traffic will be logged to the logger instance
+            debug_logger (str): if not None, all message traffic will be logged to the logger instance
         """
         # node-local topics
         self.debug_logger = debug_logger
@@ -750,9 +749,7 @@ class DialogSystem:
             except KeyboardInterrupt:
                 break
             except:
-                import traceback
-                traceback.print_exc()
-                print("ERROR in _end_dialog ")
+                logging.getLogger("error_log").error(traceback.format_exc())
 
         # stop receivers (blocking)
         for end_topic in self._end_topics:

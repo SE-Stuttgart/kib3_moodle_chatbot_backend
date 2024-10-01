@@ -21,12 +21,12 @@
 
 import random
 import json
+import re
 from datetime import datetime
 
 from services.service import PublishSubscribe
 from services.service import Service
 from utils.domain.domain import Domain
-from utils.logger import DiasysLogger
 from utils.sysact import SysAct, SysActionType
 from typing import Dict, List, Union
 
@@ -48,11 +48,9 @@ class ELearningNLG(Service):
         template_german (str): the name of the German NLG template file
         language (Language): the language of the dialogue
     """
-    def __init__(self, domain: Domain, template_file: str = None, sub_topic_domains: Dict[str, str] = {},
-                 logger: DiasysLogger = DiasysLogger()):
+    def __init__(self, domain: Domain, template_file: str = None, sub_topic_domains: Dict[str, str] = {}):
         """Constructor mainly extracts methods and rules from the template file"""
         Service.__init__(self, domain=domain, sub_topic_domains=sub_topic_domains)
-        self.logger = logger
 
     ###
     ### Helper functions
@@ -70,6 +68,18 @@ class ELearningNLG(Service):
         return f""" <ul>
                     {" ".join(['<li>' + item + '</li>' for item in items])}
                 </ul>"""
+
+    def to_href(self, url: str, displaytext: str) -> str:
+        return f"""<a href="{url}">{displaytext}</a>"""
+    
+    def to_pdf_popup(self, url: str, displaytext: str) -> str:
+        return f'<button class="block-chatbot-content-link" data-toggle="modal" data-target="#block_chatbot_coursemoduleview" data-src="{url}" data-displaytext="{displaytext}">{displaytext}</button>'
+
+    def to_content_link(self, url: str, displaytext: str, typename: str) -> str:
+        if typename == "resource":
+            return self.to_pdf_popup(url=url, displaytext=displaytext)
+        else:
+            return self.to_href(url=url, displaytext=displaytext)
 
     ###
     ### Templates
@@ -129,7 +139,7 @@ class ELearningNLG(Service):
             return self.welcomemsg
 
     def welcomemsg_first_turn_ever(self, first_turn: bool):
-        return  [("""Hallo, ich bin der Moodle Assistent!
+        return  [("""Hallo, ich bin Kibi, der Moodle Assistent!
         Ich kann dir helfen bei:
         <ul>
             <li>Suche nach Inhalten</li>
@@ -226,21 +236,25 @@ class ELearningNLG(Service):
         percentage_improvements = sum(improvements)/len(improvements)
         msgs = []
         if percentage_improvements > 0.0:
+            num_quizzes = sum(improvements)
+            counter = "einem Quiz" if num_quizzes == 1 else f"{sum(improvements)} Quizzen"
             msgs.append(random.choice([
-                (f"Sehr gut, du hast dich in dieser Runde bei {sum(improvements)} Quizzen verbessert!", []),
-                (f"Wow, du hast dich diesmal bei {sum(improvements)} Quizzen verbessert!", []),
-                (f"Super, bei {sum(improvements)} Quizzen hast du dich gerade verbessert!", []),
+                (f"Sehr gut, du hast dich in dieser Runde bei {counter} verbessert!", []),
+                (f"Wow, du hast dich diesmal bei {counter} verbessert!", []),
+                (f"Super, bei {counter} hast du dich gerade verbessert!", []),
             ]))
             msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), ["Weitere Quizze Wiederholen", "Etwas Neues lernen"]))
         else:
+            num_quizzes = len(improvements)
+            counter = "ein weiteres Quiz" if num_quizzes == 1 else f"{len(improvements)} Quizze"
             msgs.append(random.choice([
-                (f"Toll, dass du {len(improvements)} Quizze nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]),
-                (f"Du hast {len(improvements)} Quizze wiederholt - du bist auf dem richtigen Weg.", ["Weitere Quizze Wiederholen"]),
-                (f"{len(improvements)} Quizze wiederholt - wenn du so weiter machst, bist du gut für die Prüfung vorbereitet!", ["Weitere Quizze wiederholen"])
+                (f"Toll, dass du {counter} nochmal wiederholt hast! Weiter so!", ["Weitere Quizze Wiederholen"]),
+                (f"Du hast {counter} wiederholt - du bist auf dem richtigen Weg.", ["Weitere Quizze Wiederholen"]),
+                (f"{counter} wiederholt - wenn du so weiter machst, bist du gut für die Prüfung vorbereitet!", ["Weitere Quizze wiederholen"])
             ]))
         return msgs 
 
-    def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[str]):
+    def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[Dict[str, str]]):
         if badge_name == None:
             return [random.choice([
                         ("""Du hast bereits alle gerade verfügbaren Auszeichnungen erhalten 🎉
@@ -263,11 +277,12 @@ class ELearningNLG(Service):
                 (f"""Als nächste Auszeichnung könntest du {badge_name} bekommen.""", []),
                 (f"""{badge_name} ist der nächste Erfolg für dich.""", []),
             ]))
+        noun = "die Auszeichnung" if "Auszeichnung" in msgs[0][0] else "den Badge"
         msgs += [(self._donut_chart("Auszeichnungsfortschritt", percentage_done), []),
                 (f"""Wenn du noch
-                {self._enumeration(items=missing_activities)}
+                {self._enumeration(items=[self.to_content_link(**activtity_link_info) for activtity_link_info in missing_activities])}
 
-                fertig machst, kriegst du sie 😊""", [])]
+                fertig machst, kriegst du {noun} 😊""", [])]
         return msgs
     
     def congratulate_badge(self, badge_name: str, badge_img_url: str):
@@ -287,30 +302,45 @@ class ELearningNLG(Service):
                 (f"Herzlichen Glückwunsch, du hast den Abschnitt {name} abgeschlossen! 🎉", []),
             ])]
     
-    def inform_last_viewed_course_module(self, last_viewed_course_module):
+    def inform_last_viewed_course_module(self, last_viewed_course_module: Dict[str, str]):
+        last_viewed_course_module_link = self.to_content_link(**last_viewed_course_module)
         return [random.choice([
-                    (f"Letztes Mal hast du {last_viewed_course_module} angesehen.", []),
-                    (f"{last_viewed_course_module} war der letzte Inhalt, den du angeschaut hast.", []),
-                    (f"Beim letzten Mal hast du hier aufgehört: {last_viewed_course_module}.", []),
+                    (f"Letztes Mal hast du {last_viewed_course_module_link} angesehen.", []),
+                    (f"{last_viewed_course_module_link} war der letzte Inhalt, den du angeschaut hast.", []),
+                    (f"Beim letzten Mal hast du hier aufgehört: {last_viewed_course_module_link}.", []),
                 ])]
 
-    def request_continue_or_next(self, next_available_modules):
+    def request_continue_or_next(self, next_available_modules: List[Dict[str, str]]):
         return [(f"""Folgende Abschnitte hast du angefangen, aber noch nicht abgeschlossen:
-                {self._enumeration(next_available_modules)}
+                {self._enumeration([self.to_content_link(**link_info) for link_info in next_available_modules])}
                 
-                Klicke eine der Optionen, oder willst du lieber etwas Anderes lernen?""", [
-                    "Weitermachen", "Etwas Anderes lernen" 
+                Klicke eine der Optionen, oder willst du lieber etwas anderes lernen?""", [
+                    "Etwas anderes lernen" 
                 ])]
     
-    def inform_next_options(self, next_available_sections):
+    def _get_url(self, html_link_element: str):
+        url_pattern = re.compile(r'<a\s+.*?href=["\'](.*?)["\'].*?>')
+        match = url_pattern.search(html_link_element)
+        url = match.group(1)
+        return url
+
+    def inform_next_options(self, next_available_sections, has_more: bool):
         if len(next_available_sections) == 0:
             return [(f"""Du hast bereits alle Abschnitte abgeschlossen! 🎉🎉🎉""", [])]
-        return [(f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
-                {self._enumeration(items=next_available_sections)}
-                
-                Klicke eine der Optionen, oder willst du lieber etwas Anderes lernen?""", [
-                    "Etwas Anderes lernen"
-                ])]
+        
+        next_available_sections = [self.to_content_link(**link_info) for link_info in next_available_sections]
+        text = f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
+                {self._enumeration(items=next_available_sections)}"""
+        if has_more:
+            text += "\nKlicke eine der Optionen, oder willst du lieber etwas anderes lernen?"
+        else:
+            text += "\nWähle einfach eine der Optionen aus."
+
+        answer_options = []
+        if has_more:
+            answer_options.append("Etwas anderes lernen")
+
+        return [(text, answer_options)]
     
     def inform_starter_module(self, module_link: str):
         return [(f"Klicke einfach {module_link}, um direkt einzusteigen!", [
@@ -341,7 +371,8 @@ class ELearningNLG(Service):
             ] if load_more else []
         )]
    
-    def feedback_to_quiz(self, success_percentage: float, next_quiz_link: str):
+
+    def feedback_to_quiz(self, success_percentage: float, url: str, displaytext: str, typename: str):
         msgs = []
         if success_percentage >= 99:
             # all questions correct
@@ -363,8 +394,8 @@ class ELearningNLG(Service):
             ]))
             if random.random() < 0.5:
                 msgs.append((f"Denk dran, dass du jederzeit Quizze wiederholen kannst, um dein Verständnis zu verbessern!", []))
-        if next_quiz_link:
-            msgs.append((f"Bereit für das {next_quiz_link}?", []))
+        if url:
+            msgs.append((f"Bereit für das {self.to_href(url=url, displaytext=displaytext)}?", []))
         return msgs
     
     def bad_act(self, **kwargs):
@@ -388,7 +419,9 @@ class ELearningNLG(Service):
         elif sys_act.type == SysActionType.InformNextOptions:
             return self.inform_next_options
         elif sys_act.type == SysActionType.InformStarterModule:
-            return self.inform_starter_module
+            # skip message, if no more modules are available
+            if sys_act.slot_values['module_link'] != None:
+                return self.inform_starter_module
         elif sys_act.type == SysActionType.InformLastViewedCourseModule:
             return self.inform_last_viewed_course_module
         elif sys_act.type == SysActionType.InformSearchResults:
@@ -425,10 +458,6 @@ class ELearningNLG(Service):
         if moodle_event['eventname'].lower().strip() == "\\core\\event\\user_loggedin":
             self.clear_memory(user_id)
 
-    def log_dialog_turn(self, msg: str):
-        if not isinstance(self.logger, type(None)):
-            self.logger.dialog_turn(msg)
-
     @PublishSubscribe(sub_topics=["sys_acts"], pub_topics=["sys_utterance"])
     def publish_system_utterance(self, user_id: str, sys_acts: List[SysAct] = None) -> dict(sys_utterance=List[str]):
         """Generates the system utterance and publishes it.
@@ -443,8 +472,6 @@ class ELearningNLG(Service):
         for sys_act in sys_acts:
             message_fn = self.get_message_fn(sys_act)
             messages += message_fn(**sys_act.slot_values)
-        for message in messages:
-            self.log_dialog_turn(f"# USER {user_id} # NLG - {message}")
         
         if len(messages) == 0:
             messages += self.bad_act()
