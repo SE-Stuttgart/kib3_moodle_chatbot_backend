@@ -139,15 +139,13 @@ class ELearningNLG(Service):
             return self.welcomemsg
 
     def welcomemsg_first_turn_ever(self, first_turn: bool):
-        return  [("""Hallo, ich bin Kibi, der Moodle Assistent!
-        Ich kann dir helfen bei:
-        <ul>
-            <li>Suche nach Inhalten</li>
-            <li>Fortschritt überprüfen</li>
-            <li>Navigation zu Lehrinhalten</li>
-            <li>usw.</li>
-        </ul>""", []),
-        ("Du kannst auch auf das Zahnrad oben klicken, um meine Einstellungen ändern.", [])]
+        return  [("""Hallo, ich bin Kibi, der Moodle Assistent!<br>
+                Ich kann dir zum Beispiel helfen, Inhalte zu suchen, dich durch den Kurs leiten, oder dir Quizze zum üben geben.
+                Klicke auf das Fragezeichen, wenn du wissen willst, wobei ich dich genau unterstützen kann.
+                Falls Du meine Einstellungen ändern willst, klicke auf das Zahnrad.
+                <br><br>
+                <b>Achtung, ich bin kein ChatGPT</b>: ich kann leider keine richtigen Unterhaltungen führen oder inhaltliche Fragen beantworten - ich kann Dir nur zeigen, wo Du Antworten findest.""", [])
+        ]
     
     def welcomemsg(self):
         day_section = ""
