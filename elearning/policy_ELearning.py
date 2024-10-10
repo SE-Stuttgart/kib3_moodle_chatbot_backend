@@ -32,7 +32,7 @@ from services.service import Service
 from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils import UserAct
-from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_starter_module_id, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 # from dotenv import load_dotenv
 import os
@@ -354,27 +354,8 @@ class ELearningPolicy(Service):
         return dict(percentage_done=user_stats.course_completion_percentage,
                     percentage_repeated_quizzes=user_stats.quiz_repetition_percentage)
 
-    def get_first_section_link(self, user_id: int, courseid: int) -> str:
-        # check if there is a fist module tag 
-        # if not, check if there is a course overview tag
-
-
-
-        sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
-        # ignore section 0, return first section
-        earliest_section = None
-        for section in sections:
-            if section.section < 1:
-                # skip introduction section
-                continue 
-            if section.section == 1:
-                return section.url
-            if earliest_section is None:
-                earliest_section = section
-            elif earliest_section.section > section.section:
-                earliest_section = section
-        return earliest_section.url
-
+    def get_starter_module_id(self, user_id: int, courseid: int) -> str:
+        return fetch_starter_module_id(wstoken=self.get_wstoken(user_id), courseid=courseid)
         
     def choose_greeting(self, user_id: int, courseid: int) -> List[SysAct]:
         self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.LOGIN)
@@ -385,12 +366,13 @@ class ELearningPolicy(Service):
         if last_weekly_summary.first_turn_ever:
             # user is seeing chatbot for the first time
             self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.LOGIN, force=True)
-            first_section_link = self.get_first_section_link(user_id=user_id, courseid=courseid)
+            first_cm_id = self.get_starter_module_id(user_id=user_id, courseid=courseid)
+            first_cm_link = fetch_content_link(wstoken=self.get_wstoken(user_id), cmid=first_cm_id)
             if last_weekly_summary.first_week:
                 # user has not yet completed any modules: show some introduction & ice cream game
                 return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                         SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                            module_link=first_section_link
+                            module_link=first_cm_link
                         ))]
             else:
                 # user has completed some modules: show course summary, and next course section
@@ -399,7 +381,7 @@ class ELearningPolicy(Service):
                     SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                     SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values),
                     SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                            module_link=first_section_link
+                            module_link=first_cm_link
                 ))]
 
         # Add greeting
@@ -675,7 +657,7 @@ class ELearningPolicy(Service):
             else:
                 # has seen modules, but none completed or really started
                 # return first module in course, e.g. ice cream game
-                first_section_link = self.get_first_section_link(user_id=userid, courseid=courseid)
+                first_section_link = self.get_starter_module_id(user_id=userid, courseid=courseid)
                 return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                         SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
                             module_link=first_section_link
@@ -683,7 +665,7 @@ class ELearningPolicy(Service):
         else:
             # return ice cream game
             # return first module in course, e.g. ice cream game
-            first_section_link = self.get_first_section_link(user_id=userid, courseid=courseid)
+            first_section_link = self.get_starter_module_id(user_id=userid, courseid=courseid)
             return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                     SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
                         module_link=first_section_link

@@ -186,6 +186,12 @@ def fetch_last_viewed_course_modules(wstoken: str, userid: int, courseid: int, c
 		))
 	return results
 
+def fetch_starter_module_id(wstoken: str, courseid: int) -> int:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_starter_module", params=dict(
+		courseid=courseid,
+	))
+	return response['cmid']
+
 def fetch_first_available_course_module_id(wstoken: str, userid: int, courseid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame", allow_only_unfinished: bool = False) -> Union[int, None]:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_first_available_course_module", params=dict(
 		userid=userid,
