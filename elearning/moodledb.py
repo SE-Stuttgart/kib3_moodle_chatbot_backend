@@ -209,11 +209,6 @@ def fetch_available_new_course_section_ids(wstoken: str, userid: int, courseid: 
 	))
 	return filter(lambda info: info.firstcmid is not None, [SectionInfo(**res) for res in response])
 
-def fetch_icecreamgame_course_module_id(wstoken: str, courseid: int) -> int:
-	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_icecreamgame_course_module_id", params=dict(
-		courseid=courseid
-	))
-	return response['id']
 
 def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmid: int, include_types: str = "url,book,resource,h5pactivity,quiz,icecreamgame", allow_only_unfinished: bool = False, current_cm_completion: int = 0) -> int:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_next_available_course_module_id", params=dict(
