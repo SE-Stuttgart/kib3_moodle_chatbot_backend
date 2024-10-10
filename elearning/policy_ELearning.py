@@ -21,7 +21,7 @@ from enum import Enum
 import logging
 import threading
 import traceback
-from typing import List, Tuple
+from typing import List, Tuple, TypedDict
 import time
 import locale
 
@@ -52,7 +52,7 @@ LAST_SEARCH_INDEX = 'last_search_index'
 REVIEW_QUIZZES = "review_quizzes"
 CURRENT_REVIEW_QUIZ = "current_review_quiz"
 REVIEW_QUIZ_IMPROVEMENTS = "review_quiz_improvements"
-LAST_FINISHED_SECTION_ID = 'last_finished_section'
+LAST_FINISHED_TOPIC_ID = 'last_finished_section'
 NEXT_MODULE_SUGGESTIONS = 'next_module_suggestions'
 SETTINGS = 'settings'
 
@@ -75,6 +75,11 @@ class ChatbotOpeningContext(Enum):
     SECTION = "openonsection"
     BRANCH = "openonbranch"
     BADGE = "openonbadge"
+
+
+class PolicyReturn(TypedDict):
+    sys_acts: List[SysAct]
+    sys_state: SysAct
 
 
 class ELearningPolicy(Service):
@@ -173,7 +178,7 @@ class ELearningPolicy(Service):
                 self.set_state(user_id, REVIEW_QUIZZES, [])
                 self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
                 self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
-                self.set_state(user_id, LAST_FINISHED_SECTION_ID, -1)
+                self.set_state(user_id, LAST_FINISHED_TOPIC_ID, -1)
                 self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
         except:
             # Log error
@@ -188,7 +193,7 @@ class ELearningPolicy(Service):
         self.set_state(user_id, SETTINGS, UserSettings(**settings))
 
     @PublishSubscribe(sub_topics=["moodle_event"], pub_topics=["sys_acts", "sys_state"])
-    def moodle_event(self, user_id: int, moodle_event: dict) -> dict(sys_acts=List[SysAct], sys_state=SysAct):
+    def moodle_event(self, user_id: int, moodle_event: dict) -> PolicyReturn:
         """ Responsible for reacting to events from mooodle.
             Triggered by interaction with moodle (NOT the chatbot), e.g. when someone completes a coursemodule.
 
@@ -197,17 +202,6 @@ class ELearningPolicy(Service):
         """
         event_name = moodle_event['eventname'].lower().strip()
 
-        # print("=================")
-        # print("EVENT")
-        # print(event_name)
-        # print(moodle_event)
-        # print("COMPLETION UPDATED?", moodle_event == "\\core\\event\\course_module_completion_updated")
-        # print("=================")
-
-
-        # \mod_h5pactivity\event\statement_received
-        # if event_name == "\\core\\event\\user_loggedin":
-        # 	self.set_state(user_id, JUST_LOGGED_IN, True)
         if event_name == "\\core\\event\\user_loggedin":
             self.clear_memory(user_id)
         elif event_name == "\\core\\event\\badge_awarded":
@@ -242,9 +236,9 @@ class ELearningPolicy(Service):
 
                     # we get this event for each of the modules in a section with different materials (i.e., once for video, once for pdf, once for book):
                     # check that we didn't already offer congratulations, otherwise the autocomplete plugin will trigger this event for each material type
-                    last_completed_section_id = self.get_state(user_id, LAST_FINISHED_SECTION_ID)
+                    last_completed_section_id = self.get_state(user_id, LAST_FINISHED_TOPIC_ID)
                     if last_completed_section_id != section_id:
-                        self.set_state(user_id, LAST_FINISHED_SECTION_ID, section_id)
+                        self.set_state(user_id, LAST_FINISHED_TOPIC_ID, section_id)
                         self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.SECTION)
                         sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section_name, 'branch': False})]
                         sys_acts += self.get_user_next_module(userid=user_id, courseid=moodle_event['courseid'],
@@ -361,6 +355,11 @@ class ELearningPolicy(Service):
                     percentage_repeated_quizzes=user_stats.quiz_repetition_percentage)
 
     def get_first_section_link(self, user_id: int, courseid: int) -> str:
+        # check if there is a fist module tag 
+        # if not, check if there is a course overview tag
+
+
+
         sections = fetch_available_new_course_section_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid)
         # ignore section 0, return first section
         earliest_section = None
@@ -522,7 +521,7 @@ class ELearningPolicy(Service):
         
     
     @PublishSubscribe(sub_topics=["user_acts", "beliefstate", "courseid"], pub_topics=["sys_acts", "sys_state"])
-    def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> dict(sys_act=SysAct):
+    def choose_sys_act(self, user_id: str, user_acts: List[UserAct], beliefstate: dict, courseid: int) -> PolicyReturn:
         """
             Responsible for walking the policy through a single turn. Uses the current user
             action and system belief state to determine what the next system action should be.
