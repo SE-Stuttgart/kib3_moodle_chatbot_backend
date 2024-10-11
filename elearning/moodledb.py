@@ -106,6 +106,9 @@ class ContentLinkInfo:
 	name: str
 	typename : str
 
+	def to_href_element(self) -> str:
+		return f'<a href="{self.url}">{self.name}</a>'
+
 	def to_dict(self, alternative_displayname: str = None) -> Dict[str, str]:
 		return {
 			"url": self.url,
