@@ -100,7 +100,7 @@ def add_section_tag(cm: CourseModule, tag_dict: Dict[str, id]):
     # Read the XML file
     root = read_xml_file(f'./tmp/activities/{cm.type}_{cm.cmid}/module.xml')
     # find or create tag
-    rawname = f"topic:{cm.section}"
+    rawname = f"Thema:{cm.section}"
     if not rawname in tag_dict:
         tag_dict[rawname] = get_unique_tag_id(tag_dict)
 
@@ -109,29 +109,29 @@ def add_section_tag(cm: CourseModule, tag_dict: Dict[str, id]):
     tag = ET.SubElement(tags, 'tag')
     tag.attrib['id'] = str(tag_dict[rawname])
     tag_rawname = ET.SubElement(tag, 'rawname')
-    tag_rawname.text = cm.section
+    tag_rawname.text = rawname
     tag_name = ET.SubElement(tag, 'name')
     tag_name.text = rawname.lower()
 
     # add first module tag, if appropriate (icecreagame for ZQ, course overview for DQR)
     if cm.name == "Spiel zum Einstieg: Das Eiscremespiel":
-        rawname = "first-module"
+        rawname = "Thema:Einstieg"
         if not rawname in tag_dict:
             tag_dict[rawname] = get_unique_tag_id(tag_dict)
         tag = ET.SubElement(tags, 'tag')
         tag.attrib['id'] = str(tag_dict[rawname])
         tag_rawname = ET.SubElement(tag, 'rawname')
-        tag_rawname.text = "Erstes Modul"
+        tag_rawname.text = rawname
         tag_name = ET.SubElement(tag, 'name')
         tag_name.text = rawname.lower()
     elif cm.name == "Willkommen und Kursüberblick":
-        rawname = "course-overview"
+        rawname = "Thema:Kursüberblick"
         if not rawname in tag_dict:
             tag_dict[rawname] = get_unique_tag_id(tag_dict)
         tag = ET.SubElement(tags, 'tag')
         tag.attrib['id'] = str(tag_dict[rawname])
         tag_rawname = ET.SubElement(tag, 'rawname')
-        tag_rawname.text = "Kursüberblick"
+        tag_rawname.text = rawname
         tag_name = ET.SubElement(tag, 'name')
         tag_name.text = rawname.lower()
 
