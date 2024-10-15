@@ -109,7 +109,7 @@ def add_section_tag(cm: CourseModule, tag_dict: Dict[str, id]):
     tag = ET.SubElement(tags, 'tag')
     tag.attrib['id'] = str(tag_dict[rawname])
     tag_rawname = ET.SubElement(tag, 'rawname')
-    tag_rawname.text = rawname
+    tag_rawname.text = cm.section
     tag_name = ET.SubElement(tag, 'name')
     tag_name.text = rawname.lower()
 
@@ -121,7 +121,7 @@ def add_section_tag(cm: CourseModule, tag_dict: Dict[str, id]):
         tag = ET.SubElement(tags, 'tag')
         tag.attrib['id'] = str(tag_dict[rawname])
         tag_rawname = ET.SubElement(tag, 'rawname')
-        tag_rawname.text = rawname
+        tag_rawname.text = "Erstes Modul"
         tag_name = ET.SubElement(tag, 'name')
         tag_name.text = rawname.lower()
     elif cm.name == "Willkommen und Kursüberblick":
@@ -131,7 +131,7 @@ def add_section_tag(cm: CourseModule, tag_dict: Dict[str, id]):
         tag = ET.SubElement(tags, 'tag')
         tag.attrib['id'] = str(tag_dict[rawname])
         tag_rawname = ET.SubElement(tag, 'rawname')
-        tag_rawname.text = rawname
+        tag_rawname.text = "Kursüberblick"
         tag_name = ET.SubElement(tag, 'name')
         tag_name.text = rawname.lower()
 
@@ -167,6 +167,8 @@ def get_section_branch(section_name: str, top_level_section_name: str = None) ->
             return "A2-2a"
         elif section_name == "Spiel zum Einstieg: Bestellen Sie Eis!":
             return "first-section"
+        elif "abschluss" in section_name.lower():
+            return "abschluss"
         else:
             print(f"WARNING: Section name without branch id: {section_name}")
 
@@ -202,6 +204,9 @@ def tag_activities(whitelist = ['book', 'resource', 'url', 'quiz', 'label', 'h5p
            
             if module.type == 'label' and "kann ich schon" not in module.name.lower():
                 section_name = get_section_branch(module.name, top_level_section_name=top_level_section_name)
+            elif module.type == 'label' and section_name == "abschluss":
+                # don't tag Abschluss labels: they would appear as a very big tag in the tag could block
+                continue 
             else:
                 add_section_tag(cm=module, tag_dict=tags)
 
