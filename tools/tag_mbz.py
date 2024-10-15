@@ -115,7 +115,7 @@ def add_section_tag(cm: CourseModule, tag_dict: Dict[str, id]):
 
     # add first module tag, if appropriate (icecreagame for ZQ, course overview for DQR)
     if cm.name == "Spiel zum Einstieg: Das Eiscremespiel":
-        rawname = "Thema:Einstieg"
+        rawname = "Thema:Einstiegsaktivität"
         if not rawname in tag_dict:
             tag_dict[rawname] = get_unique_tag_id(tag_dict)
         tag = ET.SubElement(tags, 'tag')
@@ -166,9 +166,9 @@ def get_section_branch(section_name: str, top_level_section_name: str = None) ->
         elif "Praxisbeispiel zu den Themen A2-1 und A2-2: Trainieren Sie einen Entscheidungsbaum" in section_name:
             return "A2-2a"
         elif section_name == "Spiel zum Einstieg: Bestellen Sie Eis!":
-            return "first-section"
+            return "Einstieg"
         elif "abschluss" in section_name.lower():
-            return "abschluss"
+            return "Abschluss"
         else:
             print(f"WARNING: Section name without branch id: {section_name}")
 
