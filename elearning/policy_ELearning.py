@@ -32,7 +32,7 @@ from services.service import Service
 from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils import UserAct
-from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_section_id_and_name, fetch_starter_module_id, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_starter_module_id, fetch_topic_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 # from dotenv import load_dotenv
 import os
@@ -217,8 +217,8 @@ class ELearningPolicy(Service):
             self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, list(filter(lambda sec_info: sec_info.firstcmid != cmid, self.get_state(user_id, NEXT_MODULE_SUGGESTIONS))))
 
             # find current section id from course module
-            section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(user_id), cmid=cmid)
-            branch_review_info = fetch_branch_review_quizzes(wstoken=self.get_wstoken(user_id), userid=user_id, sectionid=section_id)
+            topic_id, topic_name = fetch_topic_id_and_name(wstoken=self.get_wstoken(user_id), cmid=cmid)
+            branch_review_info = fetch_branch_review_quizzes(wstoken=self.get_wstoken(user_id), userid=user_id, topicname=topic_name)
             self.set_state(user_id, REVIEW_QUIZZES, branch_review_info.candidates)
             if branch_review_info.completed and len(branch_review_info.candidates) > 0:
                 # we did complete a full branch, and there are review modules available
@@ -241,8 +241,9 @@ class ELearningPolicy(Service):
                         self.set_state(user_id, LAST_FINISHED_TOPIC_ID, section_id)
                         self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.SECTION)
                         sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section_name, 'branch': False})]
+                        # TODO section id here should become a topic name
                         sys_acts += self.get_user_next_module(userid=user_id, courseid=moodle_event['courseid'],
-                                                            add_last_viewed_course_module=False, current_section_id=section_id)
+                                                            add_last_viewed_course_module=False, current_topic=section_id)
                         return {
                             "sys_acts": sys_acts
                         }
@@ -380,9 +381,7 @@ class ELearningPolicy(Service):
                 return [
                     SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                     SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values),
-                    SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                            module_link=first_cm_link.to_href_element()
-                ))]
+                ] + self.get_user_next_module(userid=user_id, courseid=courseid, add_last_viewed_course_module=True)
 
         # Add greeting
         acts.append(SysAct(act_type=SysActionType.Welcome, slot_values={}))
@@ -601,12 +600,12 @@ class ELearningPolicy(Service):
         sys_state["last_act"] = sys_acts
         return {'sys_acts':  sys_acts, "sys_state": sys_state}
 
-    def get_user_next_module(self, userid: int, courseid: int, add_last_viewed_course_module: bool = False, current_section_id: int = None) -> List[SysAct]:
+    def get_user_next_module(self, userid: int, courseid: int, add_last_viewed_course_module: bool = False, current_topic: str = None) -> List[SysAct]:
         # choose how to proceed
         acts = []
         has_seen_any_course_modules = fetch_has_seen_any_course_modules(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
         
-        all_sections_completed = False
+        all_topic_completed = False
         if has_seen_any_course_modules:
             # last viewed module
             last_completed_course_modules = fetch_last_viewed_course_modules(wstoken=self.get_wstoken(userid),
@@ -620,22 +619,22 @@ class ELearningPolicy(Service):
                 # prioritize already viewed modules
                 last_started_course_modules = fetch_last_viewed_course_modules(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid, completed=False)
                 for unfinished_module in last_started_course_modules:
-                    if not unfinished_module.section in next_modules and unfinished_module.section != current_section_id and unfinished_module.section > 0:
-                        next_modules[unfinished_module.section] = unfinished_module.cmid
+                    if not unfinished_module.topicid in next_modules and unfinished_module.topicname != current_topic and unfinished_module.topicname not in ["thema:kursüberblick", "thema:einstieg", "thema:einstiegsaktivität"]:
+                        next_modules[unfinished_module.topicname] = unfinished_module.cmid
                 # fill with other started sections
                 for completed_module in last_completed_course_modules:
-                    if not completed_module.section in next_modules and completed_module.section != current_section_id and completed_module.section > 0:
+                    if not completed_module.topicname in next_modules and completed_module.topicname != current_topic and completed_module.topicname not in ["thema:kursüberblick", "thema:einstieg", "thema:einstiegsaktivität"]:
                         # get first open module from this section
-                        next_module_id= fetch_first_available_course_module_id(wstoken=self.get_wstoken(userid), userid=userid, sectionid=completed_module.section,
+                        next_module_id= fetch_first_available_course_module_id(wstoken=self.get_wstoken(userid), userid=userid, topicname=completed_module.topicname,
                                                                              courseid=courseid,
                                                                              includetypes=",".join(learning_material_types + assignment_material_types),
                                                                              allow_only_unfinished=True)
                         if not next_module_id is None:
-                            next_modules[completed_module.section] = next_module_id
+                            next_modules[completed_module.topicname] = next_module_id
                 next_available_module_links = []
                 for cmid in next_modules.values():
-                    section_id, section_name = fetch_section_id_and_name(wstoken=self.get_wstoken(userid), cmid=cmid)
-                    next_available_module_links.append(fetch_content_link(wstoken=self.get_wstoken(userid), cmid=cmid).to_dict(section_name))
+                    topic_id, topic_name = fetch_topic_id_and_name(wstoken=self.get_wstoken(userid), cmid=cmid)
+                    next_available_module_links.append(fetch_content_link(wstoken=self.get_wstoken(userid), cmid=cmid).to_dict(topic_name))
 
                 # user has started, but not completed one or more sections
                 if add_last_viewed_course_module:
@@ -648,10 +647,10 @@ class ELearningPolicy(Service):
                                     next_available_modules=next_available_module_links
                             )))
                 else:
-                    all_sections_completed = True
+                    all_topic_completed = True
             # TODO: Forum post info
             # TODO: Deadline reminder
-                if all_sections_completed:
+                if all_topic_completed:
                     # user has completed all started sections, should get choice of next new and available sections
                     acts.append(self.fetch_n_next_available_course_sections(userid=userid, courseid=courseid))
             else:

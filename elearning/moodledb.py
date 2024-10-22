@@ -41,6 +41,8 @@ class BranchReviewQuizzes:
 class CourseModuleAccess:
 	cmid: int
 	section: int
+	topicid: int
+	topicname: str
 	timeaccess: datetime.datetime
 	completionstate: int
 
@@ -141,10 +143,10 @@ def fetch_user_settings(wstoken: str, userid: int) -> UserSettings:
 	assert response['userid'] == userid
 	return UserSettings(**response)
 
-def fetch_branch_review_quizzes(wstoken: str, userid: int, sectionid: int) -> BranchReviewQuizzes:
+def fetch_branch_review_quizzes(wstoken: str, userid: int, topicname: str) -> BranchReviewQuizzes:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_branch_quizes_if_complete", params=dict(
 		userid=userid,
-		sectionid=sectionid,
+		topicname=topicname,
 		includetypes="url,book,resource,h5pactivity,quiz"
 	))
 	branch_completed = response['completed']
@@ -153,11 +155,16 @@ def fetch_branch_review_quizzes(wstoken: str, userid: int, sectionid: int) -> Br
 		cm_candidates.append(ModuleReview(**candidate))
 	return BranchReviewQuizzes(completed=branch_completed, candidates=cm_candidates, branch=response['branch'])
 
-def fetch_section_id_and_name(wstoken: str, cmid: int) -> Tuple[int, str]:
-	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_section_id", params=dict(
+def fetch_topic_id_and_name(wstoken: str, cmid: int) -> Tuple[int, str]:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_topic_id_and_name", params=dict(
 		cmid=cmid
 	))
 	return response['id'], response['name']
+
+def format_section_name_readable(section_name: str) -> str:
+	formatted = section_name.replace('thema:', '')
+	formatted[0] = formatted[0].upper()
+	return f"Thema: {formatted}"
 
 def fetch_section_completionstate(wstoken: str, userid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame") -> bool:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_section_completionstate", params=dict(
@@ -195,11 +202,11 @@ def fetch_starter_module_id(wstoken: str, courseid: int) -> int:
 	))
 	return response['cmid']
 
-def fetch_first_available_course_module_id(wstoken: str, userid: int, courseid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame", allow_only_unfinished: bool = False) -> Union[int, None]:
+def fetch_first_available_course_module_id(wstoken: str, userid: int, courseid: int, topicname: int, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame", allow_only_unfinished: bool = False) -> Union[int, None]:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_first_available_course_module", params=dict(
 		userid=userid,
 		courseid=courseid,
-		sectionid=sectionid,
+		topicname=topicname,
 		includetypes=includetypes,
 		allowonlyunfinished=int(allow_only_unfinished)
 	))
