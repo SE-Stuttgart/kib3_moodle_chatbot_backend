@@ -372,7 +372,7 @@ class ELearningPolicy(Service):
                 # user has not yet completed any modules: show some introduction & ice cream game
                 return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                         SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                            module_link=first_cm_link.to_url()
+                            module_link=first_cm_link.to_href_element()
                         ))]
             else:
                 # user has completed some modules: show course summary, and next course section
@@ -381,7 +381,7 @@ class ELearningPolicy(Service):
                     SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
                     SysAct(act_type=SysActionType.DisplayProgress, slot_values=slot_values),
                     SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
-                            module_link=first_cm_link.to_url()
+                            module_link=first_cm_link.to_href_element()
                 ))]
 
         # Add greeting

@@ -113,7 +113,7 @@ class ContentLinkInfo:
 			"typename": self.typename
 		}
 	
-	def to_url(self, alternative_displayname: str = None) -> str:
+	def to_href_element(self, alternative_displayname: str = None) -> str:
 		return "<a href='{}'>{}</a>".format(self.url, self.name if alternative_displayname is None else alternative_displayname)
 
 @dataclass
