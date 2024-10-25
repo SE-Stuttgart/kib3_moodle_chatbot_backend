@@ -1,6 +1,7 @@
 # coding: utf-8
 import datetime
 from dataclasses import dataclass
+import re
 from typing import Dict, List, Tuple, Union
 from config import MOODLE_SERVER_WEB_HOST, MOOLDE_SERVER_PROTOCOL
 import requests
@@ -143,9 +144,10 @@ def fetch_user_settings(wstoken: str, userid: int) -> UserSettings:
 	assert response['userid'] == userid
 	return UserSettings(**response)
 
-def fetch_branch_review_quizzes(wstoken: str, userid: int, topicname: str) -> BranchReviewQuizzes:
+def fetch_branch_review_quizzes(wstoken: str, userid: int, courseid: int, topicname: str) -> BranchReviewQuizzes:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_branch_quizes_if_complete", params=dict(
 		userid=userid,
+		courseid=courseid,
 		topicname=topicname,
 		includetypes="url,book,resource,h5pactivity,quiz"
 	))
@@ -166,10 +168,11 @@ def format_section_name_readable(section_name: str) -> str:
 	formatted[0] = formatted[0].upper()
 	return f"Thema: {formatted}"
 
-def fetch_section_completionstate(wstoken: str, userid: int, sectionid: int, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame") -> bool:
-	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_section_completionstate", params=dict(
+def fetch_topic_completionstate(wstoken: str, userid: int, courseid: int, topicname: str, includetypes: str = "url,book,resource,h5pactivity,quiz,icecreamgame") -> bool:
+	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_topic_completionstate", params=dict(
 		userid=userid,
-		sectionid=sectionid,
+		courseid=courseid,
+		topicname=topicname,
 		includetypes=includetypes
 	))
 	return response['completed']
@@ -312,3 +315,7 @@ def fetch_glossary_search(wstoken: str, userid: int, courseid: int, searchterm: 
 		limit=limit
 	))
 	return [GlossaryItem(**res) for res in response]
+
+
+def extract_branch_from_topicname(topicname: str) -> str:
+	return re.match(r'^[a-zA-Z]\d*', topicname.replace("thema:", "")).group().lower()

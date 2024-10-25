@@ -32,7 +32,7 @@ from services.service import Service
 from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils import UserAct
-from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_section_completionstate, fetch_starter_module_id, fetch_topic_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, extract_branch_from_topicname, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_starter_module_id, fetch_topic_completionstate, fetch_topic_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 # from dotenv import load_dotenv
 import os
@@ -212,13 +212,14 @@ class ELearningPolicy(Service):
             # check if we finished a whole branch
             # TODO if so, offer congratulations, the review, and then next possibilities?
             cmid = moodle_event['contextinstanceid']
+            courseid = moodle_event['courseid']
 
             # remove completed module from next module suggestion list s.t. user doesn't get the completed module as new suggestion
             self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, list(filter(lambda sec_info: sec_info.firstcmid != cmid, self.get_state(user_id, NEXT_MODULE_SUGGESTIONS))))
 
             # find current section id from course module
             topic_id, topic_name = fetch_topic_id_and_name(wstoken=self.get_wstoken(user_id), cmid=cmid)
-            branch_review_info = fetch_branch_review_quizzes(wstoken=self.get_wstoken(user_id), userid=user_id, topicname=topic_name)
+            branch_review_info = fetch_branch_review_quizzes(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, topicname=topic_name)
             self.set_state(user_id, REVIEW_QUIZZES, branch_review_info.candidates)
             if branch_review_info.completed and len(branch_review_info.candidates) > 0:
                 # we did complete a full branch, and there are review modules available
@@ -229,7 +230,7 @@ class ELearningPolicy(Service):
                     SysAct(act_type=SysActionType.RequestReviewOrNext)]}
             else:
                 # did we complete a full section?
-                section_completed = fetch_section_completionstate(wstoken=self.get_wstoken(user_id), userid=user_id, sectionid=section_id)
+                section_completed = fetch_topic_completionstate(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, topicname=topic_name)
                 if section_completed:
                     # reset current list of next module suggestions, because we will unlock new ones here
                     self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
