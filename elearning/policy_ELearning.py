@@ -52,7 +52,7 @@ LAST_SEARCH_INDEX = 'last_search_index'
 REVIEW_QUIZZES = "review_quizzes"
 CURRENT_REVIEW_QUIZ = "current_review_quiz"
 REVIEW_QUIZ_IMPROVEMENTS = "review_quiz_improvements"
-LAST_FINISHED_TOPIC_ID = 'last_finished_section'
+LAST_FINISHED_TOPIC_NAME = 'last_finished_section'
 NEXT_MODULE_SUGGESTIONS = 'next_module_suggestions'
 SETTINGS = 'settings'
 
@@ -178,7 +178,7 @@ class ELearningPolicy(Service):
                 self.set_state(user_id, REVIEW_QUIZZES, [])
                 self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
                 self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
-                self.set_state(user_id, LAST_FINISHED_TOPIC_ID, -1)
+                self.set_state(user_id, LAST_FINISHED_TOPIC_NAME, "")
                 self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
         except:
             # Log error
@@ -237,14 +237,14 @@ class ELearningPolicy(Service):
 
                     # we get this event for each of the modules in a section with different materials (i.e., once for video, once for pdf, once for book):
                     # check that we didn't already offer congratulations, otherwise the autocomplete plugin will trigger this event for each material type
-                    last_completed_section_id = self.get_state(user_id, LAST_FINISHED_TOPIC_ID)
-                    if last_completed_section_id != section_id:
-                        self.set_state(user_id, LAST_FINISHED_TOPIC_ID, section_id)
+                    last_completed_section_name = self.get_state(user_id, LAST_FINISHED_TOPIC_NAME)
+                    if last_completed_section_name != topic_name:
+                        self.set_state(user_id, LAST_FINISHED_TOPIC_NAME, topic_name)
                         self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.SECTION)
-                        sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": section_name, 'branch': False})]
+                        sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": topic_name, 'branch': False})]
                         # TODO section id here should become a topic name
                         sys_acts += self.get_user_next_module(userid=user_id, courseid=moodle_event['courseid'],
-                                                            add_last_viewed_course_module=False, current_topic=section_id)
+                                                            add_last_viewed_course_module=False, current_topic=topic_name)
                         return {
                             "sys_acts": sys_acts
                         }
@@ -487,7 +487,7 @@ class ELearningPolicy(Service):
             # we don't have any suggestions -> fetch all possible next sections
             available_new_course_section_ids = [section for section in 
                                                 fetch_available_new_course_section_ids(wstoken=self.get_wstoken(userid), userid=userid, courseid=courseid)
-                                                if section.section > 0]
+                                                if section.topicname not in ["thema:kursüberblick", "thema:einstieg"]]
         # extract n next suggestions. if we have none, the NLG will handle it.
         next_suggestions = available_new_course_section_ids[:max_display_options]
         remaining_suggestions = available_new_course_section_ids[max_display_options:]

@@ -97,10 +97,9 @@ class QuizInfo:
 
 @dataclass
 class SectionInfo:
-	id: int # section id
-	section: int # index of section in course
+	sectionid: int # section id
 	url: str
-	name: str
+	topicname: str
 	firstcmid: int
 
 @dataclass
