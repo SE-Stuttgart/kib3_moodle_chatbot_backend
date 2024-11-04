@@ -218,8 +218,8 @@ class ELearningPolicy(Service):
             self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, list(filter(lambda sec_info: sec_info.firstcmid != cmid, self.get_state(user_id, NEXT_MODULE_SUGGESTIONS))))
 
             # find current section id from course module
-            topic_id, topic_name = fetch_topic_id_and_name(wstoken=self.get_wstoken(user_id), cmid=cmid)
-            branch_review_info = fetch_branch_review_quizzes(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, topicname=topic_name)
+            topic_info = fetch_topic_id_and_name(wstoken=self.get_wstoken(user_id), cmid=cmid)
+            branch_review_info = fetch_branch_review_quizzes(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, topicname=topic_info.name)
             self.set_state(user_id, REVIEW_QUIZZES, branch_review_info.candidates)
             if branch_review_info.completed and len(branch_review_info.candidates) > 0:
                 # we did complete a full branch, and there are review modules available
@@ -230,7 +230,7 @@ class ELearningPolicy(Service):
                     SysAct(act_type=SysActionType.RequestReviewOrNext)]}
             else:
                 # did we complete a full section?
-                section_completed = fetch_topic_completionstate(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, topicname=topic_name)
+                section_completed = fetch_topic_completionstate(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, topicname=topic_info.name)
                 if section_completed:
                     # reset current list of next module suggestions, because we will unlock new ones here
                     self.set_state(user_id, NEXT_MODULE_SUGGESTIONS, [])
@@ -238,13 +238,13 @@ class ELearningPolicy(Service):
                     # we get this event for each of the modules in a section with different materials (i.e., once for video, once for pdf, once for book):
                     # check that we didn't already offer congratulations, otherwise the autocomplete plugin will trigger this event for each material type
                     last_completed_section_name = self.get_state(user_id, LAST_FINISHED_TOPIC_NAME)
-                    if last_completed_section_name != topic_name:
-                        self.set_state(user_id, LAST_FINISHED_TOPIC_NAME, topic_name)
+                    if last_completed_section_name != topic_info.name:
+                        self.set_state(user_id, LAST_FINISHED_TOPIC_NAME, topic_info.name)
                         self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.SECTION)
-                        sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": topic_name, 'branch': False})]
+                        sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": topic_info.sectionname, 'branch': False})]
                         # TODO section id here should become a topic name
                         sys_acts += self.get_user_next_module(userid=user_id, courseid=moodle_event['courseid'],
-                                                            add_last_viewed_course_module=False, current_topic=topic_name)
+                                                            add_last_viewed_course_module=False, current_topic=topic_info.name)
                         return {
                             "sys_acts": sys_acts
                         }
@@ -494,7 +494,7 @@ class ELearningPolicy(Service):
         act = SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
                     has_more=len(remaining_suggestions) > 0,
                     next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(userid),
-                                                                cmid=section.firstcmid).to_dict(section.name) 
+                                                                cmid=section.firstcmid).to_dict(section.sectionname) 
                                                 for section in next_suggestions])
         )
         # truncate list of next suggestions
@@ -634,8 +634,8 @@ class ELearningPolicy(Service):
                             next_modules[completed_module.topicname] = next_module_id
                 next_available_module_links = []
                 for cmid in next_modules.values():
-                    topic_id, topic_name = fetch_topic_id_and_name(wstoken=self.get_wstoken(userid), cmid=cmid)
-                    next_available_module_links.append(fetch_content_link(wstoken=self.get_wstoken(userid), cmid=cmid).to_dict(topic_name))
+                    topic_info = fetch_topic_id_and_name(wstoken=self.get_wstoken(userid), cmid=cmid)
+                    next_available_module_links.append(fetch_content_link(wstoken=self.get_wstoken(userid), cmid=cmid).to_dict(topic_info.sectionname))
 
                 # user has started, but not completed one or more sections
                 if add_last_viewed_course_module:

@@ -98,9 +98,16 @@ class QuizInfo:
 @dataclass
 class SectionInfo:
 	sectionid: int # section id
+	sectionname: str
 	url: str
 	topicname: str
 	firstcmid: int
+
+@dataclass
+class TopicInfo:
+	id: int
+	name: str
+	sectionname: str
 
 @dataclass
 class ContentLinkInfo:
@@ -156,11 +163,11 @@ def fetch_branch_review_quizzes(wstoken: str, userid: int, courseid: int, topicn
 		cm_candidates.append(ModuleReview(**candidate))
 	return BranchReviewQuizzes(completed=branch_completed, candidates=cm_candidates, branch=response['branch'])
 
-def fetch_topic_id_and_name(wstoken: str, cmid: int) -> Tuple[int, str]:
+def fetch_topic_id_and_name(wstoken: str, cmid: int) -> TopicInfo:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_topic_id_and_name", params=dict(
 		cmid=cmid
 	))
-	return response['id'], response['name']
+	return TopicInfo(**response)
 
 def format_section_name_readable(section_name: str) -> str:
 	formatted = section_name.replace('thema:', '')
