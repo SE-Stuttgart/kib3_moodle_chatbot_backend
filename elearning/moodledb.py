@@ -235,13 +235,13 @@ def fetch_available_new_course_section_ids(wstoken: str, userid: int, courseid: 
 	return filter(lambda info: info.firstcmid is not None, [SectionInfo(**res) for res in response])
 
 
-def fetch_next_available_course_module_id(wstoken: str, userid: int, current_cmid: int, include_types: str = "url,book,resource,h5pactivity,quiz,icecreamgame", allow_only_unfinished: bool = False, current_cm_completion: int = 0) -> int:
+def fetch_next_available_course_module_id(wstoken: str, userid: int, courseid: int, current_cmid: int, include_types: str = "url,book,resource,h5pactivity,quiz,icecreamgame", allow_only_unfinished: bool = False) -> int:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_next_available_course_module_id", params=dict(
 		userid=userid,
 		cmid=current_cmid,
+		courseid=courseid,
 		includetypes=include_types,
-		allowonlyunfinished=int(allow_only_unfinished),
-		currentcoursemodulecompletion=int(current_cm_completion)
+		allowonlyunfinished=int(allow_only_unfinished)
 	))
 	return response['cmid']
 

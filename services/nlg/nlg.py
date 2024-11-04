@@ -236,12 +236,12 @@ class ELearningNLG(Service):
         if percentage_improvements > 0.0:
             num_quizzes = sum(improvements)
             counter = "einem Quiz" if num_quizzes == 1 else f"{sum(improvements)} Quizzen"
+            msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), []))
             msgs.append(random.choice([
-                (f"Sehr gut, du hast dich in dieser Runde bei {counter} verbessert!", []),
-                (f"Wow, du hast dich diesmal bei {counter} verbessert!", []),
-                (f"Super, bei {counter} hast du dich gerade verbessert!", []),
+                (f"Sehr gut, du hast dich in dieser Runde bei {counter} verbessert!", ["Weitere Quizze Wiederholen", "Etwas Neues lernen"]),
+                (f"Wow, du hast dich diesmal bei {counter} verbessert!", ["Weitere Quizze Wiederholen", "Etwas Neues lernen"]),
+                (f"Super, bei {counter} hast du dich gerade verbessert!", ["Weitere Quizze Wiederholen", "Etwas Neues lernen"]),
             ]))
-            msgs.append((self._donut_chart("Quiz Verbesserungen", percentage_improvements), ["Weitere Quizze Wiederholen", "Etwas Neues lernen"]))
         else:
             num_quizzes = len(improvements)
             counter = "ein weiteres Quiz" if num_quizzes == 1 else f"{len(improvements)} Quizze"

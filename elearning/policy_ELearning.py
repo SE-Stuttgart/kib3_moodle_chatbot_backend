@@ -249,6 +249,7 @@ class ELearningPolicy(Service):
                             "sys_acts": sys_acts
                         }
         elif event_name == "\\mod_h5pactivity\\event\\statement_received" and moodle_event['component'] == 'mod_h5pactivity':
+            courseid = moodle_event['courseid']
             previous_quiz_attempt_info = self.get_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ)
             if (not previous_quiz_attempt_info is None) and int(moodle_event['contextinstanceid']) == previous_quiz_attempt_info.cmid:
                 sys_acts = []
@@ -270,8 +271,8 @@ class ELearningPolicy(Service):
             # In the case that the quiz is done outside the chatbot, give feedback (about absolute grade) and offer next quiz (if applicable)
             self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.QUIZ)
             success_percentage = (moodle_event['other']['result']['score']['raw'] / moodle_event['other']['result']['score']['max']) * 100.0
-            next_quiz_id = fetch_next_available_course_module_id(wstoken=self.get_wstoken(user_id), userid=user_id, current_cmid=int(moodle_event['contextinstanceid']),
-                                                                 include_types='h5pactivity', allow_only_unfinished=True, current_cm_completion=True)
+            next_quiz_id = fetch_next_available_course_module_id(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, current_cmid=int(moodle_event['contextinstanceid']),
+                                                                 include_types='h5pactivity', allow_only_unfinished=True)
             if next_quiz_id is None:
                 # there are no more quizzes in the current section - suggest to move on to new section
                 sys_acts = [SysAct(act_type=SysActionType.FeedbackToQuiz, slot_values=dict(
@@ -546,6 +547,7 @@ class ELearningPolicy(Service):
                     review_candidates = fetch_oldest_worst_grade_course_ids(wstoken=self.get_wstoken(user_id), userid=user_id, courseid=courseid, max_num_quizzes=max_num_quizzes)
                 next_quiz_info = review_candidates[0] if len(review_candidates) > 0 else None
                 self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=next_quiz_info)
+                self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[])
                 if not next_quiz_info is None:
                     sys_acts.append(self.display_quiz(user_id=user_id, coursemoduleid=next_quiz_info.cmid))
                 else: 
@@ -597,6 +599,7 @@ class ELearningPolicy(Service):
             self.set_state(user_id, REVIEW_QUIZZES, [])
             self.set_state(user_id=user_id, attribute_name=CURRENT_REVIEW_QUIZ, attribute_value=None)
             self.set_state(user_id=user_id, attribute_name=REVIEW_QUIZ_IMPROVEMENTS, attribute_value=[]) 
+
             self.resize_chatbot(user_id=user_id, size=ChatbotWindowSize.DEFAULT)
         sys_state["last_act"] = sys_acts
         return {'sys_acts':  sys_acts, "sys_state": sys_state}
