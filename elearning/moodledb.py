@@ -97,10 +97,11 @@ class QuizInfo:
 
 @dataclass
 class SectionInfo:
-	id: int # section id
-	section: int # index of section in course
+	sectionid: int # section id
+	sectionindex: int # section index within course
+	sectionname: str
 	url: str
-	name: str
+	topicname: str
 	firstcmid: int
 
 @dataclass
@@ -108,12 +109,16 @@ class ContentLinkInfo:
 	url: str
 	name: str
 	typename : str
+	sectionname: str = None
+	topic: str = None
 
 	def to_dict(self, alternative_displayname: str = None) -> Dict[str, str]:
 		return {
 			"url": self.url,
 			"displaytext": self.name if alternative_displayname is None else alternative_displayname,
-			"typename": self.typename
+			"typename": self.typename,
+			"sectionname": self.sectionname,
+			"topic": self.topic
 		}
 	
 	def to_href_element(self, alternative_displayname: str = None) -> str:
@@ -126,6 +131,11 @@ class GlossaryItem:
 	concept: str # glossary entry concept name
 	definition: str # definition of concept
 
+@dataclass
+class TopicInfo:
+	id: int # topic id
+	name: str # topic name
+	sectionname: str # section name extracted from 1) closest topic loabel, or, if none, 2) section name
 
 def api_call(wstoken: str, wsfunction: str, params: dict):
 	body={
@@ -157,11 +167,11 @@ def fetch_branch_review_quizzes(wstoken: str, userid: int, courseid: int, topicn
 		cm_candidates.append(ModuleReview(**candidate))
 	return BranchReviewQuizzes(completed=branch_completed, candidates=cm_candidates, branch=response['branch'])
 
-def fetch_topic_id_and_name(wstoken: str, cmid: int) -> Tuple[int, str]:
+def fetch_topic_id_and_name(wstoken: str, cmid: int) -> TopicInfo:
 	response = api_call(wstoken=wstoken, wsfunction="block_chatbot_get_topic_id_and_name", params=dict(
 		cmid=cmid
 	))
-	return response['id'], response['name']
+	return TopicInfo(**response)
 
 def format_section_name_readable(section_name: str) -> str:
 	formatted = section_name.replace('thema:', '')

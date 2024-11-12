@@ -75,7 +75,7 @@ class ELearningNLG(Service):
     def to_pdf_popup(self, url: str, displaytext: str) -> str:
         return f'<button class="block-chatbot-content-link" data-toggle="modal" data-target="#block_chatbot_coursemoduleview" data-src="{url}" data-displaytext="{displaytext}">{displaytext}</button>'
 
-    def to_content_link(self, url: str, displaytext: str, typename: str) -> str:
+    def to_content_link(self, url: str, displaytext: str, typename: str, **kwargs) -> str:
         if typename == "resource":
             return self.to_pdf_popup(url=url, displaytext=displaytext)
         else:
@@ -307,10 +307,19 @@ class ELearningNLG(Service):
                     (f"{last_viewed_course_module_link} war der letzte Inhalt, den du angeschaut hast.", []),
                     (f"Beim letzten Mal hast du hier aufgehört: {last_viewed_course_module_link}.", []),
                 ])]
+    
+    def _vertical_stack(self, items: List[str]) -> str:
+        return f"""<div class="flex-column">
+                    {" ".join(items)}
+                </div>"""
 
     def request_continue_or_next(self, next_available_modules: List[Dict[str, str]]):
+        cards = []
+        for module in next_available_modules:
+            cards.append(self.to_card(header=f"{module['topic']} - {module['sectionname']}", body=self.to_content_link(**module)))
+
         return [(f"""Folgende Abschnitte hast du angefangen, aber noch nicht abgeschlossen:
-                {self._enumeration([self.to_content_link(**link_info) for link_info in next_available_modules])}
+                {self._vertical_stack(cards)}
                 
                 Klicke eine der Optionen, oder willst du lieber etwas anderes lernen?""", [
                     "Etwas anderes lernen" 
@@ -344,6 +353,15 @@ class ELearningNLG(Service):
         return [(f"Klicke einfach {module_link}, um direkt einzusteigen!", [
             "Einstellungen",
         ])]
+    
+    def to_card(self, header: str, body: str) -> str:
+        return f"""<div class="card" style="color: black">
+                        <div class="card-header">{header}</div>
+                        <div class="card-body">
+                            {body}
+                        </div>
+                    </div>"""
+
     
     def inform_search_results(self, search_results: Dict[str, List[str]], load_more: bool):
         if len(search_results) == 0:
