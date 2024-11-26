@@ -335,9 +335,12 @@ class ELearningNLG(Service):
         if len(next_available_sections) == 0:
             return [(f"""Du hast bereits alle Abschnitte abgeschlossen! 🎉🎉🎉""", [])]
         
-        next_available_sections = [self.to_content_link(**link_info) for link_info in next_available_sections]
+        cards = []
+        for module in next_available_sections:
+            cards.append(self.to_card(header=f"{module['topic']} - {module['sectionname']}", body=self.to_content_link(**module)))
+        
         text = f"""Du könntest mit einem dieser neuen Abschnitte beginnen:
-                {self._enumeration(items=next_available_sections)}"""
+                {self._vertical_stack(cards)}"""
         if has_more:
             text += "\nKlicke eine der Optionen, oder willst du lieber etwas anderes lernen?"
         else:
@@ -388,7 +391,7 @@ class ELearningNLG(Service):
         )]
    
 
-    def feedback_to_quiz(self, success_percentage: float, url: str, displaytext: str, typename: str):
+    def feedback_to_quiz(self, success_percentage: float, url: str, displaytext: str, typename: str, **kwargs):
         msgs = []
         if success_percentage >= 99:
             # all questions correct

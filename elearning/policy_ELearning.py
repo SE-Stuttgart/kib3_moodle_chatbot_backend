@@ -492,11 +492,18 @@ class ELearningPolicy(Service):
         # extract n next suggestions. if we have none, the NLG will handle it.
         next_suggestions = available_new_course_section_ids[:max_display_options]
         remaining_suggestions = available_new_course_section_ids[max_display_options:]
+        
+        cm_infos = []
+        for suggestion in next_suggestions:
+            topic_info = fetch_topic_id_and_name(wstoken=self.get_wstoken(userid), cmid=suggestion.firstcmid)
+            cm_link = fetch_content_link(wstoken=self.get_wstoken(userid), cmid=suggestion.firstcmid)
+            cm_link.sectionname = topic_info.sectionname
+            cm_link.topic = topic_info.name
+            cm_infos.append(cm_link.to_dict())
+
         act = SysAct(act_type=SysActionType.InformNextOptions, slot_values=dict(
                     has_more=len(remaining_suggestions) > 0,
-                    next_available_sections=[fetch_content_link(wstoken=self.get_wstoken(userid),
-                                                                cmid=section.firstcmid).to_dict(section.sectionname) 
-                                                for section in next_suggestions])
+                    next_available_sections=cm_infos)
         )
         # truncate list of next suggestions
         self.set_state(userid, NEXT_MODULE_SUGGESTIONS, remaining_suggestions)
