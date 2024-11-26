@@ -32,7 +32,7 @@ from services.service import Service
 from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils import UserAct
-from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, extract_branch_from_topicname, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_starter_module_id, fetch_topic_completionstate, fetch_topic_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
+from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, extract_branch_from_topicname, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_glossary_search, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_starter_module_id, fetch_topic_completionstate, fetch_topic_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
 from utils.useract import UserActionType, UserAct
 # from dotenv import load_dotenv
 import os
@@ -477,6 +477,11 @@ class ELearningPolicy(Service):
         """
         book_links, has_more_results = get_book_links(webserviceuserid=user_id, wstoken=self.get_state(user_id, 'BOOKSEARCHTOKEN'), course_id=courseid, searchTerm=search_term, word_context_length=5, start=search_idx, end=search_idx+num_results)
         
+        # append glossary items to book links
+        glossary_items = fetch_glossary_search(wstoken=self.get_state(user_id, 'BOOKSEARCHTOKEN'), userid=user_id, courseid=courseid, searchterm=search_term, fullsearch=False, startidx=search_idx, limit=num_results)
+        if len(glossary_items) > 0:
+            book_links["Definitionen (Glossar)"] = [item.url for item in glossary_items]
+
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH_INDEX, attribute_value=search_idx + num_results)
         self.set_state(user_id=user_id, attribute_name=LAST_SEARCH, attribute_value=search_term)
         return book_links, has_more_results

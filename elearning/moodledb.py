@@ -136,6 +136,7 @@ class GlossaryItem:
 	glossaryid: int # id of glossary
 	concept: str # glossary entry concept name
 	definition: str # definition of concept
+	url: str # link to glossary item
 
 @dataclass
 class TopicInfo:
