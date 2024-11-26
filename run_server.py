@@ -31,8 +31,8 @@ def load_elearning_domain():
     e_learning_policy = ELearningPolicy(domain=domain)
     e_learning_bst = ELearningBST(domain=domain)
     e_learning_nlg = ELearningNLG(domain=domain)
-    e_learning_logger = DBLoggingHandler(domain=domain)
-    return domain, [e_learning_nlu, e_learning_bst, e_learning_policy, e_learning_nlg, e_learning_logger]
+    # e_learning_logger = DBLoggingHandler(domain=domain)
+    return domain, [e_learning_nlu, e_learning_bst, e_learning_policy, e_learning_nlg] #, e_learning_logger]
 
 #  setup dialog system
 domain_1, services_1 = load_elearning_domain()
