@@ -131,7 +131,7 @@ class ELearningNLU(Service):
                     #    r"(Wo\s*(kann ich|finde ich|steht|ist)|Zeig mir|Welche|Ich *(suche|brauche|will))?\s*(mehr\s*)?(Material(ien)?|nach|Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|(die )?Grundlagen|Tutorials|eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|Info(s?( zum Thema)?|rmation(en|squellen)?)|Videos|(Lern)?material(ien)?|was)\s*(in|von|zu|für|über|eine|, die)?\s*(?P<content>.*?)\s*(finden|durchführt|lernen|erfahren|erklären)?(\?|$)|(Kannst|Könntest) du mir (?P<content1>.*?)? (erlären(,)?|eine\s*(kurze|einfache|präzise))?\s*(Erklärung|Definition)?\s*(was( der Begriff| mit)?|von|für( den Begriff)?)?\s*(?P<content2>.*?)\s*(bedeutet|geben|gemeint ist)?(\?|$)|Was (ist|sind|bezeichnet man als)\s*(der|die|das)?\s*(Ziel|Bedeutung|mit|Definition|grundlegenden Konzepte hinter)?\s*(der|von|als)?\s*(?P<content3>.*?)\s*(gemeint)?(\?|$)"
                     #)
                     reg = (
-                        r"(Wo\s*(kann ich|finde ich|steht)|Zeig mir|Welche|Ich\s*(suche|brauche|will))\s*"
+                        r"(Wo\s*(kann ich|finde ich|steht)|Zeig mir|Welche|Ich\s*(suche|brauche|will))\s*(nach\s*)?"
                         r"((Inhalte|erfahren, wie man|spezifische Anwendungen|Beispiele|Ressourcen|mehr|(die )?Grundlagen|Tutorials|"
                         r"eine Einführung|eine einfache Erklärung für den Begriff|Übungen|Bücher(?: oder Artikel)?|Artikel|"
                         r"Info(s( zum Thema)?|rmation(en|squellen))|Videos|Lernmaterialien|was)?\s*)?"
