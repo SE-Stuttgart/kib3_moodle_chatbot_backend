@@ -86,7 +86,7 @@ class ELearningNLG(Service):
     ###
 
     # TODO is insufficient = 'none' a string, or of type(None)?
-    def request_repeat_quiz(self, quiz_link, module, insufficient):
+    def request_repeat_quiz(self, user_id, quiz_link, module, insufficient):
         if insufficient == True:
             return [f"""Bei {module} hast du leider noch nicht ausreichend Punkte 🙁.
                     Möchtest du die Quizze dazu wiederholen?"""]
@@ -96,7 +96,7 @@ class ELearningNLG(Service):
         elif insufficient == "none":
             return ["""Frag mich nochmal, wenn du ein Quiz abgeschlossen hast 😁"""]
 
-    def request_review_or_next(self):
+    def request_review_or_next(self, user_id):
         msgs = []
         if random.random() < 0.4:
             msgs.append((f"""Regelmäßiges Wiederholen von Lerninhalten führt dazu, dass du dich besser an die Inhalte erinnern kannst.""", []))
@@ -107,10 +107,10 @@ class ELearningNLG(Service):
         ]))
         return msgs
         
-    def inform_not_implemented(self, notImplementedYet):
+    def inform_not_implemented(self, user_id, notImplementedYet):
         return[(f"""Leider ist diese Funktionalität noch nicht implementiert, wir arbeiten dran!""", [])]
 
-    def request_search_term(self):
+    def request_search_term(self, user_id):
         return [random.choice([
             ("""Entschuldige, aber ich habe deinen Suchbegriff leider nicht erkannt.
                 Kannst du ihn vielleicht direkt eingeben (ohne zusätzlichen Text)?
@@ -121,7 +121,7 @@ class ELearningNLG(Service):
                 Ich habe ihn leider nicht aus der Anfrage erkennen können.""", []),
         ]) ]
 
-    def inform_help(self):
+    def inform_help(self, user_id):
         return[("""Hier ist eine Liste von Dingen, nach denen du mich fragen kannst:
                <ul>
                 <li><b>Was du als nächstes lernen kannst </b><br> (z.B. \"Was kann ich als nächstes lernen?\")</li>
@@ -138,7 +138,7 @@ class ELearningNLG(Service):
         else:
             return self.welcomemsg
 
-    def welcomemsg_first_turn_ever(self, first_turn: bool):
+    def welcomemsg_first_turn_ever(self, user_id, first_turn: bool):
         return  [("""Hallo, ich bin Kibi, der Moodle Assistent!<br>
                 Ich kann dir zum Beispiel helfen, Inhalte zu suchen, dich durch den Kurs leiten, oder dir Quizze zum üben geben.
                 Klicke auf das Fragezeichen, wenn du wissen willst, wobei ich dich genau unterstützen kann.
@@ -147,31 +147,32 @@ class ELearningNLG(Service):
                 <b>Achtung, ich bin kein ChatGPT</b>: ich kann leider keine richtigen Unterhaltungen führen oder inhaltliche Fragen beantworten - ich kann Dir nur zeigen, wo Du Antworten findest.""", [])
         ]
     
-    def welcomemsg(self):
+    def welcomemsg(self, user_id):
         day_section = ""
         now = datetime.now()
+        username = self.get_state(user_id, "USERNAME")
         if now.hour >= 5 and now.hour < 12:
-            day_section = "Guten Morgen! Gut ausgeruht?"
+            day_section = f"Guten Morgen, {username}! Gut ausgeruht?"
         elif now.hour >= 12 and now.hour < 15:
-            day_section = "Einen schönen Mittag! Hoffentlich hast du gut gegessen!"
+            day_section = f"Einen schönen Mittag dir, {username}! Hoffentlich hast du gut gegessen!"
         elif now.hour >= 15 and now.hour < 17:
-            day_section = "Einen schönen Nachmittag 😊"
+            day_section = f"Einen schönen Nachmittag dir, {username} 😊"
         elif now.hour >= 17 and now.hour < 21:
-            day_section = "Guten Abend 😊"
+            day_section = f"Guten Abend, {username} 😊"
         else:
-            day_section = "Wow, du lernst ja noch spät, Respekt 😱"
+            day_section = f"Wow {username}, du lernst ja noch spät! Respekt 😱"
 
         options = [
-            "Schön dich wieder zu sehen 😊",
-            "Hi!",
-            "Willkommen zurück 😊",
-            "Hallo!",
+            f"Schön dich wieder zu sehen, {username} 😊",
+            f"Hi {username}!",
+            f"Willkommen zurück, {username} 😊",
+            f"Hallo {username}!",
             day_section
         ]
         return [(random.choice(options), [])]
 
 
-    def inform_unread_messages(self):
+    def inform_unread_messages(self, user_id):
         """ Notify about unread forum messages """
         pass
 
@@ -180,7 +181,7 @@ class ELearningNLG(Service):
         pass
 
 
-    def display_quiz(self, quiz_embed):
+    def display_quiz(self, user_id, quiz_embed):
         if quiz_embed is None:
             return [random.choice([
                 ("Momentan gibt es keine Quizze, die wiederholt werden können.", []),
@@ -190,7 +191,7 @@ class ELearningNLG(Service):
             ])]
         return [(f"$$QUIZ;{json.dumps(quiz_embed)}", [])]
 
-    def display_weekly_summary(self, best_weekly_days: List[str], weekly_completions: Dict[str , list], weekly_completions_prev: Dict[str, list]):
+    def display_weekly_summary(self, user_id, best_weekly_days: List[str], weekly_completions: Dict[str , list], weekly_completions_prev: Dict[str, list]):
         """ 
         Args:
             weekly: If true, show activity of current and last week at end of current week.
@@ -220,7 +221,7 @@ class ELearningNLG(Service):
         inner = f""";{titleInner};{100*percentageInner}""" if not isinstance(titleInner, type(None)) else ""
         return f"""$$DONUT;{titleOuter};{100*percentageOuter}{inner}"""
 
-    def display_progress(self, percentage_done: float, percentage_repeated_quizzes: float):
+    def display_progress(self, user_id, percentage_done: float, percentage_repeated_quizzes: float):
         """ Offer choice to either review previous quizes, or continue with one of the next activities"""
         return [random.choice([
                     ("""So sieht dein aktueller Stand aus:""", []),
@@ -230,7 +231,7 @@ class ELearningNLG(Service):
                 (self._donut_chart("Kurs", percentage_done, "Wiederholte Quizze", percentage_repeated_quizzes), [])
             ]
 
-    def display_quiz_improvements(self, improvements: List[bool]):
+    def display_quiz_improvements(self, user_id, improvements: List[bool]):
         percentage_improvements = sum(improvements)/len(improvements)
         msgs = []
         if percentage_improvements > 0.0:
@@ -252,7 +253,7 @@ class ELearningNLG(Service):
             ]))
         return msgs 
 
-    def display_badge_progress(self, badge_name, percentage_done: float, missing_activities: List[Dict[str, str]]):
+    def display_badge_progress(self, user_id, badge_name, percentage_done: float, missing_activities: List[Dict[str, str]]):
         if badge_name == None:
             return [random.choice([
                         ("""Du hast bereits alle gerade verfügbaren Auszeichnungen erhalten 🎉
@@ -283,14 +284,14 @@ class ELearningNLG(Service):
                 fertig machst, kriegst du {noun} 😊""", [])]
         return msgs
     
-    def congratulate_badge(self, badge_name: str, badge_img_url: str):
+    def congratulate_badge(self, user_id, badge_name: str, badge_img_url: str):
         return [(f"""Du hast gerade die Auszeichnung <b>{badge_name}</b> erhalten:
                 <div style="text-align: center; padding: 0.5em;">
                  {badge_img_url}
                 </div>""", []),
                 ("Stark 💪", [])]
     
-    def congratulate_completion(self, name: str, branch: bool):
+    def congratulate_completion(self, user_id, name: str, branch: bool):
         if branch:
             return [(f"Herzlichen Glückwunsch! Du hast alle Themen im Zweig {name.upper()} fertig gemacht! 🎉🎉🎉", [])]
         else:
@@ -300,7 +301,7 @@ class ELearningNLG(Service):
                 (f"Herzlichen Glückwunsch, du hast den Abschnitt {name} abgeschlossen! 🎉", []),
             ])]
     
-    def inform_last_viewed_course_module(self, last_viewed_course_module: Dict[str, str]):
+    def inform_last_viewed_course_module(self, user_id, last_viewed_course_module: Dict[str, str]):
         last_viewed_course_module_link = self.to_content_link(**last_viewed_course_module)
         return [random.choice([
                     (f"Letztes Mal hast du {last_viewed_course_module_link} angesehen.", []),
@@ -313,7 +314,7 @@ class ELearningNLG(Service):
                     {" ".join(items)}
                 </div>"""
 
-    def request_continue_or_next(self, next_available_modules: List[Dict[str, str]]):
+    def request_continue_or_next(self, user_id, next_available_modules: List[Dict[str, str]]):
         cards = []
         for module in next_available_modules:
             cards.append(self.to_card(header=f"{module['topic']} - {module['sectionname']}", body=self.to_content_link(**module)))
@@ -331,7 +332,7 @@ class ELearningNLG(Service):
         url = match.group(1)
         return url
 
-    def inform_next_options(self, next_available_sections, has_more: bool):
+    def inform_next_options(self, user_id, next_available_sections, has_more: bool):
         if len(next_available_sections) == 0:
             return [(f"""Du hast bereits alle Abschnitte abgeschlossen! 🎉🎉🎉""", [])]
         
@@ -352,7 +353,7 @@ class ELearningNLG(Service):
 
         return [(text, answer_options)]
     
-    def inform_starter_module(self, module_link: str):
+    def inform_starter_module(self, user_id, module_link: str):
         return [(f"Klicke einfach {module_link}, um direkt einzusteigen!", [
             "Einstellungen",
         ])]
@@ -366,7 +367,7 @@ class ELearningNLG(Service):
                     </div>"""
 
     
-    def inform_search_results(self, search_results: Dict[str, List[str]], load_more: bool):
+    def inform_search_results(self, user_id, search_results: Dict[str, List[str]], load_more: bool):
         if len(search_results) == 0:
             return [(
                 "Tut mir leid, aber es gibt keine (weiteren) Ergebnisse zu dieser Suche 😞"
@@ -391,7 +392,7 @@ class ELearningNLG(Service):
         )]
    
 
-    def feedback_to_quiz(self, success_percentage: float, url: str, displaytext: str, typename: str, **kwargs):
+    def feedback_to_quiz(self, user_id, success_percentage: float, url: str, displaytext: str, typename: str, **kwargs):
         msgs = []
         if success_percentage >= 99:
             # all questions correct
@@ -424,13 +425,13 @@ class ELearningNLG(Service):
             ("Tut mir leid, das konnte ich nicht verstehen. Vielleicht kann ich dir besser helfen, wenn du deine Eingabe nochmal umformulierst.", ["Hilfe"]),
         ])]
 
-    def you_are_welcome(self):
+    def you_are_welcome(self, user_id):
         return [("Gerne 😊", [])]
 
     def get_message_fn(self, sys_act: SysAct):
         # delegate system act to specific message generator
         if sys_act.type == SysActionType.Welcome:
-            return self.generate_welcomemsg(sys_act)
+            return self.generate_welcomemsg(sys_act=sys_act)
         elif sys_act.type == SysActionType.RequestContinueOrNext:
             return self.request_continue_or_next
         elif sys_act.type == SysActionType.RequestSearchTerm:
@@ -490,7 +491,7 @@ class ELearningNLG(Service):
         messages = []
         for sys_act in sys_acts:
             message_fn = self.get_message_fn(sys_act)
-            messages += message_fn(**sys_act.slot_values)
+            messages += message_fn(user_id=user_id, **sys_act.slot_values)
         
         if len(messages) == 0:
             messages += self.bad_act()

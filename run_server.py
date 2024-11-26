@@ -177,9 +177,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
                     wsuserid = data['wsuserid']
                     moodle_timestamp = int(data['timestamp'])
                     time_diff_chatbot_moodle = moodle_timestamp - int(time.time()) # add this constant difference to chatbot time to get moodle server time
-                    print(" - booksearchtoken", booksearchtoken)
-                    print(" - moodle timestamp", moodle_timestamp)
-                    print(" - time difference moodle-chatbot", time_diff_chatbot_moodle)
+                    username = data['username']
 
                     # check if we can connect to the webservice.
                     # If so, start the dialog - if not, close the connection.
@@ -191,6 +189,7 @@ class SimpleWebSocket(tornado.websocket.WebSocketHandler):
                         services_1[2].set_state(self.userid, "SERVERTIMESTAMP", moodle_timestamp)
                         services_1[2].set_state(self.userid, "WSUSERID", wsuserid)
                         services_1[2].set_state(self.userid, "SERVERTIMEDIFFERENCE", time_diff_chatbot_moodle)
+                        services_1[3].set_state(self.userid, "USERNAME", username) # set username for nlg greeting
                         services_1[-1].set_state(self.userid, "BOOKSEARCHTOKEN", booksearchtoken)
 
                         ds._start_dialog(start_signals={f'socket_opened/{domains[domain_index]}': True, f'courseid/{domains[domain_index]}': courseid}, user_id=self.userid)

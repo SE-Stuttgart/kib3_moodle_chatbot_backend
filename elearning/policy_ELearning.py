@@ -675,16 +675,18 @@ class ELearningPolicy(Service):
             else:
                 # has seen modules, but none completed or really started
                 # return first module in course, e.g. ice cream game
-                first_section_link = self.get_starter_module_id(user_id=userid, courseid=courseid)
-                return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
+                first_section_id = self.get_starter_module_id(user_id=userid, courseid=courseid)
+                first_section_link = fetch_content_link(wstoken=self.get_wstoken(userid), cmid=first_section_id).to_href_element()
+                return [SysAct(act_type=SysActionType.Welcome),
                         SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
                             module_link=first_section_link
                         ))]
         else:
             # return ice cream game
             # return first module in course, e.g. ice cream game
-            first_section_link = self.get_starter_module_id(user_id=userid, courseid=courseid)
-            return [SysAct(act_type=SysActionType.Welcome, slot_values={"first_turn": True}),
+            first_section_id = self.get_starter_module_id(user_id=userid, courseid=courseid)
+            first_section_link = fetch_content_link(wstoken=self.get_wstoken(userid), cmid=first_section_id).to_href_element()
+            return [SysAct(act_type=SysActionType.Welcome),
                     SysAct(act_type=SysActionType.InformStarterModule, slot_values=dict(
                         module_link=first_section_link
                     ))]
