@@ -64,13 +64,14 @@ def configure_error_logger(log_level: str = "WARNING"):
     file_handler.setFormatter(fh_formatter)
     error_logger.addHandler(file_handler)
 
-    # configure output to console
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(log_level)
-    # ch_formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch_formatter = MultilineFormatter('logger: %(message)s')
-    console_handler.setFormatter(ch_formatter)
-    error_logger.addHandler(console_handler)
+    # configure output to console if we are in debug mode
+    if os.environ['DEBUG'] == 'true':
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(log_level)
+        # ch_formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch_formatter = MultilineFormatter('logger: %(message)s')
+        console_handler.setFormatter(ch_formatter)
+        error_logger.addHandler(console_handler)
 
-    # log exceptions
-    sys.excepthook = exception_logging_hook
+        # log exceptions
+        sys.excepthook = exception_logging_hook
