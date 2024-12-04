@@ -11,7 +11,7 @@ import asyncio
 import config
 from elearning.moodledb import fetch_user_settings
 from services.service import PublishSubscribe, Service, DialogSystem
-from utils.logger import configure_error_logger
+from utils.logger import configure_error_logger, get_logger
 
 io_loop = tornado.ioloop.IOLoop.current()
 asyncio.set_event_loop(io_loop.asyncio_loop)
@@ -20,7 +20,7 @@ configure_error_logger()
 
 
 def load_elearning_domain():
-    print("LOADING ELEARNING DOMAIN")
+    get_logger().info("LOADING ELEARNING DOMAIN")
     from elearning.policy_ELearning import ELearningPolicy
     from elearning.eLearningBst import ELearningBST
     from elearning.dbloggerhandler import DBLoggingHandler
@@ -143,7 +143,7 @@ error_free = ds.is_error_free_messaging_pipeline()
 if not error_free:
     ds.print_inconsistencies()
 # ds.draw_system_graph()
-print('setup system')
+get_logger().info('setup system')
 
 
 class SimpleWebSocket(tornado.websocket.WebSocketHandler):
@@ -257,5 +257,5 @@ if __name__ == "__main__":
     } if config.MOOLDE_SERVER_PROTOCOL == "https" else None
     http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
     http_server.listen(config.DS_SERVER_PORT)
-    print("Starting tornado...")
+    get_logger().info("Starting tornado...")
     tornado.ioloop.IOLoop.current().start()

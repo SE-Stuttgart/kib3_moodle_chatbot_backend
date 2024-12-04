@@ -32,7 +32,7 @@ class Utterance_Mapper():
         cos_scores = util.pytorch_cos_sim(query_embedding, self.embeddings)[0]
         top_results = torch.topk(cos_scores, k=1)
         mapped_utterance = self.corpus[top_results[1]]
-        print( "Query: {}, Mapped utterance: {}, label: {}, score: {}   ".format(utterance, mapped_utterance, self.labels[top_results[1]], top_results[0]))
+        # print( "Query: {}, Mapped utterance: {}, label: {}, score: {}   ".format(utterance, mapped_utterance, self.labels[top_results[1]], top_results[0]))
         if top_results[0] > self.threshold:
             return mapped_utterance
         return utterance
@@ -47,7 +47,7 @@ class Utterance_Mapper():
         #print(top_result)
         top_result = torch.max(cos_scores, dim=0)
         #print(top_result)
-        print( "Query: {}, label: {}, score: {}   ".format(utterance, self.labels[top_result[1]], top_result[0]))
+        # print( "Query: {}, label: {}, score: {}   ".format(utterance, self.labels[top_result[1]], top_result[0]))
         if top_result[0] > self.threshold:
             label = self.labels[top_result[1]]
         else:

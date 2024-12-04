@@ -63,22 +63,3 @@ def get_book_links(webserviceuserid: int, wstoken: str, course_id: int, searchTe
         return {"FEHLER": ["Fehler bei der Suche"]}, False
 
 
-# Stress Test for booksearch
-# if __name__ == "__main__":
-#     from concurrent.futures import ThreadPoolExecutor
-#     import requests
-#     from functools import partial
-
-
-#     results = []
-
-#     # do some other stuff in the main process
-#     params = (5, "0d5ff023174b6e8d6dc70e803ce2373a", 2, "Regression") # tuple of args for foo
-#     fn = partial(get_book_links, )
-#     with ThreadPoolExecutor(max_workers=50) as executor:
-#         results = list(executor.map(lambda i: get_book_links(*params), [i for i in range(0,200)]))
-
-#     for result in results:
-#         results = len(result[0]['Regression (Buch)'])
-#         assert results == 8
-#     print("Done")

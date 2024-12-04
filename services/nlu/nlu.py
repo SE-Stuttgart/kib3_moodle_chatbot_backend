@@ -18,7 +18,7 @@
 ###############################################################################
 
 import re
-import time
+# import time
 from typing import List
 from utils.utterance_mapper import Utterance_Mapper
 from services.service import PublishSubscribe
@@ -96,8 +96,6 @@ class ELearningNLU(Service):
 
     @PublishSubscribe(sub_topics=["user_utterance"], pub_topics=["user_acts"])
     def extract_user_acts(self, user_id: str, user_utterance: str = None) -> dict(user_acts=List[UserAct]):
-        print("extract_user_acts")
-
         """
         Responsible for detecting user acts with their respective slot-values from the user
         utterance through regular expressions.
@@ -110,9 +108,8 @@ class ELearningNLU(Service):
             dict of str: UserAct - a dictionary with the key "user_acts" and the value
                                             containing a list of user actions
         """
-        start = time.time()
+        # start = time.time()
         result = {}
-        #print(self.uttance_mapper.get_labels())
         if user_utterance is not None and len(user_utterance) > 0:
             user_utterance = user_utterance.strip()
             user_act = self.uttance_mapper.get_most_similar_label("\"" +user_utterance + "\"")
@@ -153,8 +150,8 @@ class ELearningNLU(Service):
                                 user_act.value = matches.get(key)
         
             result["user_acts"] = [user_act]
-            end = time.time()
-            print("extract_user_acts took: ", end-start)
+            # end = time.time()
+            # print("extract_user_acts took: ", end-start)
         else:
             result = {"user_acts": []}
         return result

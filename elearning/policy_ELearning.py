@@ -33,6 +33,7 @@ from utils import SysAct, SysActionType
 from utils.domain.jsonlookupdomain import JSONLookupDomain
 from utils import UserAct
 from elearning.moodledb import ContentLinkInfo, UserSettings, WeeklySummary, extract_branch_from_topicname, fetch_available_new_course_section_ids, fetch_badge_info, fetch_branch_review_quizzes, fetch_closest_badge, fetch_content_link, fetch_first_available_course_module_id, fetch_glossary_search, fetch_h5pquiz_params, fetch_has_seen_any_course_modules, fetch_last_user_weekly_summary, fetch_last_viewed_course_modules, fetch_next_available_course_module_id, fetch_oldest_worst_grade_course_ids, fetch_starter_module_id, fetch_topic_completionstate, fetch_topic_id_and_name, fetch_user_settings, fetch_user_statistics, fetch_viewed_course_modules_count
+from utils.logger import get_logger
 from utils.useract import UserActionType, UserAct
 # from dotenv import load_dotenv
 import os
@@ -42,7 +43,7 @@ import os
 
 # Retrieve the LC_TIME environment variable
 locale_setting = os.getenv("LC_TIME")
-print(locale_setting)
+get_logger().info(locale_setting)
 locale.setlocale(locale.LC_TIME, locale_setting)
 
 TURNS = 'turns'
@@ -242,7 +243,6 @@ class ELearningPolicy(Service):
                         self.set_state(user_id, LAST_FINISHED_TOPIC_NAME, topic_info.name)
                         self.open_chatbot(user_id=user_id, context=ChatbotOpeningContext.SECTION)
                         sys_acts = [SysAct(SysActionType.CongratulateCompletion, slot_values={"name": topic_info.sectionname, 'branch': False})]
-                        # TODO section id here should become a topic name
                         sys_acts += self.get_user_next_module(userid=user_id, courseid=moodle_event['courseid'],
                                                             add_last_viewed_course_module=False, current_topic=topic_info.name)
                         return {
@@ -532,7 +532,6 @@ class ELearningPolicy(Service):
                         action
 
         """
-        #print("USER ACTS\n", user_acts)
 
         # update the turn count
         turns = self.get_state(user_id, TURNS) + 1

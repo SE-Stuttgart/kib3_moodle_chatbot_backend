@@ -45,6 +45,8 @@ class MultilineFormatter(logging.Formatter):
         record.message = output
         return output
 
+def get_logger():
+    return logging.getLogger('error_log')
 
 def configure_error_logger(log_level: str = "WARNING"):
     # create logger
@@ -54,7 +56,7 @@ def configure_error_logger(log_level: str = "WARNING"):
     # configure file handler
     logfile_folder = "./logs"
     os.makedirs(os.path.realpath(logfile_folder), exist_ok=True)
-    log_file_name = 'errors_' + str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')) + '.log'
+    log_file_name = 'logs_' + str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')) + '.log'
     log_file_path = os.path.join(os.path.realpath(logfile_folder), log_file_name)
     file_handler = logging.FileHandler(log_file_path, mode='w')
     file_handler.setLevel(log_level)
